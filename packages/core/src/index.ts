@@ -1,5 +1,3 @@
-export const version = "0.0.0";
-
 export type {
   ChannelOption,
   CommandMeta,
@@ -14,3 +12,4 @@ export type {
   StringOption,
   TopLevelMeta,
 } from "./commands/meta.js";
+export { version } from "./version.js";
