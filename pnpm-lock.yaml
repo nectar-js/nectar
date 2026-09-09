@@ -37,6 +37,10 @@ importers:
         version: 14.27.0
 
   packages/core:
+    dependencies:
+      discord-api-types:
+        specifier: ^0.38.55
+        version: 0.38.55
     devDependencies:
       discord.js:
         specifier: ^14.27.0

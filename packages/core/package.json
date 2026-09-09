@@ -5,7 +5,7 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.18"
   },
   "bin": {
     "neat": "./dist/cli.js"
@@ -32,5 +32,8 @@
   },
   "devDependencies": {
     "discord.js": "^14.27.0"
+  },
+  "dependencies": {
+    "discord-api-types": "^0.38.55"
   }
 }
