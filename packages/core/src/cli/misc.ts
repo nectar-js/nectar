@@ -5,17 +5,18 @@ import { relative } from "./compile.js";
 import { CliError, type CliIo, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
 import { APPLICATION_ID_VAR, TOKEN_VAR } from "./sync.js";
+import { c, info as note, ok, table } from "./ui.js";
 
 /** `nect clean`: delete the build output directory. */
 export async function clean(io: CliIo): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const label = `${relative(project.root, project.outDir)}/`;
   if (!existsSync(project.outDir)) {
-    io.out(`Nothing to remove, ${label} does not exist.`);
+    io.out(note(`Nothing to remove, ${c.bold(label)} does not exist.`));
     return EXIT_OK;
   }
   rmSync(project.outDir, { recursive: true, force: true });
-  io.out(`Removed ${label}`);
+  io.out(ok(`Removed ${c.bold(label)}`));
   return EXIT_OK;
 }
 
@@ -42,15 +43,14 @@ export async function info(io: CliIo): Promise<number> {
       ["intents", describeBitfield(config.intents)],
       ["partials", config.partials === undefined ? "none" : String(config.partials.length)],
       ["eager", String(config.eager ?? project.env === "production")],
-      ["registration", scopes.length === 0 ? "none" : scopes.map(scopeKey).join(", ")],
+      ["registration", scopes.length === 0 ? c.yellow("none") : scopes.map(scopeKey).join(", ")],
     );
   } catch (error) {
     if (!(error instanceof CliError)) throw error;
-    rows.push(["config", error.message]);
+    rows.push(["config", c.yellow(error.message)]);
   }
 
-  const width = Math.max(...rows.map(([key]) => key.length));
-  for (const [key, value] of rows) io.out(`${key.padEnd(width)}  ${value}`);
+  for (const line of table(rows)) io.out(line);
   return EXIT_OK;
 }
 
@@ -59,12 +59,12 @@ async function discordVersion(): Promise<string> {
     const { version: v } = await import("discord.js");
     return v;
   } catch {
-    return "not installed";
+    return c.yellow("not installed");
   }
 }
 
 function present(value: string | undefined): string {
-  return value === undefined || value === "" ? "not set" : "set";
+  return value === undefined || value === "" ? c.yellow("not set") : c.green("set");
 }
 
 function describeBitfield(value: unknown): string {

@@ -6,6 +6,7 @@ import type { ComponentRoute } from "../components/compile.js";
 import { compileProject, relative } from "./compile.js";
 import { type CliIo, EXIT_FAILURE, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
+import { c } from "./ui.js";
 
 /** `nect routes`: print the app tree with what every file and directory means. */
 export async function routes(io: CliIo): Promise<number> {
@@ -87,7 +88,7 @@ export function renderRoutes(graph: RouteGraph, root: string): string {
   print(tree, "", true, true, lines);
   const width = Math.max(...lines.map(([left]) => left.length));
   return lines
-    .map(([left, right]) => (right === "" ? left : `${left.padEnd(width)}  ${right}`))
+    .map(([left, right]) => (right === "" ? left : `${left.padEnd(width)}  ${c.dim(right)}`))
     .join("\n");
 }
 

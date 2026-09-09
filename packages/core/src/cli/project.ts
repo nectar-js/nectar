@@ -4,6 +4,7 @@ import { loadModule } from "../compiler/load.js";
 import { ConfigError, type NectConfig, validateConfig } from "../config.js";
 import type { Env } from "../runtime/types.js";
 import { CliError } from "./io.js";
+import { c } from "./ui.js";
 
 export const CONFIG_FILES = ["nect.config.ts", "nect.config.js"];
 
@@ -21,22 +22,30 @@ export interface Project {
 export async function loadProject(cwd: string, env: NodeJS.ProcessEnv): Promise<Project> {
   const configFile = CONFIG_FILES.map((name) => path.join(cwd, name)).find((f) => existsSync(f));
   if (configFile === undefined) {
-    throw new CliError(
-      `No ${CONFIG_FILES[0]} in ${cwd}. Run nect from the project root, or create one with defineConfig.`,
-    );
+    throw new CliError(`No ${CONFIG_FILES[0]} in ${cwd}.`, {
+      details: [
+        "Run nect from the directory that holds your config file.",
+        `Starting fresh? ${c.bold("npm create @nect-js")} sets up a project.`,
+      ],
+    });
   }
+  const name = path.basename(configFile);
   let config: NectConfig;
   try {
     const module = await loadModule(configFile);
-    config = validateConfig(module.default, path.basename(configFile));
+    config = validateConfig(module.default, name);
   } catch (error) {
-    if (error instanceof ConfigError) throw new CliError(error.message);
-    throw new CliError(`Could not load ${path.basename(configFile)}: ${describe(error)}`);
+    if (error instanceof ConfigError) {
+      throw new CliError(`${name} is not valid.`, { details: [error.detail] });
+    }
+    throw new CliError(`Could not load ${name}.`, { details: [describe(error)] });
   }
   const root = path.dirname(configFile);
   const appDir = path.resolve(root, config.appDir ?? "app");
   if (!existsSync(appDir)) {
-    throw new CliError(`App directory ${path.relative(root, appDir) || "."} does not exist.`);
+    throw new CliError(`App directory ${path.relative(root, appDir) || "."}/ does not exist.`, {
+      details: [`Create it, or point ${c.bold("appDir")} in ${name} at the right place.`],
+    });
   }
   return {
     root,

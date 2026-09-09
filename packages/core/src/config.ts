@@ -35,7 +35,7 @@ export function defineConfig(config: NectConfig): NectConfig {
 export class ConfigError extends Error {
   constructor(
     readonly file: string,
-    detail: string,
+    readonly detail: string,
   ) {
     super(`${file}: ${detail}`);
     this.name = "ConfigError";

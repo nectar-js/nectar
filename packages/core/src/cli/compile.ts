@@ -3,6 +3,7 @@ import type { Diagnostic } from "../compiler/diagnostics.js";
 import { buildGraph, type RouteGraph } from "../compiler/graph.js";
 import type { CliIo } from "./io.js";
 import type { Project } from "./project.js";
+import { c, fail, indent, warn } from "./ui.js";
 
 /** Compiles the app and prints every diagnostic. Returns `null` when any is an error. */
 export async function compileProject(project: Project, io: CliIo): Promise<RouteGraph | null> {
@@ -12,15 +13,22 @@ export async function compileProject(project: Project, io: CliIo): Promise<Route
   }
   if (graph.diagnostics.hasErrors) {
     const errors = graph.diagnostics.items.filter((d) => d.severity === "error").length;
-    io.err(`${errors} error${errors === 1 ? "" : "s"}.`);
+    io.err(fail(`${errors} error${errors === 1 ? "" : "s"}. Fix the files above and run again.`));
     return null;
   }
   return graph;
 }
 
+/**
+ * One diagnostic as a headline and an indented message:
+ *
+ *     ✖ error  invalid-name  app/commands/Bad Name/command.ts
+ *       Command names must be lowercase ...
+ */
 export function formatDiagnostic(diagnostic: Diagnostic, root: string): string {
-  const where = diagnostic.file === undefined ? "" : ` ${relative(root, diagnostic.file)}`;
-  return `${diagnostic.severity}[${diagnostic.code}]${where}: ${diagnostic.message}`;
+  const mark = diagnostic.severity === "error" ? fail(c.red("error")) : warn(c.yellow("warning"));
+  const where = diagnostic.file === undefined ? "" : `  ${relative(root, diagnostic.file)}`;
+  return [`${mark}  ${c.dim(diagnostic.code)}${where}`, ...indent([diagnostic.message])].join("\n");
 }
 
 export function relative(root: string, file: string): string {

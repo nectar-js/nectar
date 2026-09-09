@@ -12,6 +12,7 @@ import {
 import { compileProject } from "./compile.js";
 import { CliError, type CliIo, EXIT_FAILURE, EXIT_OK } from "./io.js";
 import { loadProject, type Project } from "./project.js";
+import { c, credentialHint, info, ok, warn } from "./ui.js";
 
 export const TOKEN_VAR = "DISCORD_TOKEN";
 export const APPLICATION_ID_VAR = "DISCORD_APPLICATION_ID";
@@ -22,14 +23,14 @@ export async function sync(io: CliIo, dryRun: boolean, force: boolean): Promise<
   const graph = await compileProject(project, io);
   if (graph === null) return EXIT_FAILURE;
   if (registrationScopes(project.config, project.env).length === 0) {
-    throw new CliError(
-      `No registration target for ${project.env}: add dev.guilds to ${projectConfigName(project)}.`,
-    );
+    throw new CliError(`No registration target for ${project.env}.`, {
+      details: registrationHint(project),
+    });
   }
   const result = await registerCommands(project, graph, io, { dryRun, force });
   for (const scope of result.scopes) io.out(describeScope(scope, dryRun));
   if (result.unsafe.length > 0) {
-    io.err(`${force ? "Forced past" : "Would refuse"}:`);
+    io.err(warn(force ? "Forced past the safety guard:" : "The safety guard would refuse this:"));
     for (const reason of result.unsafe) io.err(`  ${reason}`);
   }
   return EXIT_OK;
@@ -52,39 +53,64 @@ export async function registerCommands(
     return await syncCommands({
       rest,
       applicationId,
-      commands: graph.commands.map((c) => c.payload),
+      commands: graph.commands.map((cmd) => cmd.payload),
       scopes: registrationScopes(project.config, project.env),
       cacheDir: project.outDir,
       dryRun: options.dryRun ?? false,
       force: options.force ?? false,
     });
   } catch (error) {
-    if (error instanceof UnsafeSyncError || error instanceof RegistrationError) {
-      throw new CliError(error.message);
+    if (error instanceof UnsafeSyncError) {
+      throw new CliError("Refusing to register commands: this looks destructive.", {
+        details: [
+          ...error.reasons,
+          "",
+          `If that is what you want, run again with ${c.bold("--force")}.`,
+        ],
+      });
+    }
+    if (error instanceof RegistrationError) {
+      throw new CliError(`Discord rejected the ${scopeKey(error.scope)} command registration.`, {
+        details: error.problems.map(
+          (p) =>
+            `${c.bold(p.command ?? "(request)")}${p.field === "" ? "" : ` ${c.dim(p.field)}`}: ${p.message}`,
+        ),
+      });
     }
     throw error;
   }
 }
 
+/** One line per scope: what changed there and whether it was written. */
 export function describeScope({ scope, diff, applied }: ScopeSync, dryRun = false): string {
-  const key = scopeKey(scope);
-  if (diff === null) return `${key}: unchanged since last sync.`;
-  if (!diff.hasChanges) return `${key}: up to date, ${diff.unchanged.length} command(s).`;
+  const key = c.bold(scopeKey(scope));
+  if (diff === null) return ok(`${key}: unchanged since last sync.`);
+  if (!diff.hasChanges) return ok(`${key}: up to date, ${diff.unchanged.length} command(s).`);
   const parts = [
-    ...diff.added.map((n) => `+${n}`),
-    ...diff.changed.map((n) => `~${n}`),
-    ...diff.removed.map((n) => `-${n}`),
-  ];
-  const verb = dryRun ? "would apply" : applied ? "applied" : "not applied";
-  return `${key}: ${parts.join(" ")} (${verb}).`;
+    ...diff.added.map((n) => c.green(`+${n}`)),
+    ...diff.changed.map((n) => c.yellow(`~${n}`)),
+    ...diff.removed.map((n) => c.red(`-${n}`)),
+  ].join(" ");
+  if (dryRun) return info(`${key}: ${parts} ${c.dim("(would apply)")}`);
+  return applied
+    ? ok(`${key}: ${parts} ${c.dim("(applied)")}`)
+    : warn(`${key}: ${parts} ${c.dim("(not applied)")}`);
 }
 
 export function requireEnv(io: CliIo, name: string): string {
   const value = io.env[name];
   if (value === undefined || value === "") {
-    throw new CliError(`${name} is not set. Put it in .env or the environment.`);
+    throw new CliError(`${name} is not set.`, { details: credentialHint(name) });
   }
   return value;
+}
+
+export function registrationHint(project: Project): string[] {
+  return [
+    `Add your test server's ID to ${c.bold("dev.guilds")} in ${projectConfigName(project)}.`,
+    "Find it in Discord: Server Settings → Widget → Server ID, or right-click the server",
+    "with Developer Mode on and choose Copy Server ID.",
+  ];
 }
 
 async function discordRest(token: string): Promise<CommandRest> {

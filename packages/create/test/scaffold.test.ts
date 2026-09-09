@@ -66,7 +66,7 @@ describe("scaffold", () => {
     const result = await check(dir);
     expect(result.err).toBe("");
     expect(result.code).toBe(0);
-    expect(result.out).toBe("No problems. 1 command, 1 component route, 1 event in app/.");
+    expect(result.out).toBe("✔ No problems. 1 command, 1 component route, 1 event in app/.");
   });
 
   test("package.json has the scripts, dependencies, and name", () => {

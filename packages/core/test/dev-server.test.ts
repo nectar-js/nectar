@@ -64,6 +64,9 @@ function chatInput(name: string): Interaction {
   } as unknown as Interaction;
 }
 
+/** Lines printed while the server runs start with HH:MM:SS. */
+const unstamp = (line: string) => line.replace(/^\d\d:\d\d:\d\d /, "");
+
 async function setup() {
   const root = makeProject(
     { "commands/ping/command.ts": command("ping-v1") },
@@ -76,8 +79,8 @@ async function setup() {
   const io = {
     cwd: root,
     env: { DISCORD_TOKEN: "t", DISCORD_APPLICATION_ID: "app" },
-    out: (line: string) => out.push(line),
-    err: (line: string) => err.push(line),
+    out: (line: string) => out.push(unstamp(line)),
+    err: (line: string) => err.push(unstamp(line)),
     rest: async () => rest,
     client: () => {
       const client = fakeClient();
@@ -114,8 +117,8 @@ describe("dev server", () => {
     const { server, out, err, rest, clients } = await setup();
     expect(err).toEqual([]);
     expect(out).toEqual([
-      "1 command, 0 component routes, 0 events in app/.",
-      "guild:1: +ping (applied).",
+      "✔ 1 command, 0 component routes, 0 events in app/",
+      "✔ guild:1: +ping (applied)",
     ]);
     expect(rest.put).toHaveBeenCalledTimes(1);
     expect(clients).toHaveLength(1);
@@ -131,7 +134,7 @@ describe("dev server", () => {
     out.length = 0;
     const file = write("app/commands/ping/command.ts", command("ping-v2"));
     await server.apply([file]);
-    expect(out).toEqual(["~ app/commands/ping/command.ts", "1 handler module reloaded."]);
+    expect(out).toEqual(["~ app/commands/ping/command.ts", "✔ 1 handler module reloaded."]);
     expect(await invoke("ping")).toEqual(["ping-v2"]);
     expect(client().login).toHaveBeenCalledTimes(1);
     expect(rest.put).toHaveBeenCalledTimes(1);
@@ -146,8 +149,8 @@ describe("dev server", () => {
     expect(out).toEqual([
       "~ app/commands/pong",
       "~ app/commands/pong/command.ts",
-      "guild:1: +pong (applied).",
-      "Routes rebuilt (2 commands, 0 component routes, 0 events), 1 handler module reloaded.",
+      "✔ guild:1: +pong (applied)",
+      "✔ Routes rebuilt (2 commands, 0 component routes, 0 events), 1 handler module reloaded.",
     ]);
     expect(await invoke("pong")).toEqual(["pong"]);
     expect(rest.put).toHaveBeenCalledTimes(2);
@@ -157,8 +160,8 @@ describe("dev server", () => {
     await server.apply([ping]);
     expect(out).toEqual([
       "~ app/commands/ping/command.ts",
-      "guild:1: ~ping (applied).",
-      "1 handler module reloaded.",
+      "✔ guild:1: ~ping (applied)",
+      "✔ 1 handler module reloaded.",
     ]);
     expect(rest.put).toHaveBeenCalledTimes(3);
     await server.stop();
@@ -168,7 +171,7 @@ describe("dev server", () => {
     const { server, err, invoke, write, root } = await setup();
     const bad = write("app/commands/Bad Name/command.ts", command("bad"));
     await server.apply([bad]);
-    expect(err.at(-1)).toBe("Keeping the previous routes until this is fixed.");
+    expect(err.at(-1)).toBe("▲ Keeping the previous routes until this is fixed.");
     expect(err.some((l) => l.includes("Bad Name"))).toBe(true);
     expect(await invoke("ping")).toEqual(["ping-v1"]);
 
@@ -184,7 +187,7 @@ describe("dev server", () => {
     out.length = 0;
     const helper = write("app/lib/helper.ts", "export const x = 1;\n");
     await server.apply([helper]);
-    expect(out).toEqual(["~ app/lib/helper.ts", "Every module reloaded."]);
+    expect(out).toEqual(["~ app/lib/helper.ts", "✔ Every module reloaded."]);
     expect(await invoke("ping")).toEqual(["ping-v1"]);
     await server.stop();
   });
@@ -211,8 +214,8 @@ describe("dev server", () => {
     expect(clients[1]?.login).toHaveBeenCalledTimes(1);
     expect(out).toEqual([
       "~ nect.config.js",
-      "Restarting with the new nect.config.js.",
-      "1 command, 0 component routes, 0 events in app/.",
+      "› Restarting with the new nect.config.js.",
+      "✔ 1 command, 0 component routes, 0 events in app/",
     ]);
     expect(await invoke("ping")).toEqual(["ping-v1"]);
     await server.stop();
@@ -231,7 +234,9 @@ describe("dev server", () => {
     const server = createDevServer(await loadProject(root, io.env), io);
     await server.start();
     await server.apply([path.join(root, "app/commands/ping/command.ts")]);
-    expect(err).toEqual(["Commands are not registered: add dev.guilds to nect.config.js."]);
+    expect(err).toHaveLength(1);
+    expect(err[0]).toContain("▲ Commands are not registered anywhere yet.");
+    expect(err[0]).toContain("dev.guilds in nect.config.js");
     await server.stop();
   });
 });

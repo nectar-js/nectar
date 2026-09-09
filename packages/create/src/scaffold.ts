@@ -19,17 +19,25 @@ export function detectPackageManager(userAgent: string | undefined): PackageMana
   return PACKAGE_MANAGERS.includes(name as PackageManager) ? (name as PackageManager) : "npm";
 }
 
-export function nextSteps(directory: string, { packageManager }: ScaffoldOptions): string {
+type Style = (format: "bold" | "green" | "dim" | "cyan", text: string) => string;
+
+export function nextSteps(
+  directory: string,
+  { packageManager }: ScaffoldOptions,
+  style: Style = (_format, text) => text,
+): string {
   const run = packageManager === "npm" ? "npm run" : packageManager;
+  const step = (command: string, note = "") =>
+    `  ${style("cyan", command)}${note === "" ? "" : `  ${style("dim", note)}`}`;
   return [
-    "Next:",
-    `  cd ${directory}`,
-    `  ${packageManager} install`,
-    "  cp .env.example .env    then fill in DISCORD_TOKEN and DISCORD_APPLICATION_ID",
-    "  add your test server's ID to dev.guilds in the config",
-    `  ${run} dev`,
+    style("bold", "Next:"),
+    step(`cd ${directory}`),
+    step(`${packageManager} install`),
+    step("cp .env.example .env", "then fill in DISCORD_TOKEN and DISCORD_APPLICATION_ID"),
+    `  ${style("dim", "add your test server's ID to dev.guilds in the config")}`,
+    step(`${run} dev`),
     "",
-    "Tokens and IDs live in the Developer Portal: https://discord.com/developers/applications",
+    `${style("dim", "Tokens and IDs live in the Developer Portal:")} https://discord.com/developers/applications`,
   ].join("\n");
 }
 

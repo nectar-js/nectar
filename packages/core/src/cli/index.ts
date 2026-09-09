@@ -9,9 +9,11 @@ import { describe } from "./project.js";
 import { routes } from "./routes.js";
 import { start } from "./start.js";
 import { sync } from "./sync.js";
+import { block, c, fail, indent } from "./ui.js";
 
 export type { CliIo } from "./io.js";
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./io.js";
+export { setColors } from "./ui.js";
 
 interface Command {
   usage: string;
@@ -91,8 +93,11 @@ export async function run(argv: string[], io: CliIo): Promise<number> {
   }
   const command = COMMANDS[name];
   if (command === undefined) {
-    io.err(`Unknown command "${name}".`);
-    io.err(help());
+    io.err(
+      block(fail(`Unknown command ${c.bold(`"${name}"`)}.`), [
+        `Run ${c.bold("nect --help")} to see the commands.`,
+      ]),
+    );
     return EXIT_USAGE;
   }
 
@@ -111,7 +116,8 @@ export async function run(argv: string[], io: CliIo): Promise<number> {
     });
     flags = parsed.values;
   } catch (error) {
-    io.err(describe(error));
+    io.err(fail(describe(error)));
+    io.err("");
     io.err(commandHelp(command));
     return EXIT_USAGE;
   }
@@ -124,39 +130,53 @@ export async function run(argv: string[], io: CliIo): Promise<number> {
     return await command.run(io, flags);
   } catch (error) {
     if (error instanceof CliError) {
-      io.err(error.message);
+      io.err(block(fail(error.message), error.details));
       return error.code;
     }
-    io.err(error instanceof Error ? (error.stack ?? error.message) : String(error));
+    io.err(
+      block(fail("Something went wrong inside Nect."), [
+        "This is a bug in Nect, not in your app. The details:",
+        "",
+        ...(error instanceof Error ? (error.stack ?? error.message) : String(error))
+          .split("\n")
+          .map((line) => c.dim(line)),
+      ]),
+    );
     return EXIT_FAILURE;
   }
 }
 
 function help(): string {
-  const width = Math.max(...Object.values(COMMANDS).map((c) => c.usage.length));
+  const width = Math.max(...Object.values(COMMANDS).map((cmd) => cmd.usage.length));
   return [
-    `nect ${version}`,
+    `${c.bold("nect")} ${c.dim(`v${version}`)}  A filesystem-based meta-framework for discord.js.`,
     "",
-    "Usage: nect <command> [options]",
+    `${c.bold("Usage:")} nect <command> [options]`,
     "",
-    "Commands:",
-    ...Object.values(COMMANDS).map((c) => `  ${c.usage.padEnd(width)}  ${c.description}`),
+    c.bold("Commands:"),
+    ...Object.values(COMMANDS).map(
+      (cmd) => `  ${c.cyan(cmd.usage.padEnd(width))}  ${c.dim(cmd.description)}`,
+    ),
     "",
-    "Options:",
-    "  --help, -h     Show help for nect or a command.",
-    "  --version, -v  Print the version.",
+    c.bold("Options:"),
+    `  ${c.cyan("--help, -h".padEnd(width))}  ${c.dim("Show help for nect or a command.")}`,
+    `  ${c.cyan("--version, -v".padEnd(width))}  ${c.dim("Print the version.")}`,
   ].join("\n");
 }
 
 function commandHelp(command: Command): string {
   const options = Object.entries(command.options ?? {});
-  const lines = [`Usage: nect ${command.usage}`, "", command.description];
+  const lines = [`${c.bold("Usage:")} nect ${command.usage}`, "", command.description];
   if (options.length > 0) {
     const width = Math.max(...options.map(([key]) => key.length));
     lines.push(
       "",
-      "Options:",
-      ...options.map(([key, opt]) => `  --${key.padEnd(width)}  ${opt.description}`),
+      c.bold("Options:"),
+      ...indent(
+        options.map(
+          ([key, opt]) => `${c.cyan(`--${key.padEnd(width)}`)}  ${c.dim(opt.description)}`,
+        ),
+      ),
     );
   }
   return lines.join("\n");

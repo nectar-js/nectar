@@ -73,7 +73,7 @@ describe("nect check", () => {
     const result = await nect(["check"], basic);
     expect(result.code).toBe(0);
     expect(result.err).toBe("");
-    expect(result.out).toBe("No problems. 3 commands, 4 component routes, 2 events in app/.");
+    expect(result.out).toBe("✔ No problems. 3 commands, 4 component routes, 2 events in app/.");
   });
 
   test("reports diagnostics with file and code, writes nothing", async () => {
@@ -83,7 +83,7 @@ describe("nect check", () => {
     });
     const result = await nect(["check"], root);
     expect(result.code).toBe(1);
-    expect(result.err).toMatch(/^error\[[a-z-]+\] app\/commands\/Bad Name/m);
+    expect(result.err).toMatch(/^✖ error {2}[a-z-]+ {2}app\/commands\/Bad Name/m);
     expect(result.err).toContain("1 error.");
     expect(existsSync(path.join(root, ".nect"))).toBe(false);
   });
@@ -196,6 +196,7 @@ describe("nect sync", () => {
     const noToken = await nect(["sync"], root, { env: { DISCORD_APPLICATION_ID: "app" } });
     expect(noToken.code).toBe(1);
     expect(noToken.err).toContain("DISCORD_TOKEN is not set");
+    expect(noToken.err).toContain("https://discord.com/developers/applications");
 
     const noTarget = await nect(["sync"], makeProject({ "commands/ping/command.ts": ping }), {
       env: creds,
@@ -211,12 +212,12 @@ describe("nect sync", () => {
 
     const first = await nect(["sync"], root, io);
     expect(first.code).toBe(0);
-    expect(first.out).toBe("guild:1: +ping (applied).");
+    expect(first.out).toBe("✔ guild:1: +ping (applied)");
     expect(rest.put).toHaveBeenCalledTimes(1);
     expect(existsSync(path.join(root, ".nect/registration.json"))).toBe(true);
 
     const second = await nect(["sync"], root, io);
-    expect(second.out).toBe("guild:1: unchanged since last sync.");
+    expect(second.out).toBe("✔ guild:1: unchanged since last sync.");
     expect(rest.get).toHaveBeenCalledTimes(1);
     expect(rest.put).toHaveBeenCalledTimes(1);
   });
@@ -228,7 +229,7 @@ describe("nect sync", () => {
 
     const dry = await nect(["sync", "--dry-run"], root, io);
     expect(dry.code).toBe(0);
-    expect(dry.out).toBe("guild:1: +ping (would apply).");
+    expect(dry.out).toBe("› guild:1: +ping (would apply)");
     expect(rest.put).not.toHaveBeenCalled();
 
     await nect(["sync"], root, io);
@@ -240,8 +241,8 @@ describe("nect sync", () => {
 
     const forced = await nect(["sync", "--force"], root, io);
     expect(forced.code).toBe(0);
-    expect(forced.out).toBe("guild:1: -ping (applied).");
-    expect(forced.err).toContain("Forced past:");
+    expect(forced.out).toBe("✔ guild:1: -ping (applied)");
+    expect(forced.err).toContain("Forced past the safety guard");
   });
 
   test("production goes to commands.target", async () => {
@@ -262,12 +263,14 @@ describe("nect start", () => {
     const root = makeProject({ "commands/ping/command.ts": ping });
     const noBuild = await nect(["start"], root, { env: { DISCORD_TOKEN: "t" } });
     expect(noBuild.code).toBe(1);
-    expect(noBuild.err).toContain(".nect/manifest.json not found. Run nect build first.");
+    expect(noBuild.err).toContain(".nect/manifest.json not found.");
+    expect(noBuild.err).toContain("nect build");
 
     await nect(["build"], root);
     const noToken = await nect(["start"], root);
     expect(noToken.code).toBe(1);
     expect(noToken.err).toContain("DISCORD_TOKEN is not set");
+    expect(noToken.err).toContain("https://discord.com/developers/applications");
   });
 });
 
@@ -277,7 +280,7 @@ describe("nect clean", () => {
     await nect(["build"], root);
     expect(existsSync(path.join(root, ".nect"))).toBe(true);
     const first = await nect(["clean"], root);
-    expect(first.out).toBe("Removed .nect/");
+    expect(first.out).toBe("✔ Removed .nect/");
     expect(existsSync(path.join(root, ".nect"))).toBe(false);
     const second = await nect(["clean"], root);
     expect(second.code).toBe(0);

@@ -9,9 +9,11 @@ import {
   describeScope,
   projectConfigName,
   registerCommands,
+  registrationHint,
   requireEnv,
   TOKEN_VAR,
 } from "../cli/sync.js";
+import { block, c, credentialHint, fail, indent, info, ok, stamp, warn } from "../cli/ui.js";
 import type { RouteGraph } from "../compiler/graph.js";
 import { enableModuleReloading, invalidateModuleGraph } from "../compiler/load.js";
 import { type Manifest, toManifest, writeManifest } from "../manifest/index.js";
@@ -54,22 +56,26 @@ export function createDevServer(
   let manifest: Manifest | null = null;
   let runtime: Runtime | null = null;
   let token = "";
+  let started = false;
   const warned = new Set<string>();
+
+  /** Lines printed while the server is running carry a timestamp; startup lines do not. */
+  const say = (line: string) => io.out(started ? `${stamp()} ${line}` : line);
+  const complain = (line: string) => io.err(started ? `${stamp()} ${line}` : line);
 
   const logger: Logger = {
     error(message, error) {
-      io.err(message);
-      if (error !== undefined) {
-        io.err(error instanceof Error ? (error.stack ?? error.message) : String(error));
-      }
+      const [head = "", ...rest] = message.split("\n");
+      const stack = error === undefined ? [] : describeError(error);
+      complain(block(fail(c.bold(head)), [...rest.map((l) => l.trimStart()), ...stack]));
     },
-    warn: (message) => io.err(message),
+    warn: (message) => complain(warn(message)),
   };
 
-  function warnOnce(message: string): void {
-    if (warned.has(message)) return;
-    warned.add(message);
-    io.err(message);
+  function warnOnce(head: string, details: string[] = []): void {
+    if (warned.has(head)) return;
+    warned.add(head);
+    complain(block(warn(head), details));
   }
 
   function emit(graph: RouteGraph): Manifest {
@@ -81,22 +87,28 @@ export function createDevServer(
 
   async function register(graph: RouteGraph): Promise<void> {
     if (registrationScopes(current.config, current.env).length === 0) {
-      warnOnce(`Commands are not registered: add dev.guilds to ${projectConfigName(current)}.`);
+      warnOnce("Commands are not registered anywhere yet.", registrationHint(current));
       return;
     }
     if (!io.env[APPLICATION_ID_VAR]) {
-      warnOnce(`Commands are not registered: ${APPLICATION_ID_VAR} is not set.`);
+      warnOnce(
+        `Commands are not registered: ${APPLICATION_ID_VAR} is not set.`,
+        credentialHint(APPLICATION_ID_VAR),
+      );
       return;
     }
     try {
       const result = await registerCommands(current, graph, io);
       for (const scope of result.scopes) {
-        if (scope.diff !== null || verbose) io.out(describeScope(scope));
+        if (scope.diff !== null || verbose) say(describeScope(scope));
       }
     } catch (error) {
       if (!(error instanceof CliError)) throw error;
-      io.err(
-        error.message.replace("Pass force to do it anyway.", "Run nect sync --force to do it."),
+      complain(
+        block(
+          fail(error.message),
+          error.details.map((line) => line.replace("run again with", "run nect sync with")),
+        ),
       );
     }
   }
@@ -117,25 +129,27 @@ export function createDevServer(
   }
 
   function watchConnection(client: Client): void {
-    client.once(Events.ClientReady, (ready) => io.out(`Logged in as ${ready.user.tag}.`));
+    client.once(Events.ClientReady, (ready) => say(ok(`Logged in as ${c.bold(ready.user.tag)}.`)));
     client.on(Events.ShardDisconnect, (event) => {
-      io.err(`Disconnected from the gateway (code ${event.code}).`);
+      complain(warn(`Disconnected from the gateway ${c.dim(`(code ${event.code})`)}.`));
     });
-    client.on(Events.ShardReconnecting, () => io.out("Reconnecting to the gateway."));
-    client.on(Events.ShardResume, () => io.out("Gateway connection resumed."));
-    client.on(Events.Error, (error) => io.err(`Gateway error: ${error.message}`));
-    if (verbose) client.on(Events.Warn, (message) => io.err(`discord.js: ${message}`));
+    client.on(Events.ShardReconnecting, () => say(info("Reconnecting to the gateway.")));
+    client.on(Events.ShardResume, () => say(ok("Gateway connection resumed.")));
+    client.on(Events.Error, (error) => complain(fail(`Gateway error: ${error.message}`)));
+    if (verbose) client.on(Events.Warn, (message) => complain(warn(`discord.js: ${message}`)));
   }
 
   /** Full start: compile, write output, print routes, register, run. */
   async function boot(): Promise<void> {
     const graph = await compileProject(current, io);
     if (graph === null) {
-      io.err("Waiting for changes.");
+      complain(warn("Waiting for changes."));
       return;
     }
     manifest = emit(graph);
-    io.out(verbose ? renderRoutes(graph, current.root) : `${summary(graph)} in ${appLabel()}.`);
+    say(ok(`${summary(graph)} in ${c.bold(appLabel())}`));
+    if (verbose)
+      for (const line of indent(renderRoutes(graph, current.root).split("\n"))) say(line);
     await register(graph);
     await launch();
   }
@@ -153,11 +167,11 @@ export function createDevServer(
       current = await loadProject(io.cwd, io.env);
     } catch (error) {
       if (!(error instanceof CliError)) throw error;
-      io.err(error.message);
-      io.err("Waiting for changes.");
+      complain(block(fail(error.message), error.details));
+      complain(warn("Waiting for changes."));
       return;
     }
-    io.out(`Restarting with the new ${projectConfigName(current)}.`);
+    say(info(`Restarting with the new ${c.bold(projectConfigName(current))}.`));
     await boot();
   }
 
@@ -168,10 +182,12 @@ export function createDevServer(
     for (const result of results) {
       if (result.status === "fulfilled") continue;
       const error: unknown = result.reason;
-      io.err(
+      complain(
         error instanceof HandlerLoadError
-          ? `${relative(current.root, error.file)}: ${error.detail}`
-          : String(error),
+          ? block(fail(`${c.bold(relative(current.root, error.file))} failed to load.`), [
+              error.detail,
+            ])
+          : fail(String(error)),
       );
     }
   }
@@ -185,6 +201,7 @@ export function createDevServer(
       token = requireEnv(io, TOKEN_VAR);
       enableModuleReloading(current.root);
       await boot();
+      started = true;
     },
 
     async apply(files) {
@@ -192,7 +209,8 @@ export function createDevServer(
       const changed = files.filter((file) => kinds.get(file) !== "ignored");
       if (changed.length === 0) return;
       for (const file of changed) {
-        io.out(`${existsSync(file) ? "~" : "-"} ${relative(current.root, file)}`);
+        const gone = !existsSync(file);
+        say(`${gone ? c.red("-") : c.yellow("~")} ${relative(current.root, file)}`);
       }
 
       if (changed.some((file) => kinds.get(file) === "config")) {
@@ -209,7 +227,7 @@ export function createDevServer(
 
       const graph = await compileProject(current, io);
       if (graph === null) {
-        io.err("Keeping the previous routes until this is fixed.");
+        complain(warn("Keeping the previous routes until this is fixed."));
         return;
       }
       const next = toManifest(graph, current.outDir);
@@ -218,8 +236,10 @@ export function createDevServer(
       if (delta.structure || delta.commands) manifest = emit(graph);
       if (delta.structure) {
         runtime.update(manifest);
-        done.push(`routes rebuilt (${summary(graph)})`);
-        if (verbose) io.out(renderRoutes(graph, current.root));
+        done.push(`routes rebuilt ${c.dim(`(${summary(graph)})`)}`);
+        if (verbose) {
+          for (const line of indent(renderRoutes(graph, current.root).split("\n"))) say(line);
+        }
       }
       if (delta.commands) await register(graph);
 
@@ -232,7 +252,7 @@ export function createDevServer(
         done.push(`${stale.length} handler module${stale.length === 1 ? "" : "s"} reloaded`);
       }
 
-      io.out(done.length === 0 ? "Nothing to reload." : `${capitalize(done.join(", "))}.`);
+      say(done.length === 0 ? info("Nothing to reload.") : ok(`${capitalize(done.join(", "))}.`));
     },
 
     stop: stopRuntime,
@@ -241,4 +261,9 @@ export function createDevServer(
 
 function capitalize(text: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function describeError(error: unknown): string[] {
+  const text = error instanceof Error ? (error.stack ?? error.message) : String(error);
+  return text.split("\n").map((line) => c.dim(line));
 }

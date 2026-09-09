@@ -4,6 +4,7 @@ import { writeTypes } from "../typegen/index.js";
 import { compileProject, relative, summary } from "./compile.js";
 import { type CliIo, EXIT_FAILURE, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
+import { c, ok, warn } from "./ui.js";
 
 /** `nect build`: compile, then write the manifest and generated types into `outDir`. */
 export async function build(io: CliIo): Promise<number> {
@@ -13,9 +14,9 @@ export async function build(io: CliIo): Promise<number> {
 
   const manifestFile = writeManifest(toManifest(graph, project.outDir), project.outDir);
   const typesFile = writeTypes(graph, project.outDir);
-  io.out(`Built ${summary(graph)}.`);
-  io.out(`  ${relative(project.root, manifestFile)}`);
-  io.out(`  ${relative(project.root, typesFile)}`);
+  io.out(ok(`Built ${summary(graph)}.`));
+  io.out(`  ${c.dim(relative(project.root, manifestFile))}`);
+  io.out(`  ${c.dim(relative(project.root, typesFile))}`);
   return EXIT_OK;
 }
 
@@ -27,8 +28,10 @@ export async function check(io: CliIo): Promise<number> {
   const warnings = graph.diagnostics.items.length;
   io.out(
     warnings === 0
-      ? `No problems. ${summary(graph)} in ${path.relative(project.root, project.appDir) || "."}/.`
-      : `${warnings} warning${warnings === 1 ? "" : "s"}, no errors.`,
+      ? ok(
+          `No problems. ${summary(graph)} in ${path.relative(project.root, project.appDir) || "."}/.`,
+        )
+      : warn(`${warnings} warning${warnings === 1 ? "" : "s"}, no errors.`),
   );
   return EXIT_OK;
 }

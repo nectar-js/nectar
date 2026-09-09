@@ -22,9 +22,9 @@ export async function manifest(io: CliIo, route: string | undefined): Promise<nu
   const matches = compiled.routes.filter((r) => r.id === route || r.path === route);
   if (matches.length === 0) {
     const known = [...new Set(compiled.routes.map((r) => r.id))].sort();
-    throw new CliError(
-      `No route "${route}". Known routes:\n${known.map((id) => `  ${id}`).join("\n")}`,
-    );
+    throw new CliError(`No route "${route}".`, {
+      details: ["Known routes:", ...known.map((id) => `  ${id}`)],
+    });
   }
   io.out(stableStringify(matches.map((r) => describeRoute(r, compiled))));
   return EXIT_OK;

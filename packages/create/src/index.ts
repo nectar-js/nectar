@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import path from "node:path";
 import { createInterface } from "node:readline/promises";
-import { parseArgs } from "node:util";
+import { parseArgs, styleText } from "node:util";
 import {
   detectPackageManager,
   type Language,
@@ -19,6 +19,10 @@ Options:
   --pm <name>       Package manager: npm, pnpm, yarn, or bun. Detected from the one running this.
   --yes, -y         Take the defaults instead of asking.
   --help, -h        Show this help.`;
+
+const colors = process.stdout.isTTY === true && !process.env.NO_COLOR;
+const style = (format: "bold" | "green" | "dim" | "cyan", text: string): string =>
+  colors ? styleText(format, text) : text;
 
 async function main(argv: string[]): Promise<number> {
   let values: Record<string, string | boolean | undefined>;
@@ -102,8 +106,10 @@ async function main(argv: string[]): Promise<number> {
       return 1;
     }
 
-    console.log(`\nCreated ${name} with ${files.length} files.\n`);
-    console.log(nextSteps(directory, options));
+    console.log(
+      `\n${style("green", "✔")} Created ${style("bold", name)} with ${files.length} files.\n`,
+    );
+    console.log(nextSteps(directory, options, style));
     return 0;
   } finally {
     rl?.close();
