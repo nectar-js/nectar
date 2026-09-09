@@ -117,7 +117,7 @@ async function run(
           );
     await runChain(middleware, ctx, handler);
   } catch (error) {
-    await handleError(error, ctx, files.errors, state.modules, state.logger);
+    await handleError(error, ctx, files.errors, state.modules, state.logger, files.middleware);
     if (autocompleteOption !== undefined)
       await closeAutocomplete(interaction as AutocompleteInteraction);
   }

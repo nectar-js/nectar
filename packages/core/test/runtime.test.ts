@@ -302,6 +302,29 @@ describe("error boundaries", () => {
     expect(logger.error).toHaveBeenCalledTimes(2);
   });
 
+  test("in development the default boundary reports route, file, interaction, and middleware", async () => {
+    const { state, logger } = await setup({
+      "middleware.ts": "export default async function (ctx, next) { return next(); }\n",
+      "commands/mod/route.ts": 'export const meta = { description: "d" };\n',
+      "commands/mod/middleware.ts":
+        "export default async function (ctx, next) { return next(); }\n",
+      "commands/mod/ban/command.ts": cmd('{ description: "d" }', 'throw new Error("nope")'),
+    });
+    state.env = "development";
+    await createInteractionDispatcher(state)(
+      chatInput("mod", null, "ban", { guildId: "g1", channelId: "c1", user: { id: "u1" } }),
+    );
+    const [message, error] = logger.error.mock.calls[0] ?? [];
+    expect(error).toMatchObject({ message: "nope" });
+    const lines = String(message).split("\n");
+    expect(lines[0]).toBe("Unhandled error in command:mod/ban");
+    expect(lines[1]).toMatch(/^ {2}file {9}.*commands[\\/]mod[\\/]ban[\\/]command\.ts$/);
+    expect(lines[2]).toBe("  interaction  /mod ban (guild g1, channel c1, user u1)");
+    expect(lines[3]).toMatch(/^ {2}middleware {3}.*middleware\.ts$/);
+    expect(lines[4]).toMatch(/^ {15}.*commands[\\/]mod[\\/]middleware\.ts$/);
+    expect(lines).toHaveLength(5);
+  });
+
   test("a handler that is not a function is reported through the boundaries", async () => {
     const { state, logger } = await setup({
       "commands/bad/command.ts": 'export const meta = { description: "d" };\nexport default 42;\n',
