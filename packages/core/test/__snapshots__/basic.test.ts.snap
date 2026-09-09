@@ -1,5 +1,111 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`examples/basic command payloads 1`] = `
+[
+  {
+    "handlers": {
+      "ban": "command:moderation/ban",
+      "kick": "command:moderation/kick",
+    },
+    "name": "moderation",
+    "payload": {
+      "default_member_permissions": "1099511627776",
+      "description": "Moderation tools",
+      "name": "moderation",
+      "options": [
+        {
+          "description": "Ban a member",
+          "name": "ban",
+          "options": [
+            {
+              "description": "Who to ban",
+              "name": "target",
+              "required": true,
+              "type": 6,
+            },
+            {
+              "description": "Why",
+              "max_length": 512,
+              "name": "reason",
+              "type": 3,
+            },
+            {
+              "description": "Days of messages to delete",
+              "max_value": 7,
+              "min_value": 0,
+              "name": "days",
+              "type": 4,
+            },
+          ],
+          "type": 1,
+        },
+        {
+          "description": "Kick a member",
+          "name": "kick",
+          "options": [
+            {
+              "description": "Who to kick",
+              "name": "target",
+              "required": true,
+              "type": 6,
+            },
+            {
+              "description": "Why",
+              "name": "reason",
+              "type": 3,
+            },
+          ],
+          "type": 1,
+        },
+      ],
+      "type": 1,
+    },
+  },
+  {
+    "handlers": {
+      "": "command:ping",
+    },
+    "name": "ping",
+    "payload": {
+      "description": "Check that the bot is alive",
+      "name": "ping",
+      "type": 1,
+    },
+  },
+  {
+    "handlers": {
+      "profile": "command:user/profile",
+    },
+    "name": "user",
+    "payload": {
+      "description": "User utilities",
+      "name": "user",
+      "options": [
+        {
+          "description": "Show a profile",
+          "name": "profile",
+          "options": [
+            {
+              "description": "Who to look up",
+              "name": "target",
+              "type": 6,
+            },
+            {
+              "autocomplete": true,
+              "description": "Which section to show",
+              "name": "section",
+              "type": 3,
+            },
+          ],
+          "type": 1,
+        },
+      ],
+      "type": 1,
+    },
+  },
+]
+`;
+
 exports[`examples/basic route table 1`] = `
 {
   "boundaries": [
@@ -10,6 +116,28 @@ exports[`examples/basic route table 1`] = `
       "segments": [
         {
           "name": "moderation",
+          "type": "static",
+        },
+      ],
+    },
+    {
+      "category": "command",
+      "file": "commands/moderation/route.ts",
+      "kind": "route",
+      "segments": [
+        {
+          "name": "moderation",
+          "type": "static",
+        },
+      ],
+    },
+    {
+      "category": "command",
+      "file": "commands/user/route.ts",
+      "kind": "route",
+      "segments": [
+        {
+          "name": "user",
           "type": "static",
         },
       ],

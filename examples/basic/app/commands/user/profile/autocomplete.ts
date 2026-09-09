@@ -1,3 +1,3 @@
-export async function target() {
+export async function section() {
   return [];
 }
