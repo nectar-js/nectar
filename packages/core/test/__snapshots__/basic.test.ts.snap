@@ -1,0 +1,278 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`examples/basic route table 1`] = `
+{
+  "boundaries": [
+    {
+      "category": "command",
+      "file": "commands/moderation/middleware.ts",
+      "kind": "middleware",
+      "segments": [
+        {
+          "name": "moderation",
+          "type": "static",
+        },
+      ],
+    },
+    {
+      "category": null,
+      "file": "error.ts",
+      "kind": "error",
+      "segments": [],
+    },
+    {
+      "category": null,
+      "file": "middleware.ts",
+      "kind": "middleware",
+      "segments": [],
+    },
+  ],
+  "diagnostics": [],
+  "routes": [
+    {
+      "category": "command",
+      "file": "commands/moderation/ban/command.ts",
+      "id": "command:moderation/ban",
+      "kind": "command",
+      "params": [],
+      "path": "moderation/ban",
+      "segments": [
+        {
+          "name": "moderation",
+          "type": "static",
+        },
+        {
+          "name": "ban",
+          "type": "static",
+        },
+      ],
+      "shortId": "1qy99y",
+    },
+    {
+      "category": "command",
+      "file": "commands/moderation/kick/command.ts",
+      "id": "command:moderation/kick",
+      "kind": "command",
+      "params": [],
+      "path": "moderation/kick",
+      "segments": [
+        {
+          "name": "moderation",
+          "type": "static",
+        },
+        {
+          "name": "kick",
+          "type": "static",
+        },
+      ],
+      "shortId": "snukfs",
+    },
+    {
+      "category": "command",
+      "file": "commands/ping/command.ts",
+      "id": "command:ping",
+      "kind": "command",
+      "params": [],
+      "path": "ping",
+      "segments": [
+        {
+          "name": "ping",
+          "type": "static",
+        },
+      ],
+      "shortId": "3384xw",
+    },
+    {
+      "category": "command",
+      "file": "commands/user/profile/autocomplete.ts",
+      "id": "command:user/profile",
+      "kind": "autocomplete",
+      "params": [],
+      "path": "user/profile",
+      "segments": [
+        {
+          "name": "user",
+          "type": "static",
+        },
+        {
+          "name": "profile",
+          "type": "static",
+        },
+      ],
+      "shortId": "352ode",
+    },
+    {
+      "category": "command",
+      "file": "commands/user/profile/command.ts",
+      "id": "command:user/profile",
+      "kind": "command",
+      "params": [],
+      "path": "user/profile",
+      "segments": [
+        {
+          "name": "user",
+          "type": "static",
+        },
+        {
+          "name": "profile",
+          "type": "static",
+        },
+      ],
+      "shortId": "352ode",
+    },
+    {
+      "category": "component",
+      "file": "components/pagination/[page]/next/button.ts",
+      "id": "component:pagination/[page]/next",
+      "kind": "button",
+      "params": [
+        "page",
+      ],
+      "path": "pagination/[page]/next",
+      "segments": [
+        {
+          "name": "pagination",
+          "type": "static",
+        },
+        {
+          "name": "page",
+          "type": "dynamic",
+        },
+        {
+          "name": "next",
+          "type": "static",
+        },
+      ],
+      "shortId": "1w74m6",
+    },
+    {
+      "category": "component",
+      "file": "components/pagination/[page]/prev/button.ts",
+      "id": "component:pagination/[page]/prev",
+      "kind": "button",
+      "params": [
+        "page",
+      ],
+      "path": "pagination/[page]/prev",
+      "segments": [
+        {
+          "name": "pagination",
+          "type": "static",
+        },
+        {
+          "name": "page",
+          "type": "dynamic",
+        },
+        {
+          "name": "prev",
+          "type": "static",
+        },
+      ],
+      "shortId": "1n652h",
+    },
+    {
+      "category": "component",
+      "file": "components/tickets/[ticketId]/assign/select.ts",
+      "id": "component:tickets/[ticketId]/assign",
+      "kind": "select",
+      "params": [
+        "ticketId",
+      ],
+      "path": "tickets/[ticketId]/assign",
+      "segments": [
+        {
+          "name": "tickets",
+          "type": "static",
+        },
+        {
+          "name": "ticketId",
+          "type": "dynamic",
+        },
+        {
+          "name": "assign",
+          "type": "static",
+        },
+      ],
+      "shortId": "1x540s",
+    },
+    {
+      "category": "component",
+      "file": "components/tickets/[ticketId]/close/button.ts",
+      "id": "component:tickets/[ticketId]/close",
+      "kind": "button",
+      "params": [
+        "ticketId",
+      ],
+      "path": "tickets/[ticketId]/close",
+      "segments": [
+        {
+          "name": "tickets",
+          "type": "static",
+        },
+        {
+          "name": "ticketId",
+          "type": "dynamic",
+        },
+        {
+          "name": "close",
+          "type": "static",
+        },
+      ],
+      "shortId": "31imou",
+    },
+    {
+      "category": "event",
+      "file": "events/guildMemberAdd/(audit)/event.ts",
+      "id": "event:guildMemberAdd/(audit)",
+      "kind": "event",
+      "params": [],
+      "path": "guildMemberAdd/(audit)",
+      "segments": [
+        {
+          "name": "guildMemberAdd",
+          "type": "static",
+        },
+        {
+          "name": "audit",
+          "type": "group",
+        },
+      ],
+      "shortId": "3k8vpf",
+    },
+    {
+      "category": "event",
+      "file": "events/guildMemberAdd/(welcome)/event.ts",
+      "id": "event:guildMemberAdd/(welcome)",
+      "kind": "event",
+      "params": [],
+      "path": "guildMemberAdd/(welcome)",
+      "segments": [
+        {
+          "name": "guildMemberAdd",
+          "type": "static",
+        },
+        {
+          "name": "welcome",
+          "type": "group",
+        },
+      ],
+      "shortId": "3oqz5i",
+    },
+    {
+      "category": "event",
+      "file": "events/ready/event.ts",
+      "id": "event:ready",
+      "kind": "event",
+      "params": [],
+      "path": "ready",
+      "segments": [
+        {
+          "name": "ready",
+          "type": "static",
+        },
+      ],
+      "shortId": "8ahax2",
+    },
+  ],
+}
+`;
