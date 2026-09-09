@@ -6,11 +6,7 @@ Scaffolds a new [Nect](https://github.com/OMouta/Neat) project.
 npm create @nect-js
 ```
 
-It asks for a directory, TypeScript or JavaScript, and a package manager, then writes a project you can read in one sitting: a `/ping` command, a button with a route parameter, a ready event, root middleware, and the config.
-
-Copy `.env.example` to `.env`, fill in `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID` from the [Developer Portal](https://discord.com/developers/applications), add your test server's ID to `dev.guilds` in `nect.config.ts`, and run `npm run dev`.
-
-## Options
+Asks for a directory, TypeScript or JavaScript, and a package manager, then prints the steps to get the bot running.
 
 ```
 npm create @nect-js [directory] [options]
@@ -20,8 +16,6 @@ npm create @nect-js [directory] [options]
   --yes, -y         Take the defaults instead of asking.
   --help, -h        Show this help.
 ```
-
-Non-interactive runs take the defaults, so `npm create @nect-js my-bot --ts -y` works in a script.
 
 ## License
 
