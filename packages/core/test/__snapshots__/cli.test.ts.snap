@@ -1,0 +1,31 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`neat routes > examples/basic tree 1`] = `
+"app
+├── error.ts               error boundary for 12 routes
+├── middleware.ts          middleware for 12 routes
+├── commands
+│   ├── moderation
+│   │   ├── middleware.ts  middleware for 2 routes
+│   │   ├── route.ts       command metadata
+│   │   ├── ban            /moderation ban
+│   │   └── kick           /moderation kick
+│   ├── ping               /ping
+│   └── user
+│       ├── route.ts       command metadata
+│       └── profile        /user profile · autocomplete: section
+├── components
+│   ├── pagination
+│   │   └── [page]
+│   │       ├── next       button n:1w74m6:<page>
+│   │       └── prev       button n:1n652h:<page>
+│   └── tickets
+│       └── [ticketId]
+│           ├── assign     select (user) n:1x540s:<ticketId>
+│           └── close      button n:31imou:<ticketId>
+└── events
+    ├── clientReady        event clientReady
+    └── guildMemberAdd
+        ├── (audit)        event guildMemberAdd (sequential)
+        └── (welcome)      event guildMemberAdd (sequential)"
+`;

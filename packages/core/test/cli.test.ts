@@ -125,3 +125,55 @@ describe("neat build", () => {
     expect(existsSync(path.join(root, ".neat"))).toBe(false);
   });
 });
+
+describe("neat routes", () => {
+  test("examples/basic tree", async () => {
+    const result = await neat(["routes"], basic);
+    expect(result.code).toBe(0);
+    expect(result.out).toMatchSnapshot();
+  });
+});
+
+describe("neat manifest", () => {
+  test("prints the manifest", async () => {
+    const result = await neat(["manifest"], basic);
+    expect(result.code).toBe(0);
+    const parsed = JSON.parse(result.out);
+    expect(parsed.version).toBe(1);
+    expect(parsed.commands.map((c: { name: string }) => c.name)).toEqual([
+      "moderation",
+      "ping",
+      "user",
+    ]);
+  });
+
+  test("--route answers the ownership questions", async () => {
+    const ban = await neat(["manifest", "--route", "command:moderation/ban"], basic);
+    expect(ban.code).toBe(0);
+    const [detail] = JSON.parse(ban.out);
+    expect(detail.file).toBe("commands/moderation/ban/command.ts");
+    expect(detail.middleware).toEqual(["middleware.ts", "commands/moderation/middleware.ts"]);
+    expect(detail.errors).toEqual(["error.ts"]);
+    expect(detail.command).toMatchObject({ name: "moderation", position: "ban" });
+    expect(detail.command.payload.name).toBe("moderation");
+
+    const byPath = await neat(["manifest", "--route", "pagination/[page]/next"], basic);
+    const [button] = JSON.parse(byPath.out);
+    expect(button.customId).toMatch(/^n:[a-z0-9]{6}:<page>$/);
+
+    const both = await neat(["manifest", "--route", "command:user/profile"], basic);
+    const details = JSON.parse(both.out);
+    expect(details.map((d: { kind: string }) => d.kind)).toEqual(["autocomplete", "command"]);
+    expect(details[0].commandRoute).toBe("commands/user/profile/command.ts");
+
+    const event = await neat(["manifest", "--route", "event:guildMemberAdd/(welcome)"], basic);
+    expect(JSON.parse(event.out)[0].eventHandlers.handlers).toHaveLength(2);
+  });
+
+  test("unknown route lists the known ones", async () => {
+    const result = await neat(["manifest", "--route", "nope"], basic);
+    expect(result.code).toBe(1);
+    expect(result.err).toContain('No route "nope"');
+    expect(result.err).toContain("  command:ping");
+  });
+});

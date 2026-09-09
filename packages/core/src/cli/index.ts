@@ -2,7 +2,9 @@ import { parseArgs } from "node:util";
 import { version } from "../version.js";
 import { build, check } from "./build.js";
 import { CliError, type CliIo, EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./io.js";
+import { manifest } from "./manifest.js";
 import { describe } from "./project.js";
+import { routes } from "./routes.js";
 
 export type { CliIo } from "./io.js";
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./io.js";
@@ -24,6 +26,19 @@ const COMMANDS: Record<string, Command> = {
     usage: "check",
     description: "Compile and report problems without writing anything.",
     run: (io) => check(io),
+  },
+  routes: {
+    usage: "routes",
+    description: "Show the app tree: commands, components, events, middleware, error boundaries.",
+    run: (io) => routes(io),
+  },
+  manifest: {
+    usage: "manifest [--route <id>]",
+    description: "Print the compiled manifest, or everything about one route.",
+    options: {
+      route: { type: "string", description: "Route ID or path, e.g. command:moderation/ban." },
+    },
+    run: (io, flags) => manifest(io, flags.route as string | undefined),
   },
 };
 
