@@ -42,6 +42,17 @@ export {
   type Routed,
 } from "./define.js";
 export type { EventMeta, EventMode } from "./events/compile.js";
+export {
+  type CommandDiff,
+  RegistrationError,
+  type RegistrationProblem,
+  type Scope,
+  type ScopeSync,
+  type SyncOptions,
+  type SyncResult,
+  syncCommands,
+  UnsafeSyncError,
+} from "./registration/index.js";
 export type {
   ContextExtension,
   Env,
