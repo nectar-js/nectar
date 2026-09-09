@@ -395,6 +395,21 @@ exports[`examples/basic route table 1`] = `
     },
     {
       "category": "event",
+      "file": "events/clientReady/event.ts",
+      "id": "event:clientReady",
+      "kind": "event",
+      "params": [],
+      "path": "clientReady",
+      "segments": [
+        {
+          "name": "clientReady",
+          "type": "static",
+        },
+      ],
+      "shortId": "3777su",
+    },
+    {
+      "category": "event",
       "file": "events/guildMemberAdd/(audit)/event.ts",
       "id": "event:guildMemberAdd/(audit)",
       "kind": "event",
@@ -430,21 +445,6 @@ exports[`examples/basic route table 1`] = `
         },
       ],
       "shortId": "3oqz5i",
-    },
-    {
-      "category": "event",
-      "file": "events/ready/event.ts",
-      "id": "event:ready",
-      "kind": "event",
-      "params": [],
-      "path": "ready",
-      "segments": [
-        {
-          "name": "ready",
-          "type": "static",
-        },
-      ],
-      "shortId": "8ahax2",
     },
   ],
 }
