@@ -1,3 +1,6 @@
-export default async function (error: unknown) {
-  console.error(error);
-}
+import { defineError } from "@neatjs/core";
+
+export default defineError(async (error, ctx) => {
+  console.error(`[${ctx.route.id}]`, error);
+  return "unhandled";
+});

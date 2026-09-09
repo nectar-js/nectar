@@ -5,5 +5,5 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["app", "neat.config.ts"]
+  "include": ["app", "neat.config.ts", ".neat/types.d.ts"]
 }

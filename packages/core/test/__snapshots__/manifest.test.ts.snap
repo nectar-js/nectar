@@ -119,8 +119,8 @@ exports[`manifest > examples/basic manifest 1`] = `
     },
     {
       "handlers": [
-        "event:guildMemberAdd/(audit)",
         "event:guildMemberAdd/(welcome)",
+        "event:guildMemberAdd/(audit)",
       ],
       "mode": "sequential",
       "name": "guildMemberAdd",
@@ -287,7 +287,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "middleware.ts",
       ],
       "once": false,
-      "order": 0,
+      "order": 1,
       "path": "guildMemberAdd/(audit)",
     },
     {

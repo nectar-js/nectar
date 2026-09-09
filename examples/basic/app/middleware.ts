@@ -1,3 +1,6 @@
-export default async function (_ctx: unknown, next: () => Promise<void>) {
-  return next();
-}
+import { defineMiddleware } from "@neatjs/core";
+
+export default defineMiddleware(async (_ctx, next) => {
+  const startedAt = Date.now();
+  return next({ startedAt });
+});

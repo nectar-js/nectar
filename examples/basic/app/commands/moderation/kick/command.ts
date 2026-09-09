@@ -1,4 +1,4 @@
-import type { CommandMeta } from "@neatjs/core";
+import { type CommandMeta, defineCommand } from "@neatjs/core";
 
 export const meta: CommandMeta = {
   description: "Kick a member",
@@ -8,4 +8,9 @@ export const meta: CommandMeta = {
   ],
 };
 
-export default async function () {}
+export default defineCommand("moderation/kick", async (ctx) => {
+  const target = ctx.interaction.options.getUser("target", true);
+  const reason = ctx.interaction.options.getString("reason") ?? "No reason given";
+  await ctx.interaction.guild?.members.kick(target, reason);
+  await ctx.interaction.reply(`${ctx.member.displayName} kicked ${target.tag}: ${reason}`);
+});
