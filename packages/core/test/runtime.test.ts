@@ -2,6 +2,7 @@ import { EventEmitter } from "node:events";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { Client, Interaction } from "discord.js";
+import { MessageFlags } from "discord-api-types/v10";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildGraph } from "../src/compiler/index.js";
 import { customIdFor } from "../src/components/index.js";
@@ -291,7 +292,7 @@ describe("error boundaries", () => {
     );
     expect((fresh as unknown as { reply: ReturnType<typeof vi.fn> }).reply).toHaveBeenCalledWith({
       content: GENERIC_ERROR_REPLY,
-      ephemeral: true,
+      flags: MessageFlags.Ephemeral,
     });
 
     const answered = chatInput("fail", null, null, { replied: true });
@@ -320,9 +321,10 @@ describe("error boundaries", () => {
     expect(lines[0]).toBe("Unhandled error in command:mod/ban");
     expect(lines[1]).toMatch(/^ {2}file {9}.*commands[\\/]mod[\\/]ban[\\/]command\.ts$/);
     expect(lines[2]).toBe("  interaction  /mod ban (guild g1, channel c1, user u1)");
-    expect(lines[3]).toMatch(/^ {2}middleware {3}.*middleware\.ts$/);
-    expect(lines[4]).toMatch(/^ {15}.*commands[\\/]mod[\\/]middleware\.ts$/);
-    expect(lines).toHaveLength(5);
+    expect(lines[3]).toMatch(/^ {2}elapsed {6}\d+ms since Discord created it$/);
+    expect(lines[4]).toMatch(/^ {2}middleware {3}.*middleware\.ts$/);
+    expect(lines[5]).toMatch(/^ {15}.*commands[\\/]mod[\\/]middleware\.ts$/);
+    expect(lines).toHaveLength(6);
   });
 
   test("a handler that is not a function is reported through the boundaries", async () => {

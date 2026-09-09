@@ -1,4 +1,5 @@
 import type { Interaction } from "discord.js";
+import { MessageFlags } from "discord-api-types/v10";
 import type { ModuleRegistry } from "./modules.js";
 import type { ErrorHandler, EventContext, InteractionContext, Logger } from "./types.js";
 
@@ -53,7 +54,7 @@ async function defaultBoundary(
   if (interaction.replied || interaction.deferred) return;
 
   try {
-    await interaction.reply({ content: GENERIC_ERROR_REPLY, ephemeral: true });
+    await interaction.reply({ content: GENERIC_ERROR_REPLY, flags: MessageFlags.Ephemeral });
   } catch (replyError) {
     logger.error(`Could not send the error reply for ${ctx.route.id}`, replyError);
   }
@@ -67,6 +68,9 @@ function developmentReport(
   const rows: [string, string][] = [["file", ctx.route.file]];
   if ("interaction" in ctx) {
     rows.push(["interaction", describeInteraction(ctx.interaction)]);
+    // Discord gives a handler 3000ms to respond. Far past that means a slow handler or a
+    // second process on the same token that answered first.
+    rows.push(["elapsed", `${ctx.trace.elapsed()}ms since Discord created it`]);
     rows.push([
       "middleware",
       middleware.length === 0 ? "none" : middleware.join(`\n${" ".repeat(15)}`),
@@ -132,5 +136,5 @@ interface RepliableLike {
   isRepliable?: () => boolean;
   replied?: boolean;
   deferred?: boolean;
-  reply: (options: { content: string; ephemeral: boolean }) => Promise<unknown>;
+  reply: (options: { content: string; flags: MessageFlags }) => Promise<unknown>;
 }
