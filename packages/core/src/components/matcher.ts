@@ -1,25 +1,35 @@
-import type { ComponentKind, ComponentRoute } from "./compile.js";
+import type { ComponentKind } from "./compile.js";
 import { decodeCustomId } from "./customId.js";
 
-export type MatchResult =
-  | { ok: true; route: ComponentRoute; params: Record<string, string | string[]> }
+/** What the matcher needs from a route. Both compiled and manifest routes satisfy it. */
+export interface MatchableRoute {
+  kind: ComponentKind;
+  shortId: string;
+  params: string[];
+  catchAll: string | null;
+}
+
+export type MatchResult<Route extends MatchableRoute = MatchableRoute> =
+  | { ok: true; route: Route; params: Record<string, string | string[]> }
   /** The custom ID is not Neat's. Hand-built components should be left alone. */
   | { ok: false; reason: "not-neat" }
   /** The ID carries the Neat prefix but cannot be decoded, names no route, or has the wrong number of values. */
   | { ok: false; reason: "malformed" | "unknown-route" | "param-count" };
 
-export interface ComponentMatcher {
-  match(kind: ComponentKind, customId: string): MatchResult;
+export interface ComponentMatcher<Route extends MatchableRoute = MatchableRoute> {
+  match(kind: ComponentKind, customId: string): MatchResult<Route>;
 }
 
 /**
- * Resolves incoming custom IDs to compiled routes.
+ * Resolves incoming custom IDs to routes.
  *
  * Custom IDs carry the route's short ID, so matching is a direct lookup rather than a pattern
  * scan. The interaction kind is part of the key because a button and a modal may share a path.
  */
-export function createMatcher(routes: readonly ComponentRoute[]): ComponentMatcher {
-  const byId = new Map<string, ComponentRoute>();
+export function createMatcher<Route extends MatchableRoute>(
+  routes: readonly Route[],
+): ComponentMatcher<Route> {
+  const byId = new Map<string, Route>();
   for (const route of routes) byId.set(`${route.kind}:${route.shortId}`, route);
 
   return {
