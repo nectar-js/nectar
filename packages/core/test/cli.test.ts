@@ -1,10 +1,11 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { type CliIo, run } from "../src/cli/index.js";
 import { version } from "../src/version.js";
+import { makeProject } from "./helpers.js";
 
 const basic = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../examples/basic");
 
@@ -12,20 +13,6 @@ const temps: string[] = [];
 afterEach(() => {
   for (const dir of temps.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
-
-/** A throwaway project: a plain-object config plus the given app files. */
-export function makeProject(files: Record<string, string>, config = "{ intents: [] }"): string {
-  const root = mkdtempSync(path.join(tmpdir(), "neat-cli-"));
-  temps.push(root);
-  writeFileSync(path.join(root, "neat.config.js"), `export default ${config};\n`);
-  mkdirSync(path.join(root, "app"));
-  for (const [relative, content] of Object.entries(files)) {
-    const full = path.join(root, "app", ...relative.split("/"));
-    mkdirSync(path.dirname(full), { recursive: true });
-    writeFileSync(full, content);
-  }
-  return root;
-}
 
 export async function neat(
   argv: string[],

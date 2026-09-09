@@ -38,3 +38,17 @@ export function normalize(table: RouteTable, root: string) {
     })),
   };
 }
+
+/** A throwaway project: a plain-object config plus the given app files. */
+export function makeProject(files: Record<string, string>, config = "{ intents: [] }"): string {
+  const root = mkdtempSync(path.join(tmpdir(), "neat-cli-"));
+  created.push(root);
+  writeFileSync(path.join(root, "neat.config.js"), `export default ${config};\n`);
+  mkdirSync(path.join(root, "app"));
+  for (const [relative, content] of Object.entries(files)) {
+    const full = path.join(root, "app", ...relative.split("/"));
+    mkdirSync(path.dirname(full), { recursive: true });
+    writeFileSync(full, content);
+  }
+  return root;
+}

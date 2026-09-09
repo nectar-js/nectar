@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import { version } from "../version.js";
 import { build, check } from "./build.js";
+import { dev } from "./dev.js";
 import { CliError, type CliIo, EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./io.js";
 import { manifest } from "./manifest.js";
 import { clean, info } from "./misc.js";
@@ -20,6 +21,14 @@ interface Command {
 }
 
 const COMMANDS: Record<string, Command> = {
+  dev: {
+    usage: "dev [--verbose]",
+    description: "Compile, register dev guild commands, run the bot, and reload on changes.",
+    options: {
+      verbose: { type: "boolean", description: "Print the route tree and discord.js warnings." },
+    },
+    run: (io, flags) => dev(io, flags.verbose === true),
+  },
   build: {
     usage: "build",
     description: "Compile the app and write the manifest and types.",

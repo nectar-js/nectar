@@ -5,7 +5,7 @@ export type HandlerModule = Record<string, unknown>;
 export class HandlerLoadError extends Error {
   constructor(
     readonly file: string,
-    detail: string,
+    readonly detail: string,
   ) {
     super(`${file}: ${detail}`);
     this.name = "HandlerLoadError";

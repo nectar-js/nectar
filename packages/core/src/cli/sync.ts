@@ -1,8 +1,10 @@
+import type { RouteGraph } from "../compiler/graph.js";
 import {
   type CommandRest,
   RegistrationError,
   registrationScopes,
   type ScopeSync,
+  type SyncResult,
   scopeKey,
   syncCommands,
   UnsafeSyncError,
@@ -19,35 +21,12 @@ export async function sync(io: CliIo, dryRun: boolean, force: boolean): Promise<
   const project = await loadProject(io.cwd, io.env);
   const graph = await compileProject(project, io);
   if (graph === null) return EXIT_FAILURE;
-
-  const scopes = registrationScopes(project.config, project.env);
-  if (scopes.length === 0) {
+  if (registrationScopes(project.config, project.env).length === 0) {
     throw new CliError(
       `No registration target for ${project.env}: add dev.guilds to ${projectConfigName(project)}.`,
     );
   }
-  const token = requireEnv(io, TOKEN_VAR);
-  const applicationId = requireEnv(io, APPLICATION_ID_VAR);
-  const rest = await (io.rest ?? discordRest)(token);
-
-  let result: Awaited<ReturnType<typeof syncCommands>>;
-  try {
-    result = await syncCommands({
-      rest,
-      applicationId,
-      commands: graph.commands.map((c) => c.payload),
-      scopes,
-      cacheDir: project.outDir,
-      dryRun,
-      force,
-    });
-  } catch (error) {
-    if (error instanceof UnsafeSyncError || error instanceof RegistrationError) {
-      throw new CliError(error.message);
-    }
-    throw error;
-  }
-
+  const result = await registerCommands(project, graph, io, { dryRun, force });
   for (const scope of result.scopes) io.out(describeScope(scope, dryRun));
   if (result.unsafe.length > 0) {
     io.err(`${force ? "Forced past" : "Would refuse"}:`);
@@ -56,7 +35,38 @@ export async function sync(io: CliIo, dryRun: boolean, force: boolean): Promise<
   return EXIT_OK;
 }
 
-function describeScope({ scope, diff, applied }: ScopeSync, dryRun: boolean): string {
+/**
+ * Registers a compiled graph's commands in this environment's scopes. Missing credentials,
+ * the safety guard, and Discord validation failures all surface as `CliError`.
+ */
+export async function registerCommands(
+  project: Project,
+  graph: RouteGraph,
+  io: CliIo,
+  options: { dryRun?: boolean; force?: boolean } = {},
+): Promise<SyncResult> {
+  const token = requireEnv(io, TOKEN_VAR);
+  const applicationId = requireEnv(io, APPLICATION_ID_VAR);
+  const rest = await (io.rest ?? discordRest)(token);
+  try {
+    return await syncCommands({
+      rest,
+      applicationId,
+      commands: graph.commands.map((c) => c.payload),
+      scopes: registrationScopes(project.config, project.env),
+      cacheDir: project.outDir,
+      dryRun: options.dryRun ?? false,
+      force: options.force ?? false,
+    });
+  } catch (error) {
+    if (error instanceof UnsafeSyncError || error instanceof RegistrationError) {
+      throw new CliError(error.message);
+    }
+    throw error;
+  }
+}
+
+export function describeScope({ scope, diff, applied }: ScopeSync, dryRun = false): string {
   const key = scopeKey(scope);
   if (diff === null) return `${key}: unchanged since last sync.`;
   if (!diff.hasChanges) return `${key}: up to date, ${diff.unchanged.length} command(s).`;
@@ -69,7 +79,7 @@ function describeScope({ scope, diff, applied }: ScopeSync, dryRun: boolean): st
   return `${key}: ${parts.join(" ")} (${verb}).`;
 }
 
-function requireEnv(io: CliIo, name: string): string {
+export function requireEnv(io: CliIo, name: string): string {
   const value = io.env[name];
   if (value === undefined || value === "") {
     throw new CliError(`${name} is not set. Put it in .env or the environment.`);
@@ -82,6 +92,6 @@ async function discordRest(token: string): Promise<CommandRest> {
   return new REST().setToken(token);
 }
 
-function projectConfigName(project: Project): string {
+export function projectConfigName(project: Project): string {
   return project.configFile.split(/[\\/]/).at(-1) ?? "neat.config.ts";
 }
