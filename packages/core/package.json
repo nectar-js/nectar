@@ -1,0 +1,34 @@
+{
+  "name": "@neatjs/core",
+  "version": "0.0.0",
+  "description": "A filesystem-based meta-framework for discord.js.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "neat": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "default": "./dist/testing.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "discord.js": "^14.27.0"
+  },
+  "devDependencies": {
+    "discord.js": "^14.27.0"
+  }
+}
