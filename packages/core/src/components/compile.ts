@@ -50,11 +50,19 @@ export async function compileComponents(table: RouteTable): Promise<CompiledComp
   return { routes, diagnostics };
 }
 
+/** What the encoder needs from a route. Compiled, manifest, and registered routes all satisfy it. */
+export interface EncodableRoute {
+  id: string;
+  shortId: string;
+  params: string[];
+  catchAll: string | null;
+}
+
 /**
  * Encodes a custom ID for a compiled route. Throws when a parameter is missing, a value is not
  * a string, or the result exceeds Discord's limit.
  */
-export function customIdFor(route: ComponentRoute, params: ComponentParams = {}): string {
+export function customIdFor(route: EncodableRoute, params: ComponentParams = {}): string {
   const values: string[] = [];
   for (const name of route.params) {
     const value = params[name];
@@ -73,6 +81,13 @@ export function customIdFor(route: ComponentRoute, params: ComponentParams = {})
       );
     }
     values.push(value);
+  }
+  for (const name of Object.keys(params)) {
+    if (!route.params.includes(name)) {
+      throw new TypeError(
+        `Route ${route.id} has no parameter "${name}". ${route.params.length === 0 ? "It takes none." : `It takes: ${route.params.join(", ")}.`}`,
+      );
+    }
   }
   return encodeCustomId(route.shortId, values, route.id);
 }
@@ -94,16 +109,6 @@ async function compileRoute(
     );
   }
 
-  let selectKind: SelectKind | null = null;
-  if (kind === "select") {
-    selectKind = await loadSelectKind(route, diagnostics);
-    if (selectKind === null) return null;
-  }
-
-  return { ...route, category: "component", kind, selectKind, catchAll, overhead };
-}
-
-async function loadSelectKind(route: Route, diagnostics: Diagnostics): Promise<SelectKind | null> {
   let module: Record<string, unknown>;
   try {
     module = await loadModule(route.file);
@@ -116,6 +121,41 @@ async function loadSelectKind(route: Route, diagnostics: Diagnostics): Promise<S
     return null;
   }
 
+  if (!checkDeclaredRoute(module, route, diagnostics)) return null;
+
+  let selectKind: SelectKind | null = null;
+  if (kind === "select") {
+    selectKind = validateSelectKind(module, route, diagnostics);
+    if (selectKind === null) return null;
+  }
+
+  return { ...route, category: "component", kind, selectKind, catchAll, overhead };
+}
+
+/** A handler made with `defineComponent(path, ...)` must name the route its file sits in. */
+export function checkDeclaredRoute(
+  module: Record<string, unknown>,
+  route: Route,
+  diagnostics: Diagnostics,
+  expected = route.path,
+): boolean {
+  const handler = module.default;
+  if (typeof handler !== "function") return true;
+  const declared = (handler as { route?: unknown }).route;
+  if (declared === undefined || declared === expected) return true;
+  diagnostics.error(
+    "route-mismatch",
+    `This file is the route "${expected}" but its handler declares "${String(declared)}". Update the string or move the file.`,
+    { file: route.file, route: route.id },
+  );
+  return false;
+}
+
+function validateSelectKind(
+  module: Record<string, unknown>,
+  route: Route,
+  diagnostics: Diagnostics,
+): SelectKind | null {
   const kind = module.kind;
   if (kind === undefined) {
     diagnostics.error(

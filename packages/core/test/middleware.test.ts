@@ -3,7 +3,7 @@ import { runChain } from "../src/runtime/index.js";
 import type { InteractionContext, Middleware } from "../src/runtime/types.js";
 
 const ctx = (): InteractionContext => ({
-  interaction: {},
+  interaction: {} as InteractionContext["interaction"],
   client: {} as InteractionContext["client"],
   route: { id: "command:x", category: "command", path: "x", file: "x" },
   params: {},

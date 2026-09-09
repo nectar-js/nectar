@@ -1,6 +1,7 @@
 import path from "node:path";
 import { Client, Events } from "discord.js";
-import type { Manifest } from "../manifest/schema.js";
+import { registerComponentRoutes } from "../components/registry.js";
+import type { Manifest, ManifestComponentRoute } from "../manifest/schema.js";
 import { createInteractionDispatcher } from "./dispatch.js";
 import { bindEvents, type EventBinding } from "./events.js";
 import { ModuleRegistry } from "./modules.js";
@@ -59,6 +60,12 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     logger,
   };
 
+  registerComponentRoutes(
+    state.manifest.routes.filter(
+      (r): r is ManifestComponentRoute =>
+        r.kind === "button" || r.kind === "select" || r.kind === "modal",
+    ),
+  );
   const dispatch = createInteractionDispatcher(state);
   const inFlight = new Set<Promise<void>>();
   let bindings: EventBinding[] = [];

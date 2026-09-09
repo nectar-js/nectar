@@ -1,13 +1,4 @@
-import type {
-  AnySelectMenuInteraction,
-  AutocompleteInteraction,
-  ButtonInteraction,
-  ChatInputCommandInteraction,
-  Client,
-  ClientOptions,
-  ContextMenuCommandInteraction,
-  ModalSubmitInteraction,
-} from "discord.js";
+import type { Client, ClientOptions, Interaction } from "discord.js";
 import type { RouteCategory } from "../compiler/routes.js";
 
 export type Env = "development" | "test" | "production";
@@ -39,21 +30,16 @@ export interface Trace {
   elapsed(): number;
 }
 
-export interface InteractionContext<Interaction = unknown> {
-  interaction: Interaction;
+export type Params = Record<string, string | string[]>;
+
+export interface InteractionContext<I = Interaction, P = Params> {
+  interaction: I;
   client: Client;
   route: RouteInfo;
-  params: Record<string, string | string[]>;
+  params: P;
   env: Env;
   trace: Trace;
 }
-
-export type CommandContext = InteractionContext<ChatInputCommandInteraction>;
-export type ContextMenuContext = InteractionContext<ContextMenuCommandInteraction>;
-export type ButtonContext = InteractionContext<ButtonInteraction>;
-export type SelectContext = InteractionContext<AnySelectMenuInteraction>;
-export type ModalContext = InteractionContext<ModalSubmitInteraction>;
-export type AutocompleteContext = InteractionContext<AutocompleteInteraction>;
 
 export interface EventContext {
   client: Client;
@@ -64,9 +50,29 @@ export interface EventContext {
 /** What a middleware's `next()` accepts: extra fields merged into the downstream context. */
 export type ContextExtension = Record<string, unknown>;
 
-export type Next = (extension?: ContextExtension) => Promise<unknown>;
+declare const extension: unique symbol;
 
-export type Middleware = (ctx: InteractionContext, next: Next) => unknown;
+/** Carries the extension type through `next()`'s return value so `defineMiddleware` can infer it. */
+export interface Extended<E extends ContextExtension> {
+  readonly [extension]?: E;
+}
+
+export type Next = <E extends ContextExtension = Record<never, never>>(
+  extension?: E,
+) => Promise<Extended<E>>;
+
+export type Middleware<E extends ContextExtension = ContextExtension> = ((
+  ctx: InteractionContext,
+  next: Next,
+) => unknown) &
+  Extended<E>;
+
+/** The context fields a middleware module adds downstream. `{}` for plain functions. */
+export type MiddlewareExtension<M> = M extends { default: Extended<infer E> }
+  ? ContextExtension extends E
+    ? Record<never, never>
+    : E
+  : Record<never, never>;
 
 export type Handler = (ctx: InteractionContext) => unknown;
 

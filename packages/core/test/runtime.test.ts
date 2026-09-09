@@ -377,7 +377,7 @@ describe("lifecycle", () => {
   test("eager loading fails start on a broken module", async () => {
     const { state, client } = await setup({
       "commands/ok/command.ts": cmd('{ description: "d" }', ""),
-      "components/x/button.ts": 'import "./missing.js";\nexport default async function () {}\n',
+      "middleware.ts": 'import "./missing.js";\nexport default async function () {}\n',
     });
     const runtime = createRuntime({
       manifest: state.manifest,

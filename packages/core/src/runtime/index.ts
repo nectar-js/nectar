@@ -11,23 +11,20 @@ export {
 } from "./runtime.js";
 export type { RuntimeState } from "./state.js";
 export type {
-  AutocompleteContext,
-  ButtonContext,
-  CommandContext,
   ContextExtension,
-  ContextMenuContext,
   Env,
   ErrorHandler,
   EventContext,
   EventHandler,
+  Extended,
   Handler,
   InteractionContext,
   Logger,
   Middleware,
-  ModalContext,
+  MiddlewareExtension,
   Next,
+  Params,
   RouteInfo,
   RuntimeConfig,
-  SelectContext,
   Trace,
 } from "./types.js";

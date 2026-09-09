@@ -1,4 +1,11 @@
-import type { ContextExtension, Handler, InteractionContext, Middleware } from "./types.js";
+import type {
+  ContextExtension,
+  Extended,
+  Handler,
+  InteractionContext,
+  Middleware,
+  Next,
+} from "./types.js";
 
 /**
  * Runs middleware outer to inner, then the handler.
@@ -19,11 +26,11 @@ export async function runChain(
     if (layer === undefined) return handler(current);
 
     let called = false;
-    const next = (extension?: ContextExtension) => {
+    const next: Next = <E extends ContextExtension>(extension?: E) => {
       if (called) throw new Error("next() was called twice in the same middleware.");
       called = true;
       const downstream = extension === undefined ? current : { ...current, ...extension };
-      return step(index + 1, downstream);
+      return step(index + 1, downstream) as Promise<Extended<E>>;
     };
     return layer(current, next);
   }
