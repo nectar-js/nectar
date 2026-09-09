@@ -56,14 +56,17 @@ export function stamp(): string {
   return c.dim(new Date().toTimeString().slice(0, 8));
 }
 
-/** The env var hints, shared by every command that needs credentials. */
-export function credentialHint(name: string): string[] {
+/** How to supply a credential, shared by every command that needs one. */
+export function credentialHint(kind: "token" | "applicationId", configName: string): string[] {
+  const variable = kind === "token" ? "DISCORD_TOKEN" : "DISCORD_APPLICATION_ID";
   const where =
-    name === "DISCORD_TOKEN"
+    kind === "token"
       ? "your application → Bot → Reset Token"
       : "your application → General Information → Application ID";
   return [
-    `Nect reads it from ${c.bold(".env")} in the project root, or from the environment.`,
+    `Put ${c.bold(`${variable}=...`)} in ${c.bold(".env")} next to ${configName}, or export it.`,
+    `The config reads it with ${c.bold(`${kind}: process.env.${variable}`)}; without that line the`,
+    "variable is used directly.",
     `Get it from the Developer Portal under ${where}:`,
     link(PORTAL_URL),
   ];

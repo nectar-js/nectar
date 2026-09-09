@@ -46,8 +46,8 @@ export async function registerCommands(
   io: CliIo,
   options: { dryRun?: boolean; force?: boolean } = {},
 ): Promise<SyncResult> {
-  const token = requireEnv(io, TOKEN_VAR);
-  const applicationId = requireEnv(io, APPLICATION_ID_VAR);
+  const token = credential(project, io, "token");
+  const applicationId = credential(project, io, "applicationId");
   const rest = await (io.rest ?? discordRest)(token);
   try {
     return await syncCommands({
@@ -97,10 +97,25 @@ export function describeScope({ scope, diff, applied }: ScopeSync, dryRun = fals
     : warn(`${key}: ${parts} ${c.dim("(not applied)")}`);
 }
 
-export function requireEnv(io: CliIo, name: string): string {
-  const value = io.env[name];
-  if (value === undefined || value === "") {
-    throw new CliError(`${name} is not set.`, { details: credentialHint(name) });
+export type Credential = "token" | "applicationId";
+
+export const CREDENTIAL_VARS: Record<Credential, string> = {
+  token: TOKEN_VAR,
+  applicationId: APPLICATION_ID_VAR,
+};
+
+/** The config field wins; the env var is the fallback. Empty strings count as unset. */
+export function findCredential(project: Project, io: CliIo, kind: Credential): string | null {
+  const value = project.config[kind] || io.env[CREDENTIAL_VARS[kind]];
+  return value === undefined || value === "" ? null : value;
+}
+
+export function credential(project: Project, io: CliIo, kind: Credential): string {
+  const value = findCredential(project, io, kind);
+  if (value === null) {
+    throw new CliError(`${CREDENTIAL_VARS[kind]} is not set.`, {
+      details: credentialHint(kind, projectConfigName(project)),
+    });
   }
   return value;
 }

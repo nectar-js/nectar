@@ -5,7 +5,7 @@ import { createRuntime } from "../runtime/index.js";
 import { relative } from "./compile.js";
 import { CliError, type CliIo, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
-import { requireEnv, TOKEN_VAR } from "./sync.js";
+import { credential } from "./sync.js";
 import { c, ok } from "./ui.js";
 
 /** `nect start`: run the bot from the last `nect build`. No source discovery happens here. */
@@ -17,7 +17,7 @@ export async function start(io: CliIo): Promise<number> {
       details: [`Run ${c.bold("nect build")} first, then ${c.bold("nect start")} again.`],
     });
   }
-  const token = requireEnv(io, TOKEN_VAR);
+  const token = credential(project, io, "token");
 
   const { manifest, appDir } = loadManifest(manifestFile);
   const runtime = createRuntime({ manifest, appDir, config: project.config, env: project.env });

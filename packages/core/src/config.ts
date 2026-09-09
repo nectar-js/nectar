@@ -3,6 +3,13 @@ import type { Env } from "./runtime/types.js";
 
 /** `nect.config.ts`: `export default defineConfig({ ... })`. */
 export interface NectConfig {
+  /**
+   * Bot token. Usually `process.env.DISCORD_TOKEN`; the CLI falls back to that variable when
+   * this is omitted or empty.
+   */
+  token?: string | undefined;
+  /** Application ID, for command registration. Falls back to `DISCORD_APPLICATION_ID`. */
+  applicationId?: string | undefined;
   intents: ClientOptions["intents"];
   partials?: ClientOptions["partials"];
   /** Extra discord.js client options. `intents` and `partials` above take precedence. */
@@ -52,6 +59,11 @@ export function validateConfig(value: unknown, file: string): NectConfig {
   if (!isRecord(value)) fail("the default export must be an object. Use defineConfig({ ... }).");
   const config = value as Record<string, unknown>;
 
+  for (const key of ["token", "applicationId"] as const) {
+    if (config[key] !== undefined && typeof config[key] !== "string") {
+      fail(`\`${key}\` must be a string, usually read from process.env.`);
+    }
+  }
   if (config.intents === undefined) fail("`intents` is required. Use [] for none.");
   if (!isBitfield(config.intents)) {
     fail("`intents` must be an array of intent names or bits, a single bit, or a bigint.");

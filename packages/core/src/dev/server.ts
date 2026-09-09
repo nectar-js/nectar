@@ -6,12 +6,12 @@ import { loadProject, type Project } from "../cli/project.js";
 import { renderRoutes } from "../cli/routes.js";
 import {
   APPLICATION_ID_VAR,
+  credential,
   describeScope,
+  findCredential,
   projectConfigName,
   registerCommands,
   registrationHint,
-  requireEnv,
-  TOKEN_VAR,
 } from "../cli/sync.js";
 import { block, c, credentialHint, fail, indent, info, ok, stamp, warn } from "../cli/ui.js";
 import type { RouteGraph } from "../compiler/graph.js";
@@ -90,10 +90,10 @@ export function createDevServer(
       warnOnce("Commands are not registered anywhere yet.", registrationHint(current));
       return;
     }
-    if (!io.env[APPLICATION_ID_VAR]) {
+    if (findCredential(current, io, "applicationId") === null) {
       warnOnce(
         `Commands are not registered: ${APPLICATION_ID_VAR} is not set.`,
-        credentialHint(APPLICATION_ID_VAR),
+        credentialHint("applicationId", projectConfigName(current)),
       );
       return;
     }
@@ -198,7 +198,7 @@ export function createDevServer(
 
   return {
     async start() {
-      token = requireEnv(io, TOKEN_VAR);
+      token = credential(current, io, "token");
       enableModuleReloading(current.root);
       await boot();
       started = true;

@@ -65,6 +65,39 @@ describe("nect", () => {
     const result = await nect(["check"], root);
     expect(result.code).toBe(1);
     expect(result.err).toContain("`dev.guilds`");
+    const token = await nect(["check"], makeProject({}, "{ intents: [], token: 1 }"));
+    expect(token.code).toBe(1);
+    expect(token.err).toContain("`token` must be a string");
+  });
+
+  test("credentials come from the config first, then the environment", async () => {
+    const root = makeProject(
+      { "commands/ping/command.ts": ping },
+      '{ intents: [], token: "from-config", applicationId: "cfg-app", dev: { guilds: ["1"] } }',
+    );
+    const rest = fakeRest();
+    let seenToken = "";
+    const result = await nect(["sync"], root, {
+      env: { DISCORD_TOKEN: "from-env" },
+      rest: async (token) => {
+        seenToken = token;
+        return rest;
+      },
+    });
+    expect(result.code).toBe(0);
+    expect(seenToken).toBe("from-config");
+    expect(rest.put).toHaveBeenCalledWith("/applications/cfg-app/guilds/1/commands", {
+      body: [{ name: "ping", description: "Pong", type: 1 }],
+    });
+
+    const empty = makeProject(
+      { "commands/ping/command.ts": ping },
+      '{ intents: [], token: "", dev: { guilds: ["1"] } }',
+    );
+    const missing = await nect(["sync"], empty, { env: {} });
+    expect(missing.code).toBe(1);
+    expect(missing.err).toContain("DISCORD_TOKEN is not set.");
+    expect(missing.err).toContain("token: process.env.DISCORD_TOKEN");
   });
 });
 

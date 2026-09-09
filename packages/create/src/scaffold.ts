@@ -103,9 +103,12 @@ function config(): string {
   return `import { defineConfig } from "@nect-js/core";
 
 export default defineConfig({
+  token: process.env.DISCORD_TOKEN,
+  applicationId: process.env.DISCORD_APPLICATION_ID,
   intents: ["Guilds"],
   dev: {
-    // Commands register here instantly while you develop. Paste your test server's ID.
+    // Commands register here instantly while you develop. Paste your test server's ID,
+    // or read it from .env the same way as the token above.
     guilds: [],
   },
 });

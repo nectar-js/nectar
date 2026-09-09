@@ -134,6 +134,8 @@ import { defineConfig } from "@nect-js/core";
 import { GatewayIntentBits } from "discord.js";
 
 export default defineConfig({
+  token: process.env.DISCORD_TOKEN,
+  applicationId: process.env.DISCORD_APPLICATION_ID,
   intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
   dev: {
     guilds: ["123456789012345678"],
