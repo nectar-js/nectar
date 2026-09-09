@@ -106,6 +106,51 @@ exports[`examples/basic command payloads 1`] = `
 ]
 `;
 
+exports[`examples/basic component routes round-trip 1`] = `
+[
+  {
+    "id": "component:pagination/[page]/next",
+    "kind": "button",
+    "overhead": 9,
+    "params": [
+      "page",
+    ],
+    "selectKind": null,
+    "shortId": "1w74m6",
+  },
+  {
+    "id": "component:pagination/[page]/prev",
+    "kind": "button",
+    "overhead": 9,
+    "params": [
+      "page",
+    ],
+    "selectKind": null,
+    "shortId": "1n652h",
+  },
+  {
+    "id": "component:tickets/[ticketId]/assign",
+    "kind": "select",
+    "overhead": 9,
+    "params": [
+      "ticketId",
+    ],
+    "selectKind": "user",
+    "shortId": "1x540s",
+  },
+  {
+    "id": "component:tickets/[ticketId]/close",
+    "kind": "button",
+    "overhead": 9,
+    "params": [
+      "ticketId",
+    ],
+    "selectKind": null,
+    "shortId": "31imou",
+  },
+]
+`;
+
 exports[`examples/basic route table 1`] = `
 {
   "boundaries": [
