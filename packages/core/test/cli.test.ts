@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterEach, describe, expect, test } from "vitest";
+import { afterEach, describe, expect, test, vi } from "vitest";
 import { type CliIo, run } from "../src/cli/index.js";
 import { version } from "../src/version.js";
 
@@ -175,5 +175,148 @@ describe("neat manifest", () => {
     expect(result.code).toBe(1);
     expect(result.err).toContain('No route "nope"');
     expect(result.err).toContain("  command:ping");
+  });
+});
+
+function fakeRest() {
+  const store = new Map<string, unknown[]>();
+  const rest = {
+    get: vi.fn(async (route: string) => store.get(route) ?? []),
+    put: vi.fn(async (route: string, { body }: { body: unknown }) => {
+      const stored = (body as Record<string, unknown>[]).map((c, i) => ({
+        id: String(i),
+        application_id: "app",
+        type: 1,
+        nsfw: false,
+        contexts: null,
+        integration_types: [0],
+        default_member_permissions: null,
+        ...c,
+      }));
+      store.set(route, stored);
+      return stored;
+    }),
+  };
+  return rest;
+}
+
+describe("neat sync", () => {
+  const creds = { DISCORD_TOKEN: "t", DISCORD_APPLICATION_ID: "app" };
+  const devConfig = '{ intents: [], dev: { guilds: ["1"] } }';
+
+  test("needs credentials and a target", async () => {
+    const root = makeProject({ "commands/ping/command.ts": ping }, devConfig);
+    const noToken = await neat(["sync"], root, { env: { DISCORD_APPLICATION_ID: "app" } });
+    expect(noToken.code).toBe(1);
+    expect(noToken.err).toContain("DISCORD_TOKEN is not set");
+
+    const noTarget = await neat(["sync"], makeProject({ "commands/ping/command.ts": ping }), {
+      env: creds,
+    });
+    expect(noTarget.code).toBe(1);
+    expect(noTarget.err).toContain("No registration target for development");
+  });
+
+  test("registers, then a second run is a cache hit", async () => {
+    const root = makeProject({ "commands/ping/command.ts": ping }, devConfig);
+    const rest = fakeRest();
+    const io = { env: creds, rest: async () => rest };
+
+    const first = await neat(["sync"], root, io);
+    expect(first.code).toBe(0);
+    expect(first.out).toBe("guild:1: +ping (applied).");
+    expect(rest.put).toHaveBeenCalledTimes(1);
+    expect(existsSync(path.join(root, ".neat/registration.json"))).toBe(true);
+
+    const second = await neat(["sync"], root, io);
+    expect(second.out).toBe("guild:1: unchanged since last sync.");
+    expect(rest.get).toHaveBeenCalledTimes(1);
+    expect(rest.put).toHaveBeenCalledTimes(1);
+  });
+
+  test("dry run reports without writing, and the guard needs --force", async () => {
+    const root = makeProject({ "commands/ping/command.ts": ping }, devConfig);
+    const rest = fakeRest();
+    const io = { env: creds, rest: async () => rest };
+
+    const dry = await neat(["sync", "--dry-run"], root, io);
+    expect(dry.code).toBe(0);
+    expect(dry.out).toBe("guild:1: +ping (would apply).");
+    expect(rest.put).not.toHaveBeenCalled();
+
+    await neat(["sync"], root, io);
+    rmSync(path.join(root, "app/commands"), { recursive: true });
+    const refused = await neat(["sync"], root, io);
+    expect(refused.code).toBe(1);
+    expect(refused.err).toContain("Refusing to register commands");
+    expect(rest.put).toHaveBeenCalledTimes(1);
+
+    const forced = await neat(["sync", "--force"], root, io);
+    expect(forced.code).toBe(0);
+    expect(forced.out).toBe("guild:1: -ping (applied).");
+    expect(forced.err).toContain("Forced past:");
+  });
+
+  test("production goes to commands.target", async () => {
+    const root = makeProject(
+      { "commands/ping/command.ts": ping },
+      '{ intents: [], env: "production", commands: { target: ["7"] } }',
+    );
+    const rest = fakeRest();
+    await neat(["sync"], root, { env: creds, rest: async () => rest });
+    expect(rest.put).toHaveBeenCalledWith("/applications/app/guilds/7/commands", {
+      body: [{ name: "ping", description: "Pong", type: 1 }],
+    });
+  });
+});
+
+describe("neat start", () => {
+  test("needs a build and a token", async () => {
+    const root = makeProject({ "commands/ping/command.ts": ping });
+    const noBuild = await neat(["start"], root, { env: { DISCORD_TOKEN: "t" } });
+    expect(noBuild.code).toBe(1);
+    expect(noBuild.err).toContain(".neat/manifest.json not found. Run neat build first.");
+
+    await neat(["build"], root);
+    const noToken = await neat(["start"], root);
+    expect(noToken.code).toBe(1);
+    expect(noToken.err).toContain("DISCORD_TOKEN is not set");
+  });
+});
+
+describe("neat clean", () => {
+  test("removes outDir and is fine when it is already gone", async () => {
+    const root = makeProject({ "commands/ping/command.ts": ping });
+    await neat(["build"], root);
+    expect(existsSync(path.join(root, ".neat"))).toBe(true);
+    const first = await neat(["clean"], root);
+    expect(first.out).toBe("Removed .neat/");
+    expect(existsSync(path.join(root, ".neat"))).toBe(false);
+    const second = await neat(["clean"], root);
+    expect(second.code).toBe(0);
+    expect(second.out).toContain("Nothing to remove");
+  });
+});
+
+describe("neat info", () => {
+  test("shows versions and the effective config", async () => {
+    const result = await neat(["info"], basic, { env: { DISCORD_TOKEN: "t" } });
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/^neat +0\.0\.0$/m);
+    expect(result.out).toMatch(/^node +v\d+/m);
+    expect(result.out).toMatch(/^discord\.js +14\./m);
+    expect(result.out).toMatch(/^DISCORD_TOKEN +set$/m);
+    expect(result.out).toMatch(/^DISCORD_APPLICATION_ID +not set$/m);
+    expect(result.out).toMatch(/^env +development$/m);
+    expect(result.out).toMatch(/^intents +Guilds, GuildMembers$/m);
+    expect(result.out).toMatch(/^registration +none$/m);
+  });
+
+  test("still works without a config", async () => {
+    const root = mkdtempSync(path.join(tmpdir(), "neat-empty-"));
+    temps.push(root);
+    const result = await neat(["info"], root);
+    expect(result.code).toBe(0);
+    expect(result.out).toMatch(/^config +No neat\.config\.ts/m);
   });
 });

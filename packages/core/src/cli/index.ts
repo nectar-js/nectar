@@ -3,8 +3,11 @@ import { version } from "../version.js";
 import { build, check } from "./build.js";
 import { CliError, type CliIo, EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./io.js";
 import { manifest } from "./manifest.js";
+import { clean, info } from "./misc.js";
 import { describe } from "./project.js";
 import { routes } from "./routes.js";
+import { start } from "./start.js";
+import { sync } from "./sync.js";
 
 export type { CliIo } from "./io.js";
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./io.js";
@@ -39,6 +42,30 @@ const COMMANDS: Record<string, Command> = {
       route: { type: "string", description: "Route ID or path, e.g. command:moderation/ban." },
     },
     run: (io, flags) => manifest(io, flags.route as string | undefined),
+  },
+  sync: {
+    usage: "sync [--dry-run] [--force]",
+    description: "Register commands with Discord, writing only scopes that changed.",
+    options: {
+      "dry-run": { type: "boolean", description: "Show the diff without changing anything." },
+      force: { type: "boolean", description: "Proceed even when the change looks destructive." },
+    },
+    run: (io, flags) => sync(io, flags["dry-run"] === true, flags.force === true),
+  },
+  start: {
+    usage: "start",
+    description: "Run the bot from the last build.",
+    run: (io) => start(io),
+  },
+  clean: {
+    usage: "clean",
+    description: "Delete the build output directory.",
+    run: (io) => clean(io),
+  },
+  info: {
+    usage: "info",
+    description: "Show versions, environment, and the effective config.",
+    run: (io) => info(io),
   },
 };
 
