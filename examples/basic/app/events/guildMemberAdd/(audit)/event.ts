@@ -1,4 +1,4 @@
-import { defineEvent } from "@neatjs/core";
+import { defineEvent } from "@nect-js/core";
 
 export const meta = { order: 1 };
 

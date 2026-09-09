@@ -1,8 +1,8 @@
 import type { ClientOptions } from "discord.js";
 import type { Env } from "./runtime/types.js";
 
-/** `neat.config.ts`: `export default defineConfig({ ... })`. */
-export interface NeatConfig {
+/** `nect.config.ts`: `export default defineConfig({ ... })`. */
+export interface NectConfig {
   intents: ClientOptions["intents"];
   partials?: ClientOptions["partials"];
   /** Extra discord.js client options. `intents` and `partials` above take precedence. */
@@ -13,7 +13,7 @@ export interface NeatConfig {
   env?: Env;
   /** Route directory, relative to the project root. Defaults to `app`. */
   appDir?: string;
-  /** Build output, relative to the project root. Defaults to `.neat`. */
+  /** Build output, relative to the project root. Defaults to `.nect`. */
   outDir?: string;
   dev?: {
     /** Guilds that receive commands instantly while developing. */
@@ -28,7 +28,7 @@ export interface NeatConfig {
   };
 }
 
-export function defineConfig(config: NeatConfig): NeatConfig {
+export function defineConfig(config: NectConfig): NectConfig {
   return config;
 }
 
@@ -45,7 +45,7 @@ export class ConfigError extends Error {
 const ENVS = new Set<string>(["development", "test", "production"]);
 
 /** Checks a loaded config's shape. Discord validates intent and partial values itself at login. */
-export function validateConfig(value: unknown, file: string): NeatConfig {
+export function validateConfig(value: unknown, file: string): NectConfig {
   const fail = (detail: string): never => {
     throw new ConfigError(file, detail);
   };
@@ -86,7 +86,7 @@ export function validateConfig(value: unknown, file: string): NeatConfig {
       fail('`commands.target` must be "global" or an array of guild ID strings.');
     }
   }
-  return config as unknown as NeatConfig;
+  return config as unknown as NectConfig;
 }
 
 function isGuildList(value: unknown): value is string[] {

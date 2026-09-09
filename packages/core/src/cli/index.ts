@@ -135,22 +135,22 @@ export async function run(argv: string[], io: CliIo): Promise<number> {
 function help(): string {
   const width = Math.max(...Object.values(COMMANDS).map((c) => c.usage.length));
   return [
-    `neat ${version}`,
+    `nect ${version}`,
     "",
-    "Usage: neat <command> [options]",
+    "Usage: nect <command> [options]",
     "",
     "Commands:",
     ...Object.values(COMMANDS).map((c) => `  ${c.usage.padEnd(width)}  ${c.description}`),
     "",
     "Options:",
-    "  --help, -h     Show help for neat or a command.",
+    "  --help, -h     Show help for nect or a command.",
     "  --version, -v  Print the version.",
   ].join("\n");
 }
 
 function commandHelp(command: Command): string {
   const options = Object.entries(command.options ?? {});
-  const lines = [`Usage: neat ${command.usage}`, "", command.description];
+  const lines = [`Usage: nect ${command.usage}`, "", command.description];
   if (options.length > 0) {
     const width = Math.max(...options.map(([key]) => key.length));
     lines.push(

@@ -6,7 +6,7 @@ import { CliError, type CliIo, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
 import { APPLICATION_ID_VAR, TOKEN_VAR } from "./sync.js";
 
-/** `neat clean`: delete the build output directory. */
+/** `nect clean`: delete the build output directory. */
 export async function clean(io: CliIo): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const label = `${relative(project.root, project.outDir)}/`;
@@ -19,10 +19,10 @@ export async function clean(io: CliIo): Promise<number> {
   return EXIT_OK;
 }
 
-/** `neat info`: versions, environment, and the config values that decide runtime behaviour. */
+/** `nect info`: versions, environment, and the config values that decide runtime behaviour. */
 export async function info(io: CliIo): Promise<number> {
   const rows: [string, string][] = [
-    ["neat", version],
+    ["nect", version],
     ["node", process.version],
     ["discord.js", await discordVersion()],
     ["platform", `${process.platform} ${process.arch}`],

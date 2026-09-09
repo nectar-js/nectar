@@ -28,9 +28,9 @@ interface Reloading {
 let reloading: Reloading | null = null;
 
 /**
- * Turns on cache busting for project files. Used by `neat dev` only.
+ * Turns on cache busting for project files. Used by `nect dev` only.
  *
- * Every import of a file under `root` gets `?neat=<content hash>-<generation>` appended, the
+ * Every import of a file under `root` gets `?nect=<content hash>-<generation>` appended, the
  * direct ones here and the transitive ones through a resolve hook. A handler whose content
  * changed therefore gets a new URL and a fresh evaluation; its unchanged imports keep their
  * URL and are shared. Old instances stay in the ESM cache until the process exits.
@@ -67,5 +67,5 @@ function versioned(url: string): string {
   } catch {
     return url;
   }
-  return `${url}?neat=${hash}-${reloading.generation}`;
+  return `${url}?nect=${hash}-${reloading.generation}`;
 }

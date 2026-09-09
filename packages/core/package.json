@@ -1,5 +1,5 @@
 {
-  "name": "@neatjs/core",
+  "name": "@nect-js/core",
   "version": "0.0.0",
   "description": "A filesystem-based meta-framework for discord.js.",
   "license": "MIT",
@@ -8,7 +8,7 @@
     "node": ">=22.18"
   },
   "bin": {
-    "neat": "./dist/cli.js"
+    "nect": "./dist/cli.js"
   },
   "exports": {
     ".": {

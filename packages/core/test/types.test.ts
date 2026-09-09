@@ -1,6 +1,6 @@
 /**
  * Type-level checks. They run under `pnpm typecheck`; vitest only sees the runtime shells.
- * The augmentation below stands in for a generated `.neat/types.d.ts`.
+ * The augmentation below stands in for a generated `.nect/types.d.ts`.
  */
 import type {
   ButtonInteraction,
@@ -35,7 +35,7 @@ type AuthModule = { default: typeof auth };
 type PassthroughModule = { default: typeof passthrough };
 
 declare module "../src/index.js" {
-  interface NeatRoutes {
+  interface NectRoutes {
     commands: {
       ping: { type: "chatInput"; options: Empty; context: Empty };
       "moderation/ban": {

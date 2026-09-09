@@ -7,7 +7,7 @@ import { compileProject, relative } from "./compile.js";
 import { type CliIo, EXIT_FAILURE, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
 
-/** `neat routes`: print the app tree with what every file and directory means. */
+/** `nect routes`: print the app tree with what every file and directory means. */
 export async function routes(io: CliIo): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const graph = await compileProject(project, io);

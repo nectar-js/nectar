@@ -29,7 +29,7 @@ importers:
 
   examples/basic:
     dependencies:
-      '@neatjs/core':
+      '@nect-js/core':
         specifier: workspace:*
         version: link:../../packages/core
       discord.js:

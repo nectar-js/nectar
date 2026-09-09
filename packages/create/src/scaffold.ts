@@ -42,9 +42,9 @@ export function templateFiles(options: ScaffoldOptions): Record<string, string> 
   const ext = ts ? "ts" : "js";
   const files: Record<string, string> = {
     "package.json": packageJson(options),
-    [`neat.config.${ext}`]: config(),
+    [`nect.config.${ext}`]: config(),
     ".env.example": "DISCORD_TOKEN=\nDISCORD_APPLICATION_ID=\n",
-    ".gitignore": "node_modules/\n.neat/\n.env\n",
+    ".gitignore": "node_modules/\n.nect/\n.env\n",
     [`app/middleware.${ext}`]: middleware(ts),
     [`app/commands/ping/command.${ext}`]: pingCommand(ts),
     [`app/components/counter/[count]/button.${ext}`]: counterButton(ts),
@@ -70,20 +70,20 @@ export function scaffold(dir: string, options: ScaffoldOptions): string[] {
 
 function packageJson({ name, language }: ScaffoldOptions): string {
   const scripts: Record<string, string> = {
-    dev: "neat dev",
-    build: "neat build",
-    start: "neat start",
-    check: "neat check",
-    sync: "neat sync",
+    dev: "nect dev",
+    build: "nect build",
+    start: "nect start",
+    check: "nect check",
+    sync: "nect sync",
   };
-  if (language === "ts") scripts.typecheck = "neat build && tsc --noEmit";
+  if (language === "ts") scripts.typecheck = "nect build && tsc --noEmit";
   const pkg = {
     name,
     private: true,
     type: "module",
     engines: { node: ">=22.18" },
     scripts,
-    dependencies: { "@neatjs/core": `^${version}`, "discord.js": DISCORD_JS },
+    dependencies: { "@nect-js/core": `^${version}`, "discord.js": DISCORD_JS },
     ...(language === "ts"
       ? { devDependencies: { "@types/node": "^22.20.1", typescript: "^5.9.0" } }
       : {}),
@@ -92,7 +92,7 @@ function packageJson({ name, language }: ScaffoldOptions): string {
 }
 
 function config(): string {
-  return `import { defineConfig } from "@neatjs/core";
+  return `import { defineConfig } from "@nect-js/core";
 
 export default defineConfig({
   intents: ["Guilds"],
@@ -118,7 +118,7 @@ function tsconfig(): string {
         skipLibCheck: true,
         verbatimModuleSyntax: true,
       },
-      include: ["app", "neat.config.ts", ".neat/types.d.ts"],
+      include: ["app", "nect.config.ts", ".nect/types.d.ts"],
     },
     null,
     2,
@@ -126,7 +126,7 @@ function tsconfig(): string {
 }
 
 function middleware(ts: boolean): string {
-  return `import { defineMiddleware } from "@neatjs/core";
+  return `import { defineMiddleware } from "@nect-js/core";
 
 // Runs before every interaction. Whatever you pass to next() is on ctx downstream${ts ? ", typed" : ""}.
 export default defineMiddleware(async (_ctx, next) => {
@@ -138,11 +138,11 @@ export default defineMiddleware(async (_ctx, next) => {
 function pingCommand(ts: boolean): string {
   const meta = ts
     ? `export const meta: CommandMeta = {`
-    : `/** @type {import("@neatjs/core").CommandMeta} */
+    : `/** @type {import("@nect-js/core").CommandMeta} */
 export const meta = {`;
   const imports = ts
-    ? `import { type CommandMeta, customId, defineCommand } from "@neatjs/core";`
-    : `import { customId, defineCommand } from "@neatjs/core";`;
+    ? `import { type CommandMeta, customId, defineCommand } from "@nect-js/core";`
+    : `import { customId, defineCommand } from "@nect-js/core";`;
   return `${imports}
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
@@ -164,7 +164,7 @@ export default defineCommand("ping", async (ctx) => {
 }
 
 function counterButton(ts: boolean): string {
-  return `import { customId, defineComponent } from "@neatjs/core";
+  return `import { customId, defineComponent } from "@nect-js/core";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 // The directory name [count] makes ctx.params.count a string decoded from the custom ID.
@@ -182,7 +182,7 @@ export default defineComponent("counter/[count]", async (ctx) => {
 }
 
 function readyEvent(): string {
-  return `import { defineEvent } from "@neatjs/core";
+  return `import { defineEvent } from "@nect-js/core";
 
 export default defineEvent("clientReady", async (client) => {
   console.log(\`Logged in as \${client.user.tag}\`);

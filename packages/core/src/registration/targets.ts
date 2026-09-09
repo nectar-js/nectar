@@ -1,4 +1,4 @@
-import type { NeatConfig } from "../config.js";
+import type { NectConfig } from "../config.js";
 import type { Env } from "../runtime/types.js";
 import type { Scope } from "./remote.js";
 
@@ -8,7 +8,7 @@ import type { Scope } from "./remote.js";
  * `commands.target`, global by default.
  */
 export function registrationScopes(
-  config: Pick<NeatConfig, "dev" | "commands">,
+  config: Pick<NectConfig, "dev" | "commands">,
   env: Env,
 ): Scope[] {
   if (env !== "production") return (config.dev?.guilds ?? []).map((guild) => ({ guild }));

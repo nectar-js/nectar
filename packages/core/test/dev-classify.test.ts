@@ -7,15 +7,15 @@ import { makeApp } from "./helpers.js";
 
 const root = path.resolve("/proj");
 const project = {
-  configFile: path.join(root, "neat.config.ts"),
+  configFile: path.join(root, "nect.config.ts"),
   appDir: path.join(root, "app"),
-  outDir: path.join(root, ".neat"),
+  outDir: path.join(root, ".nect"),
 };
 const kind = (rel: string) => classifyPath(path.join(root, ...rel.split("/")), project);
 
 describe("classifyPath", () => {
   test("config file", () => {
-    expect(kind("neat.config.ts")).toBe("config");
+    expect(kind("nect.config.ts")).toBe("config");
   });
 
   test("reserved files and directories under the app directory are route changes", () => {
@@ -34,7 +34,7 @@ describe("classifyPath", () => {
   });
 
   test("output, node_modules, git, tests, and non-source files are ignored", () => {
-    expect(kind(".neat/manifest.json")).toBe("ignored");
+    expect(kind(".nect/manifest.json")).toBe("ignored");
     expect(kind("node_modules/x/index.js")).toBe("ignored");
     expect(kind(".git/index")).toBe("ignored");
     expect(kind("app/commands/ping/command.test.ts")).toBe("ignored");

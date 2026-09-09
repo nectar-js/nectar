@@ -12,7 +12,7 @@ import {
   scaffold,
 } from "./scaffold.js";
 
-const USAGE = `Usage: npm create @neatjs [directory] [options]
+const USAGE = `Usage: npm create @nect-js [directory] [options]
 
 Options:
   --ts, --js        Language. Asked when omitted.

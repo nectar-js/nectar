@@ -11,9 +11,9 @@ export interface MatchableRoute {
 
 export type MatchResult<Route extends MatchableRoute = MatchableRoute> =
   | { ok: true; route: Route; params: Record<string, string | string[]> }
-  /** The custom ID is not Neat's. Hand-built components should be left alone. */
-  | { ok: false; reason: "not-neat" }
-  /** The ID carries the Neat prefix but cannot be decoded, names no route, or has the wrong number of values. */
+  /** The custom ID is not Nect's. Hand-built components should be left alone. */
+  | { ok: false; reason: "not-nect" }
+  /** The ID carries the Nect prefix but cannot be decoded, names no route, or has the wrong number of values. */
   | { ok: false; reason: "malformed" | "unknown-route" | "param-count" };
 
 export interface ComponentMatcher<Route extends MatchableRoute = MatchableRoute> {

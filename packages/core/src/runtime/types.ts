@@ -3,7 +3,7 @@ import type { RouteCategory } from "../compiler/routes.js";
 
 export type Env = "development" | "test" | "production";
 
-/** The subset of `neat.config.ts` the runtime reads. */
+/** The subset of `nect.config.ts` the runtime reads. */
 export interface RuntimeConfig {
   intents: ClientOptions["intents"];
   partials?: ClientOptions["partials"];

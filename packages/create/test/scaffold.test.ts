@@ -22,19 +22,19 @@ afterEach(() => {
 });
 
 function tempDir(): string {
-  const dir = mkdtempSync(path.join(tmpdir(), "neat-create-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "nect-create-"));
   temps.push(dir);
   return path.join(dir, "my-bot");
 }
 
 /**
- * Stands in for `npm install`: links the workspace's `@neatjs/core` and `discord.js` into the
+ * Stands in for `npm install`: links the workspace's `@nect-js/core` and `discord.js` into the
  * generated project. Junctions, so no privileges are needed on Windows.
  */
 function linkDependencies(dir: string): void {
   const modules = path.join(dir, "node_modules");
-  mkdirSync(path.join(modules, "@neatjs"), { recursive: true });
-  symlinkSync(path.join(repo, "packages/core"), path.join(modules, "@neatjs/core"), "junction");
+  mkdirSync(path.join(modules, "@nect-js"), { recursive: true });
+  symlinkSync(path.join(repo, "packages/core"), path.join(modules, "@nect-js/core"), "junction");
   symlinkSync(
     realpathSync(path.join(repo, "examples/basic/node_modules/discord.js")),
     path.join(modules, "discord.js"),
@@ -55,12 +55,12 @@ async function check(cwd: string) {
 }
 
 describe("scaffold", () => {
-  test.each(["ts", "js"] as const)("a %s project passes neat check", async (language) => {
+  test.each(["ts", "js"] as const)("a %s project passes nect check", async (language) => {
     const dir = tempDir();
     const files = scaffold(dir, { name: "my-bot", language, packageManager: "npm" });
     expect(files).toHaveLength(language === "ts" ? 9 : 8);
     expect(files.some((f) => f.startsWith("app/components/counter/[count]/button."))).toBe(true);
-    expect(readFileSync(path.join(dir, ".gitignore"), "utf8")).toContain(".neat/");
+    expect(readFileSync(path.join(dir, ".gitignore"), "utf8")).toContain(".nect/");
 
     linkDependencies(dir);
     const result = await check(dir);
@@ -73,8 +73,8 @@ describe("scaffold", () => {
     const files = templateFiles({ name: "bot", language: "ts", packageManager: "pnpm" });
     const pkg = JSON.parse(files["package.json"] ?? "{}");
     expect(pkg.name).toBe("bot");
-    expect(pkg.scripts.dev).toBe("neat dev");
-    expect(pkg.dependencies["@neatjs/core"]).toMatch(/^\^\d/);
+    expect(pkg.scripts.dev).toBe("nect dev");
+    expect(pkg.dependencies["@nect-js/core"]).toMatch(/^\^\d/);
     expect(pkg.dependencies["discord.js"]).toMatch(/^\^14/);
     expect(pkg.devDependencies.typescript).toBeDefined();
     expect(
@@ -91,7 +91,7 @@ describe("scaffold", () => {
     expect(() => scaffold(dir, { name: "my-bot", language: "js", packageManager: "npm" })).toThrow(
       "not empty",
     );
-    expect(existsSync(path.join(dir, "neat.config.js"))).toBe(true);
+    expect(existsSync(path.join(dir, "nect.config.js"))).toBe(true);
   });
 
   test("package manager detection and next steps", () => {

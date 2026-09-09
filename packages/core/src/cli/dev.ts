@@ -4,7 +4,7 @@ import { relative } from "./compile.js";
 import { CliError, type CliIo, EXIT_OK } from "./io.js";
 import { describe, loadProject } from "./project.js";
 
-/** `neat dev [--verbose]`: compile, register dev guild commands, run, and react to file changes. */
+/** `nect dev [--verbose]`: compile, register dev guild commands, run, and react to file changes. */
 export async function dev(io: CliIo, verbose: boolean): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const server = createDevServer(project, io, { verbose });

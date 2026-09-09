@@ -14,7 +14,7 @@ import type {
 import type { CommandType, OptionType } from "./commands/meta.js";
 import type { SelectKind } from "./components/compile.js";
 import { encodeComponentRoute } from "./components/registry.js";
-import type { NeatRoutes } from "./index.js";
+import type { NectRoutes } from "./index.js";
 import type {
   ContextExtension,
   ErrorHandler,
@@ -28,8 +28,8 @@ import type {
 
 type Empty = Record<never, never>;
 
-/** `NeatRoutes[K]` when the generated types declare it, otherwise `never`. */
-type Declared<K extends string> = NeatRoutes extends Record<K, infer V> ? V : never;
+/** `NectRoutes[K]` when the generated types declare it, otherwise `never`. */
+type Declared<K extends string> = NectRoutes extends Record<K, infer V> ? V : never;
 type Fallback<T, F> = [T] extends [never] ? F : T;
 
 export type ComponentKindName = "button" | "modal" | `select:${SelectKind}`;

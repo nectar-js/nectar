@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`neat routes > examples/basic tree 1`] = `
+exports[`nect routes > examples/basic tree 1`] = `
 "app
 ├── error.ts               error boundary for 12 routes
 ├── middleware.ts          middleware for 12 routes

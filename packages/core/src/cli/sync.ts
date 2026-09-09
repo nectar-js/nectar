@@ -16,7 +16,7 @@ import { loadProject, type Project } from "./project.js";
 export const TOKEN_VAR = "DISCORD_TOKEN";
 export const APPLICATION_ID_VAR = "DISCORD_APPLICATION_ID";
 
-/** `neat sync [--dry-run] [--force]`: register the compiled commands with Discord. */
+/** `nect sync [--dry-run] [--force]`: register the compiled commands with Discord. */
 export async function sync(io: CliIo, dryRun: boolean, force: boolean): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const graph = await compileProject(project, io);
@@ -93,5 +93,5 @@ async function discordRest(token: string): Promise<CommandRest> {
 }
 
 export function projectConfigName(project: Project): string {
-  return project.configFile.split(/[\\/]/).at(-1) ?? "neat.config.ts";
+  return project.configFile.split(/[\\/]/).at(-1) ?? "nect.config.ts";
 }

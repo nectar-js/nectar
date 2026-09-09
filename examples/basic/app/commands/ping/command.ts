@@ -1,4 +1,4 @@
-import { type CommandMeta, defineCommand } from "@neatjs/core";
+import { type CommandMeta, defineCommand } from "@nect-js/core";
 
 export const meta: CommandMeta = {
   description: "Check that the bot is alive",

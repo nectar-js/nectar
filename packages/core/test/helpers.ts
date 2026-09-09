@@ -12,7 +12,7 @@ afterEach(() => {
 
 /** Writes an app tree into a fresh temp directory. Keys are posix paths relative to the app root. */
 export function makeApp(files: Record<string, string> | string[]): string {
-  const root = mkdtempSync(path.join(tmpdir(), "neat-app-"));
+  const root = mkdtempSync(path.join(tmpdir(), "nect-app-"));
   created.push(root);
   const entries = Array.isArray(files) ? files.map((f) => [f, ""] as const) : Object.entries(files);
   for (const [relative, content] of entries) {
@@ -41,9 +41,9 @@ export function normalize(table: RouteTable, root: string) {
 
 /** A throwaway project: a plain-object config plus the given app files. */
 export function makeProject(files: Record<string, string>, config = "{ intents: [] }"): string {
-  const root = mkdtempSync(path.join(tmpdir(), "neat-cli-"));
+  const root = mkdtempSync(path.join(tmpdir(), "nect-cli-"));
   created.push(root);
-  writeFileSync(path.join(root, "neat.config.js"), `export default ${config};\n`);
+  writeFileSync(path.join(root, "nect.config.js"), `export default ${config};\n`);
   mkdirSync(path.join(root, "app"));
   for (const [relative, content] of Object.entries(files)) {
     const full = path.join(root, "app", ...relative.split("/"));

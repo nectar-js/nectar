@@ -10,11 +10,11 @@ import { createDevServer } from "../src/dev/server.js";
 import { makeProject } from "./helpers.js";
 
 declare global {
-  var __neat: unknown[];
+  var __nect: unknown[];
 }
 
 const command = (value: string, description = "d") =>
-  `export const meta = { description: "${description}" };\nexport default async function () { globalThis.__neat.push("${value}"); }\n`;
+  `export const meta = { description: "${description}" };\nexport default async function () { globalThis.__nect.push("${value}"); }\n`;
 
 interface FakeClient extends EventEmitter {
   login: ReturnType<typeof vi.fn>;
@@ -90,8 +90,8 @@ async function setup() {
   const client = () => clients.at(-1) as FakeClient;
   const invoke = async (name: string) => {
     client().emit("interactionCreate", chatInput(name));
-    await vi.waitFor(() => expect(globalThis.__neat.length).toBeGreaterThan(0));
-    return globalThis.__neat.splice(0);
+    await vi.waitFor(() => expect(globalThis.__nect.length).toBeGreaterThan(0));
+    return globalThis.__nect.splice(0);
   };
   const write = (rel: string, content: string) => {
     const file = path.join(root, ...rel.split("/"));
@@ -106,7 +106,7 @@ async function setup() {
 beforeAll(() => enableModuleReloading(tmpdir()));
 
 beforeEach(() => {
-  globalThis.__neat = [];
+  globalThis.__nect = [];
 });
 
 describe("dev server", () => {
@@ -192,7 +192,7 @@ describe("dev server", () => {
   test("ignored paths do nothing", async () => {
     const { server, out, err, write, root } = await setup();
     out.length = 0;
-    await server.apply([path.join(root, ".neat/manifest.json"), write("README.md", "# hi\n")]);
+    await server.apply([path.join(root, ".nect/manifest.json"), write("README.md", "# hi\n")]);
     expect(out).toEqual([]);
     expect(err).toEqual([]);
     await server.stop();
@@ -202,7 +202,7 @@ describe("dev server", () => {
     const { server, out, write, clients, invoke } = await setup();
     out.length = 0;
     const config = write(
-      "neat.config.js",
+      "nect.config.js",
       'export default { intents: ["Guilds"], dev: { guilds: ["1"] } };\n',
     );
     await server.apply([config]);
@@ -210,8 +210,8 @@ describe("dev server", () => {
     expect(clients[0]?.destroy).toHaveBeenCalledTimes(1);
     expect(clients[1]?.login).toHaveBeenCalledTimes(1);
     expect(out).toEqual([
-      "~ neat.config.js",
-      "Restarting with the new neat.config.js.",
+      "~ nect.config.js",
+      "Restarting with the new nect.config.js.",
       "1 command, 0 component routes, 0 events in app/.",
     ]);
     expect(await invoke("ping")).toEqual(["ping-v1"]);
@@ -231,7 +231,7 @@ describe("dev server", () => {
     const server = createDevServer(await loadProject(root, io.env), io);
     await server.start();
     await server.apply([path.join(root, "app/commands/ping/command.ts")]);
-    expect(err).toEqual(["Commands are not registered: add dev.guilds to neat.config.js."]);
+    expect(err).toEqual(["Commands are not registered: add dev.guilds to nect.config.js."]);
     await server.stop();
   });
 });

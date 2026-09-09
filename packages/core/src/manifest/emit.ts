@@ -56,7 +56,7 @@ export function toManifest(graph: RouteGraph, outDir: string): Manifest {
 
   return {
     version: MANIFEST_VERSION,
-    neat: version,
+    nect: version,
     appDir: posix(path.relative(path.resolve(outDir), graph.appDir)),
     routes,
     commands: graph.commands.map((c) => ({

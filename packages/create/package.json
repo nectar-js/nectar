@@ -1,14 +1,14 @@
 {
-  "name": "@neatjs/create",
+  "name": "@nect-js/create",
   "version": "0.0.0",
-  "description": "Create a new Neat project.",
+  "description": "Create a new Nect project.",
   "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22.18"
   },
   "bin": {
-    "create-neat": "./dist/index.js"
+    "create-nect": "./dist/index.js"
   },
   "files": [
     "dist"

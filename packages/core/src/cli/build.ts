@@ -5,7 +5,7 @@ import { compileProject, relative, summary } from "./compile.js";
 import { type CliIo, EXIT_FAILURE, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
 
-/** `neat build`: compile, then write the manifest and generated types into `outDir`. */
+/** `nect build`: compile, then write the manifest and generated types into `outDir`. */
 export async function build(io: CliIo): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const graph = await compileProject(project, io);
@@ -19,7 +19,7 @@ export async function build(io: CliIo): Promise<number> {
   return EXIT_OK;
 }
 
-/** `neat check`: compile and report, writing nothing. */
+/** `nect check`: compile and report, writing nothing. */
 export async function check(io: CliIo): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const graph = await compileProject(project, io);

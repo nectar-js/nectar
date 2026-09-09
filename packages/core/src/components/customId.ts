@@ -32,14 +32,14 @@ export function encodeCustomId(shortId: string, values: readonly string[], route
 
 export type DecodedCustomId =
   | { ok: true; shortId: string; values: string[] }
-  | { ok: false; reason: "not-neat" | "malformed" };
+  | { ok: false; reason: "not-nect" | "malformed" };
 
 /**
  * Splits a raw custom ID back into its short ID and positional values.
- * IDs without the Neat prefix are reported as `not-neat` so hand-built components pass through.
+ * IDs without the Nect prefix are reported as `not-nect` so hand-built components pass through.
  */
 export function decodeCustomId(raw: string): DecodedCustomId {
-  if (!raw.startsWith(PREFIX)) return { ok: false, reason: "not-neat" };
+  if (!raw.startsWith(PREFIX)) return { ok: false, reason: "not-nect" };
 
   const shortId = raw.slice(PREFIX.length, PREFIX.length + SHORT_ID_LENGTH);
   if (!/^[0-9a-z]{6}$/.test(shortId)) return { ok: false, reason: "malformed" };

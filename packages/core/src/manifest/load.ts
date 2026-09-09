@@ -14,7 +14,7 @@ export class ManifestVersionError extends Error {
     readonly found: unknown,
   ) {
     super(
-      `${file} is manifest version ${String(found)}, this build of @neatjs/core reads version ${MANIFEST_VERSION}. Run \`neat build\` again.`,
+      `${file} is manifest version ${String(found)}, this build of @nect-js/core reads version ${MANIFEST_VERSION}. Run \`nect build\` again.`,
     );
     this.name = "ManifestVersionError";
   }

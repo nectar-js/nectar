@@ -43,9 +43,9 @@ describe("decode", () => {
     });
   });
 
-  test("ignores IDs that are not Neat's", () => {
+  test("ignores IDs that are not Nect's", () => {
     for (const raw of ["", "confirm", "x:abc123", "N:abc123", "n"]) {
-      expect(decodeCustomId(raw)).toEqual({ ok: false, reason: "not-neat" });
+      expect(decodeCustomId(raw)).toEqual({ ok: false, reason: "not-nect" });
     }
   });
 

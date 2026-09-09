@@ -7,12 +7,12 @@ import { CliError, type CliIo, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
 import { TOKEN_VAR } from "./sync.js";
 
-/** `neat start`: run the bot from the last `neat build`. No source discovery happens here. */
+/** `nect start`: run the bot from the last `nect build`. No source discovery happens here. */
 export async function start(io: CliIo): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const manifestFile = path.join(project.outDir, MANIFEST_FILE);
   if (!existsSync(manifestFile)) {
-    throw new CliError(`${relative(project.root, manifestFile)} not found. Run neat build first.`);
+    throw new CliError(`${relative(project.root, manifestFile)} not found. Run nect build first.`);
   }
   const token = io.env[TOKEN_VAR];
   if (token === undefined || token === "") {

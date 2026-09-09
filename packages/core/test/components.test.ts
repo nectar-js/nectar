@@ -215,7 +215,7 @@ describe("matcher", () => {
 
   test("passes through foreign IDs and reports malformed ones", async () => {
     const { matcher } = await build();
-    expect(matcher.match("button", "my-own-button")).toEqual({ ok: false, reason: "not-neat" });
+    expect(matcher.match("button", "my-own-button")).toEqual({ ok: false, reason: "not-nect" });
     expect(matcher.match("button", "n:zz")).toEqual({ ok: false, reason: "malformed" });
     expect(matcher.match("button", "n:000000")).toEqual({ ok: false, reason: "unknown-route" });
   });

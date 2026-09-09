@@ -15,7 +15,7 @@ afterEach(() => {
   for (const dir of temps.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 function temp(): string {
-  const dir = mkdtempSync(path.join(tmpdir(), "neat-sync-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "nect-sync-"));
   temps.push(dir);
   return dir;
 }

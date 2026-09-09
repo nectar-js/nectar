@@ -1,5 +1,5 @@
 import type { Client } from "discord.js";
-import type { NeatConfig } from "../config.js";
+import type { NectConfig } from "../config.js";
 import type { CommandRest } from "../registration/index.js";
 
 /** What a CLI command can touch. The bin passes the real process; tests pass buffers. */
@@ -11,7 +11,7 @@ export interface CliIo {
   /** Builds the REST client `sync` talks to. Tests swap in a fake. */
   rest?: (token: string) => Promise<CommandRest>;
   /** Builds the discord.js client `dev` runs. Tests swap in a fake that never logs in. */
-  client?: (config: NeatConfig) => Client;
+  client?: (config: NectConfig) => Client;
 }
 
 export const EXIT_OK = 0;

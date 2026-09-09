@@ -8,7 +8,7 @@ import { compileProject } from "./compile.js";
 import { CliError, type CliIo, EXIT_FAILURE, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
 
-/** `neat manifest [--route <id>]`: print the compiled manifest, or everything about one route. */
+/** `nect manifest [--route <id>]`: print the compiled manifest, or everything about one route. */
 export async function manifest(io: CliIo, route: string | undefined): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const graph = await compileProject(project, io);

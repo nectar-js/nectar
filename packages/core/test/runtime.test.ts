@@ -16,10 +16,10 @@ import {
 import { makeApp } from "./helpers.js";
 
 declare global {
-  var __neat: unknown[];
+  var __nect: unknown[];
 }
 
-const push = (...values: string[]) => `globalThis.__neat.push([${values.join(", ")}]);`;
+const push = (...values: string[]) => `globalThis.__nect.push([${values.join(", ")}]);`;
 const handler = (body: string) => `export default async function (ctx) { ${body} }\n`;
 const cmd = (meta: string, body: string) => `export const meta = ${meta};\n${handler(body)}`;
 
@@ -48,7 +48,7 @@ const app = {
   "components/pick/select.ts": `export const kind = "string";\n${handler(push('"pick"'))}`,
   "components/form/modal.ts": handler(push('"form"')),
   "events/clientReady/event.ts":
-    "export default async function (client, ctx) { globalThis.__neat.push(['ready', ctx.route.id, typeof ctx.client]); }\n",
+    "export default async function (client, ctx) { globalThis.__nect.push(['ready', ctx.route.id, typeof ctx.client]); }\n",
   "events/messageCreate/(a)/event.ts": `export const meta = { order: 1 };\nexport default async function (msg) { ${push('"a"', "msg")} }\n`,
   "events/messageCreate/(b)/event.ts": `export const meta = { order: 0 };\nexport default async function (msg) { await new Promise((r) => setTimeout(r, 10)); ${push('"b"', "msg")} }\n`,
   "events/guildMemberAdd/event.ts": `export const meta = { once: true };\n${handler(push('"member"'))}`,
@@ -92,7 +92,7 @@ async function setup(files: Record<string, string> = app) {
 }
 
 function calls(): unknown[] {
-  return globalThis.__neat.splice(0);
+  return globalThis.__nect.splice(0);
 }
 
 /** A stubbed discord.js interaction. Every type guard is false unless overridden. */
@@ -133,7 +133,7 @@ const component = (guard: string, customId: string) =>
   interaction({ [guard]: () => true, customId });
 
 beforeEach(() => {
-  globalThis.__neat = [];
+  globalThis.__nect = [];
 });
 
 describe("interaction dispatch", () => {
@@ -196,7 +196,7 @@ describe("interaction dispatch", () => {
     ]);
   });
 
-  test("foreign custom IDs are ignored silently, broken Neat IDs with a warning", async () => {
+  test("foreign custom IDs are ignored silently, broken Nect IDs with a warning", async () => {
     const { state, logger, componentRoute } = await setup();
     const dispatch = createInteractionDispatcher(state);
     await dispatch(component("isButton", "my-own-button"));
@@ -255,7 +255,7 @@ describe("interaction dispatch", () => {
     const { state } = await setup({
       "commands/t/command.ts": cmd(
         '{ description: "d" }',
-        "globalThis.__neat.push([ctx.trace.id, ctx.trace.elapsed() >= 5, ctx.trace.receivedAt > 0]);",
+        "globalThis.__nect.push([ctx.trace.id, ctx.trace.elapsed() >= 5, ctx.trace.receivedAt > 0]);",
       ),
     });
     await createInteractionDispatcher(state)(chatInput("t"));
@@ -356,7 +356,7 @@ describe("events", () => {
     client.emit("guildMemberAdd");
     client.emit("guildMemberAdd");
     client.emit("guildMemberRemove");
-    await vi.waitFor(() => expect(globalThis.__neat.length).toBe(5));
+    await vi.waitFor(() => expect(globalThis.__nect.length).toBe(5));
 
     // Events do not wait for each other, so the slow messageCreate pair lands last.
     expect(calls()).toEqual([
@@ -392,7 +392,7 @@ describe("events", () => {
     });
     await runtime.start({ token: "t", signals: false });
     client.emit("messageCreate");
-    await vi.waitFor(() => expect(globalThis.__neat.length).toBe(2));
+    await vi.waitFor(() => expect(globalThis.__nect.length).toBe(2));
     expect(calls()).toEqual([["fast"], ["slow"]]);
     await runtime.stop();
   });
@@ -492,7 +492,7 @@ describe("update", () => {
     client.emit("interactionCreate", chatInput("two"));
     client.emit("messageCreate");
     client.emit("guildMemberAdd");
-    await vi.waitFor(() => expect(globalThis.__neat.length).toBe(3));
+    await vi.waitFor(() => expect(globalThis.__nect.length).toBe(3));
     expect(new Set(calls())).toEqual(new Set([["two"], ["msg-old"], ["member"]]));
     expect(client.listenerCount("messageCreate")).toBe(1);
     expect(client.listenerCount("interactionCreate")).toBe(1);

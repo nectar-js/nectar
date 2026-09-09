@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="./assets/NeatFavIcon.png" alt="Neat" width="96" />
+  <img src="./assets/NectFavIcon.png" alt="Nect" width="96" />
 </p>
 
-<h1 align="center">Neat</h1>
+<h1 align="center">Nect</h1>
 
 <p align="center">A filesystem-based meta-framework for discord.js.</p>
 
@@ -10,13 +10,13 @@
 
 <br />
 
-Neat turns your Discord application's directory tree into commands, components, events, middleware, and typed routes. discord.js stays fully accessible underneath. You write handlers. Neat owns the client bootstrap, command registration, custom ID parsing, interaction routing, file watching, and production build.
+Nect turns your Discord application's directory tree into commands, components, events, middleware, and typed routes. discord.js stays fully accessible underneath. You write handlers. Nect owns the client bootstrap, command registration, custom ID parsing, interaction routing, file watching, and production build.
 
 ## The idea
 
 A Discord bot already looks like an application with routes. Commands have names and subcommands. Buttons and selects carry custom IDs. Modals return identifiers. Autocomplete belongs to a command option. Middleware wants a scope.
 
-Neat makes that structure literal. The filesystem is the application model.
+Nect makes that structure literal. The filesystem is the application model.
 
 ```bash
 app/
@@ -48,7 +48,7 @@ app/
       (audit)/event.ts
 ```
 
-Neat compiles this tree into a manifest before the bot starts. Production loads the manifest. It never scans source files.
+Nect compiles this tree into a manifest before the bot starts. Production loads the manifest. It never scans source files.
 
 ## What it looks like
 
@@ -56,7 +56,7 @@ A command. The name comes from the directory. Everything Discord requires and ca
 
 ```ts
 // app/commands/user/profile/command.ts
-import { defineCommand } from "@neatjs/core";
+import { defineCommand } from "@nect-js/core";
 
 export const meta = {
   description: "Show a user's profile",
@@ -75,7 +75,7 @@ A button with a dynamic segment. The parameter is typed because of where the fil
 
 ```ts
 // app/components/tickets/[ticketId]/close/button.ts
-import { defineComponent } from "@neatjs/core";
+import { defineComponent } from "@nect-js/core";
 
 export default defineComponent(async ({ interaction, params }) => {
   // params.ticketId is a string, inferred from the route
@@ -88,7 +88,7 @@ Building that button somewhere else. `customId` is typed against the generated r
 
 ```ts
 import { ButtonBuilder, ButtonStyle, ActionRowBuilder } from "discord.js";
-import { customId } from "@neatjs/core";
+import { customId } from "@nect-js/core";
 
 const close = new ButtonBuilder()
   .setCustomId(customId("tickets/[ticketId]/close", { ticketId: ticket.id }))
@@ -102,7 +102,7 @@ Middleware, scoped by placement. This file sits in `app/commands/moderation/`, s
 
 ```ts
 // app/commands/moderation/middleware.ts
-import { defineMiddleware } from "@neatjs/core";
+import { defineMiddleware } from "@nect-js/core";
 import { PermissionFlagsBits } from "discord.js";
 
 export default defineMiddleware(async (ctx, next) => {
@@ -119,7 +119,7 @@ An event. The directory name is the discord.js event name. Handlers get the nati
 
 ```ts
 // app/events/guildMemberAdd/(welcome)/event.ts
-import { defineEvent } from "@neatjs/core";
+import { defineEvent } from "@nect-js/core";
 
 export default defineEvent(async (member) => {
   await member.guild.systemChannel?.send(`Welcome, ${member}.`);
@@ -129,8 +129,8 @@ export default defineEvent(async (member) => {
 Configuration covers only what the tree cannot express.
 
 ```ts
-// neat.config.ts
-import { defineConfig } from "@neatjs/core";
+// nect.config.ts
+import { defineConfig } from "@nect-js/core";
 import { GatewayIntentBits } from "discord.js";
 
 export default defineConfig({
@@ -141,37 +141,37 @@ export default defineConfig({
 });
 ```
 
-## What Neat handles for you
+## What Nect handles for you
 
-- Command registration. Neat diffs the compiled commands against what Discord has and only writes when something changed. Development registers to your dev guilds, production registers globally.
+- Command registration. Nect diffs the compiled commands against what Discord has and only writes when something changed. Development registers to your dev guilds, production registers globally.
 - Custom IDs. Routes generate them and routes parse them. There is one source of truth, and the encoder refuses to exceed Discord's length limit instead of truncating.
 - Interaction routing. Commands, subcommands, context menus, buttons, selects, modals, and autocomplete all resolve through the same compiled route graph.
 - Middleware and error boundaries, resolved at build time from file placement and run outer to inner.
-- Development server. `neat dev` watches your files, hot-swaps handlers without reconnecting to the gateway, rebuilds routes when the tree changes, and updates dev guild commands when metadata changes.
+- Development server. `nect dev` watches your files, hot-swaps handlers without reconnecting to the gateway, rebuilds routes when the tree changes, and updates dev guild commands when metadata changes.
 - Generated types. Route names, parameters, command options, and middleware context are emitted as a `.d.ts` you never edit.
 - Diagnostics. Conflicting routes, invalid nesting, and Discord limit violations fail the build with the file that caused them.
 
 ## What stays yours
 
-discord.js. Every handler receives the native interaction and client. Builders, collections, permissions, REST, caching, sharding, and the rest of the discord.js API work unchanged. Neat adds structure on top and does not rename or wrap Discord concepts.
+discord.js. Every handler receives the native interaction and client. Builders, collections, permissions, REST, caching, sharding, and the rest of the discord.js API work unchanged. Nect adds structure on top and does not rename or wrap Discord concepts.
 
-Your database, your state, your business logic. Neat ships no ORM, no dashboard, no ticket system.
+Your database, your state, your business logic. Nect ships no ORM, no dashboard, no ticket system.
 
 ## CLI
 
 ```
-neat dev        start the development server
-neat build      compile to a manifest and production output
-neat start      run the production build
-neat check      validate the app without writing output
-neat routes     print the compiled route tree
-neat manifest   inspect the manifest, per route with --route
-neat sync       reconcile command registration with Discord
-neat clean      delete generated output
-neat info       versions and environment
+nect dev        start the development server
+nect build      compile to a manifest and production output
+nect start      run the production build
+nect check      validate the app without writing output
+nect routes     print the compiled route tree
+nect manifest   inspect the manifest, per route with --route
+nect sync       reconcile command registration with Discord
+nect clean      delete generated output
+nect info       versions and environment
 ```
 
-New projects start with `npm create @neatjs`.
+New projects start with `npm create @nect-js`.
 
 ## Requirements
 

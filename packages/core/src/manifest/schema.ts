@@ -6,15 +6,15 @@ import type { EventMode } from "../events/compile.js";
 export const MANIFEST_VERSION = 1;
 
 /**
- * The compiled app, as written to `.neat/manifest.json`.
+ * The compiled app, as written to `.nect/manifest.json`.
  *
  * Every file path is relative to `appDir`, with `/` separators, so a manifest built on one
  * machine loads on another. `appDir` itself is relative to the manifest's own directory.
  */
 export interface Manifest {
   version: typeof MANIFEST_VERSION;
-  /** `@neatjs/core` version that produced this manifest. */
-  neat: string;
+  /** `@nect-js/core` version that produced this manifest. */
+  nect: string;
   appDir: string;
   routes: ManifestRoute[];
   commands: ManifestCommand[];

@@ -40,7 +40,7 @@ export interface DevServer {
 }
 
 /**
- * The state behind `neat dev`: the compiled manifest and the runtime serving it. Changes are
+ * The state behind `nect dev`: the compiled manifest and the runtime serving it. Changes are
  * handled in the smallest way that keeps the running bot correct, and the gateway connection
  * survives everything but a config change.
  */
@@ -96,7 +96,7 @@ export function createDevServer(
     } catch (error) {
       if (!(error instanceof CliError)) throw error;
       io.err(
-        error.message.replace("Pass force to do it anyway.", "Run neat sync --force to do it."),
+        error.message.replace("Pass force to do it anyway.", "Run nect sync --force to do it."),
       );
     }
   }

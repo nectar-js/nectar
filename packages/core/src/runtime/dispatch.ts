@@ -72,7 +72,7 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
     const [kind, customId] = component;
     const match = tables.matcher.match(kind, customId);
     if (!match.ok) {
-      if (match.reason !== "not-neat") {
+      if (match.reason !== "not-nect") {
         state.logger.warn(`Ignoring ${kind} with custom ID "${customId}": ${match.reason}.`);
       }
       return;
@@ -134,7 +134,7 @@ async function closeAutocomplete(interaction: AutocompleteInteraction): Promise<
 }
 
 function unknown(state: RuntimeState, what: string): void {
-  state.logger.warn(`No route for ${what}. Run \`neat sync\` if commands changed.`);
+  state.logger.warn(`No route for ${what}. Run \`nect sync\` if commands changed.`);
 }
 
 interface Tables {

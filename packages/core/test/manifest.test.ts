@@ -16,14 +16,14 @@ const appDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "../../../examples/basic/app",
 );
-const outDir = path.resolve(appDir, "../.neat");
+const outDir = path.resolve(appDir, "../.nect");
 
 const temps: string[] = [];
 afterEach(() => {
   for (const dir of temps.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 function temp(): string {
-  const dir = mkdtempSync(path.join(tmpdir(), "neat-manifest-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "nect-manifest-"));
   temps.push(dir);
   return dir;
 }
@@ -49,7 +49,7 @@ describe("manifest", () => {
 
   test("write then load resolves the app directory", async () => {
     const dir = temp();
-    const out = path.join(dir, ".neat");
+    const out = path.join(dir, ".nect");
     const graph = await buildGraph(appDir);
     const file = writeManifest(toManifest(graph, out), out);
     expect(path.basename(file)).toBe("manifest.json");

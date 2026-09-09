@@ -1,4 +1,4 @@
-import { defineMiddleware } from "@neatjs/core";
+import { defineMiddleware } from "@nect-js/core";
 import type { GuildMember } from "discord.js";
 
 export default defineMiddleware(async (ctx, next) => {

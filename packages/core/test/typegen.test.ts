@@ -15,11 +15,11 @@ describe("generated types", () => {
   test("examples/basic types.d.ts", async () => {
     const graph = await buildGraph(appDir);
     expect(graph.diagnostics.items).toEqual([]);
-    const types = toTypes(graph, path.join(basic, ".neat"));
+    const types = toTypes(graph, path.join(basic, ".nect"));
     expect(types).toMatchSnapshot();
 
     // The example project's typecheck reads this file, so the checkpoint runs against real output.
-    const file = writeTypes(graph, path.join(basic, ".neat"));
+    const file = writeTypes(graph, path.join(basic, ".nect"));
     expect(readFileSync(file, "utf8")).toBe(types);
   });
 
@@ -31,7 +31,7 @@ describe("generated types", () => {
       "components/w/middleware.ts":
         "export default async function (ctx, next) { return next(); }\n",
     });
-    const types = toTypes(await buildGraph(root), path.join(root, ".neat"));
+    const types = toTypes(await buildGraph(root), path.join(root, ".nect"));
     expect(types).toContain(
       '"w/[id]/[...steps]": { kind: "button" | "modal"; params: { "id": string; "steps": string[] }; context: M0 & M1 };',
     );
@@ -96,7 +96,7 @@ describe("customId registry", () => {
 });
 
 describe("validateConfig", () => {
-  const ok = (value: unknown) => validateConfig(value, "neat.config.ts");
+  const ok = (value: unknown) => validateConfig(value, "nect.config.ts");
   const bad = (value: unknown, message: RegExp) => {
     expect(() => ok(value)).toThrow(ConfigError);
     expect(() => ok(value)).toThrow(message);

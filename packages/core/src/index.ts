@@ -1,11 +1,11 @@
 export { version } from "./version.js";
 
 /**
- * Filled in by the generated `.neat/types.d.ts` through module augmentation. Until then every
+ * Filled in by the generated `.nect/types.d.ts` through module augmentation. Until then every
  * route path is accepted and parameters are untyped.
  */
 // biome-ignore lint/suspicious/noEmptyInterface: augmentation target
-export interface NeatRoutes {}
+export interface NectRoutes {}
 
 export type {
   ChannelOption,
@@ -23,7 +23,7 @@ export type {
 } from "./commands/meta.js";
 export type { SelectKind } from "./components/compile.js";
 export { CustomIdTooLongError, MAX_CUSTOM_ID_LENGTH } from "./components/customId.js";
-export { ConfigError, defineConfig, type NeatConfig, validateConfig } from "./config.js";
+export { ConfigError, defineConfig, type NectConfig, validateConfig } from "./config.js";
 export {
   type CommandContext,
   type CommandPath,

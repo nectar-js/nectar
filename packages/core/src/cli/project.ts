@@ -1,31 +1,31 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { loadModule } from "../compiler/load.js";
-import { ConfigError, type NeatConfig, validateConfig } from "../config.js";
+import { ConfigError, type NectConfig, validateConfig } from "../config.js";
 import type { Env } from "../runtime/types.js";
 import { CliError } from "./io.js";
 
-export const CONFIG_FILES = ["neat.config.ts", "neat.config.js"];
+export const CONFIG_FILES = ["nect.config.ts", "nect.config.js"];
 
 export interface Project {
   /** Directory holding the config file. Every relative config path resolves against it. */
   root: string;
   configFile: string;
-  config: NeatConfig;
+  config: NectConfig;
   appDir: string;
   outDir: string;
   env: Env;
 }
 
-/** Finds and validates `neat.config.ts` in `cwd`. */
+/** Finds and validates `nect.config.ts` in `cwd`. */
 export async function loadProject(cwd: string, env: NodeJS.ProcessEnv): Promise<Project> {
   const configFile = CONFIG_FILES.map((name) => path.join(cwd, name)).find((f) => existsSync(f));
   if (configFile === undefined) {
     throw new CliError(
-      `No ${CONFIG_FILES[0]} in ${cwd}. Run neat from the project root, or create one with defineConfig.`,
+      `No ${CONFIG_FILES[0]} in ${cwd}. Run nect from the project root, or create one with defineConfig.`,
     );
   }
-  let config: NeatConfig;
+  let config: NectConfig;
   try {
     const module = await loadModule(configFile);
     config = validateConfig(module.default, path.basename(configFile));
@@ -43,7 +43,7 @@ export async function loadProject(cwd: string, env: NodeJS.ProcessEnv): Promise<
     configFile,
     config,
     appDir,
-    outDir: path.resolve(root, config.outDir ?? ".neat"),
+    outDir: path.resolve(root, config.outDir ?? ".nect"),
     env: config.env ?? envFrom(env.NODE_ENV),
   };
 }
