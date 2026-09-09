@@ -1,0 +1,12 @@
+{
+  "name": "basic",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@neatjs/core": "workspace:*",
+    "discord.js": "^14.27.0"
+  }
+}
