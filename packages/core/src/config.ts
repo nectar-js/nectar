@@ -19,6 +19,13 @@ export interface NeatConfig {
     /** Guilds that receive commands instantly while developing. */
     guilds?: string[];
   };
+  commands?: {
+    /**
+     * Where commands are registered outside development: everywhere, or only in the listed
+     * guilds. Defaults to `"global"`. Development always uses `dev.guilds`.
+     */
+    target?: "global" | string[];
+  };
 }
 
 export function defineConfig(config: NeatConfig): NeatConfig {
@@ -68,14 +75,22 @@ export function validateConfig(value: unknown, file: string): NeatConfig {
   if (config.dev !== undefined) {
     if (!isRecord(config.dev)) fail("`dev` must be an object.");
     const guilds = (config.dev as Record<string, unknown>).guilds;
-    if (
-      guilds !== undefined &&
-      (!Array.isArray(guilds) || !guilds.every((g) => typeof g === "string" && /^\d+$/.test(g)))
-    ) {
+    if (guilds !== undefined && !isGuildList(guilds)) {
       fail("`dev.guilds` must be an array of guild ID strings.");
     }
   }
+  if (config.commands !== undefined) {
+    if (!isRecord(config.commands)) fail("`commands` must be an object.");
+    const target = (config.commands as Record<string, unknown>).target;
+    if (target !== undefined && target !== "global" && !isGuildList(target)) {
+      fail('`commands.target` must be "global" or an array of guild ID strings.');
+    }
+  }
   return config as unknown as NeatConfig;
+}
+
+function isGuildList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((g) => typeof g === "string" && /^\d+$/.test(g));
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

@@ -7,3 +7,4 @@ export {
   normalizeCommand,
 } from "./normalize.js";
 export { type CommandRest, fetchCommands, putCommands, type Scope, scopeKey } from "./remote.js";
+export { registrationScopes } from "./targets.js";

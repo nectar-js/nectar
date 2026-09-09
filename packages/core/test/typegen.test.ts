@@ -114,6 +114,7 @@ describe("validateConfig", () => {
         appDir: "src/app",
         outDir: "build",
         dev: { guilds: ["123"] },
+        commands: { target: ["456"] },
       }),
     ).toMatchObject({ eager: true });
   });
@@ -127,5 +128,7 @@ describe("validateConfig", () => {
     bad({ intents: [], env: "staging" }, /`env`/);
     bad({ intents: [], appDir: "" }, /`appDir`/);
     bad({ intents: [], dev: { guilds: ["abc"] } }, /`dev.guilds`/);
+    bad({ intents: [], commands: { target: "guild" } }, /`commands.target`/);
+    bad({ intents: [], commands: { target: ["x"] } }, /`commands.target`/);
   });
 });
