@@ -1,8 +1,14 @@
-# Neat
+<p align="center">
+  <img src="./assets/NeatFavIcon.png" alt="Neat" width="96" />
+</p>
 
-A filesystem-based meta-framework for discord.js.
+<h1 align="center">Neat</h1>
 
-**Status:** In Development
+<p align="center">A filesystem-based meta-framework for discord.js.</p>
+
+<p align="center"><strong>Status:</strong> In Development</p>
+
+<br />
 
 Neat turns your Discord application's directory tree into commands, components, events, middleware, and typed routes. discord.js stays fully accessible underneath. You write handlers. Neat owns the client bootstrap, command registration, custom ID parsing, interaction routing, file watching, and production build.
 
