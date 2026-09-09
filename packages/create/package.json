@@ -1,0 +1,20 @@
+{
+  "name": "@neatjs/create",
+  "version": "0.0.0",
+  "description": "Create a new Neat project.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "create-neat": "./dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit"
+  }
+}
