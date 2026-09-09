@@ -1,4 +1,6 @@
 import { EventEmitter } from "node:events";
+import { mkdirSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import type { Client, Interaction } from "discord.js";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { buildGraph } from "../src/compiler/index.js";
@@ -432,5 +434,47 @@ describe("lifecycle", () => {
     process.emit("SIGINT");
     await vi.waitFor(() => expect(client.destroy).toHaveBeenCalledTimes(1));
     expect(process.listenerCount("SIGINT")).toBe(before);
+  });
+});
+
+describe("update", () => {
+  test("a new manifest changes dispatch and rebinds events without touching the client", async () => {
+    const { state, client, logger } = await setup({
+      "commands/one/command.ts": cmd('{ description: "d" }', push('"one"')),
+      "events/messageCreate/event.ts": handler(push('"msg-old"')),
+    });
+    const runtime = createRuntime({
+      manifest: state.manifest,
+      appDir: state.appDir,
+      config: { intents: [] },
+      env: "test",
+      logger,
+      client: client as unknown as Client,
+    });
+    await runtime.start({ token: "t", signals: false });
+
+    mkdirSync(path.join(state.appDir, "commands/two"));
+    writeFileSync(
+      path.join(state.appDir, "commands/two/command.ts"),
+      cmd('{ description: "d" }', push('"two"')),
+    );
+    mkdirSync(path.join(state.appDir, "events/guildMemberAdd"));
+    writeFileSync(
+      path.join(state.appDir, "events/guildMemberAdd/event.ts"),
+      handler(push('"member"')),
+    );
+    const next = toManifest(await buildGraph(state.appDir), state.appDir);
+    runtime.update(next);
+
+    client.emit("interactionCreate", chatInput("two"));
+    client.emit("messageCreate");
+    client.emit("guildMemberAdd");
+    await vi.waitFor(() => expect(globalThis.__neat.length).toBe(3));
+    expect(new Set(calls())).toEqual(new Set([["two"], ["msg-old"], ["member"]]));
+    expect(client.listenerCount("messageCreate")).toBe(1);
+    expect(client.listenerCount("interactionCreate")).toBe(1);
+    expect(client.login).toHaveBeenCalledTimes(1);
+    await runtime.stop();
+    expect(client.listenerCount("guildMemberAdd")).toBe(0);
   });
 });

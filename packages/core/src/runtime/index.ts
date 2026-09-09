@@ -5,6 +5,7 @@ export { runChain } from "./middleware.js";
 export { HandlerLoadError, ModuleRegistry } from "./modules.js";
 export {
   createRuntime,
+  manifestFiles,
   type Runtime,
   type RuntimeOptions,
   type StartOptions,

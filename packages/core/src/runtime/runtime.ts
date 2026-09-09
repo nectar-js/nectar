@@ -31,6 +31,7 @@ export interface StartOptions {
 export interface Runtime {
   readonly client: Client;
   readonly env: Env;
+  readonly modules: ModuleRegistry;
   /** Loads handlers, attaches listeners, and logs in. */
   start(options: StartOptions): Promise<void>;
   /**
@@ -38,6 +39,11 @@ export interface Runtime {
    * destroys the client. Safe to call twice.
    */
   stop(): Promise<void>;
+  /**
+   * Swaps in a recompiled manifest: dispatch tables, component routes, and event listeners
+   * follow it. Handler modules are not touched; invalidate them through `modules`.
+   */
+  update(manifest: Manifest): void;
 }
 
 export function createRuntime(options: RuntimeOptions): Runtime {
@@ -60,15 +66,11 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     logger,
   };
 
-  registerComponentRoutes(
-    state.manifest.routes.filter(
-      (r): r is ManifestComponentRoute =>
-        r.kind === "button" || r.kind === "select" || r.kind === "modal",
-    ),
-  );
-  const dispatch = createInteractionDispatcher(state);
+  registerComponentRoutes(componentRoutes(state.manifest));
+  let dispatch = createInteractionDispatcher(state);
   const inFlight = new Set<Promise<void>>();
   let bindings: EventBinding[] = [];
+  let started = false;
   let drainTimeout = 10_000;
   let stopping: Promise<void> | null = null;
   let onSignal: (() => void) | null = null;
@@ -81,14 +83,16 @@ export function createRuntime(options: RuntimeOptions): Runtime {
   return {
     client,
     env,
+    modules: state.modules,
 
     async start({ token, signals = true, drainTimeout: timeout = 10_000 }) {
       drainTimeout = timeout;
       if (options.config.eager ?? env === "production") {
-        await state.modules.preload(everyFile(state));
+        await state.modules.preload(manifestFiles(state.manifest, state.appDir));
       }
 
       bindings = bindEvents(state);
+      started = true;
       client.on(Events.InteractionCreate, onInteraction);
 
       if (signals) {
@@ -122,6 +126,16 @@ export function createRuntime(options: RuntimeOptions): Runtime {
       })();
       return stopping;
     },
+
+    update(manifest) {
+      state.manifest = manifest;
+      registerComponentRoutes(componentRoutes(manifest));
+      dispatch = createInteractionDispatcher(state);
+      if (started && stopping === null) {
+        for (const { name, listener } of bindings) client.off(name, listener);
+        bindings = bindEvents(state);
+      }
+    },
   };
 }
 
@@ -140,14 +154,22 @@ async function drain(inFlight: Set<Promise<void>>, timeout: number, logger: Logg
   }
 }
 
-function everyFile(state: RuntimeState): Set<string> {
+function componentRoutes(manifest: Manifest): ManifestComponentRoute[] {
+  return manifest.routes.filter(
+    (r): r is ManifestComponentRoute =>
+      r.kind === "button" || r.kind === "select" || r.kind === "modal",
+  );
+}
+
+/** Absolute paths of every handler, middleware, and error boundary file a manifest refers to. */
+export function manifestFiles(manifest: Manifest, appDir: string): Set<string> {
   const files = new Set<string>();
-  for (const route of state.manifest.routes) {
+  for (const route of manifest.routes) {
     files.add(route.file);
     for (const file of route.middleware) files.add(file);
     for (const file of route.errors) files.add(file);
   }
-  return new Set([...files].map((file) => path.join(state.appDir, ...file.split("/"))));
+  return new Set([...files].map((file) => path.join(appDir, ...file.split("/"))));
 }
 
 function envFromProcess(): Env {
