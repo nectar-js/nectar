@@ -31,6 +31,19 @@ export class ModuleRegistry {
     return pending;
   }
 
+  /**
+   * Forgets cached modules so the next load imports them again. With no argument, forgets
+   * everything. Only useful together with `enableModuleReloading`; otherwise `import()` hands
+   * back the same instance.
+   */
+  invalidate(files?: Iterable<string>): void {
+    if (files === undefined) {
+      this.cache.clear();
+      return;
+    }
+    for (const file of files) this.cache.delete(file);
+  }
+
   /** Imports every file up front so a bad module fails startup instead of the first interaction. */
   async preload(files: Iterable<string>): Promise<void> {
     await Promise.all([...new Set(files)].map((file) => this.load(file)));
