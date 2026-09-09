@@ -1,4 +1,14 @@
 #!/usr/bin/env node
-import { version } from "./index.js";
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { run } from "./cli/index.js";
 
-console.log(`neat ${version}`);
+const envFile = path.join(process.cwd(), ".env");
+if (existsSync(envFile)) process.loadEnvFile(envFile);
+
+process.exitCode = await run(process.argv.slice(2), {
+  cwd: process.cwd(),
+  env: process.env,
+  out: (line) => console.log(line),
+  err: (line) => console.error(line),
+});
