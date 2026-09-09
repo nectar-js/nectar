@@ -1,4 +1,4 @@
-import { defineConfig } from "tsup";
+import { defineConfig } from "tsdown";
 
 export default defineConfig({
   entry: {
@@ -7,9 +7,10 @@ export default defineConfig({
     cli: "src/cli.ts",
   },
   format: "esm",
+  platform: "node",
   target: "node22",
   dts: true,
   sourcemap: true,
   clean: true,
-  splitting: false,
+  fixedExtension: false,
 });

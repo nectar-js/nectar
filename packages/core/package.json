@@ -24,7 +24,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsup",
+    "build": "tsdown",
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
