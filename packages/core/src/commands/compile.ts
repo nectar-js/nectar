@@ -8,6 +8,7 @@ import { Diagnostics } from "../compiler/diagnostics.js";
 import { loadModule } from "../compiler/load.js";
 import type { Boundary, Route, RouteTable } from "../compiler/routes.js";
 import { formatSegment } from "../compiler/segments.js";
+import { checkDeclaredRoute } from "../components/compile.js";
 import type { CommandMeta, CommandOption, CommandRouteMeta, TopLevelMeta } from "./meta.js";
 import { topLevelKeysUsed, validateCommandMeta, validateCommandRouteMeta } from "./validate.js";
 
@@ -101,6 +102,7 @@ async function loadRoutes(routes: Route[], diagnostics: Diagnostics): Promise<Lo
     commandRoutes.map(async (route): Promise<LoadedRoute | null> => {
       const module = await importOrReport(route.file, diagnostics);
       if (module === null) return null;
+      if (!checkDeclaredRoute(module, route, diagnostics)) return null;
       const meta = validateCommandMeta(module.meta, route.file, diagnostics);
       if (meta === null) return null;
       return { route, parts: route.path.split("/"), meta };
