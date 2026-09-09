@@ -1,8 +1,8 @@
 import path from "node:path";
 import { Diagnostics } from "./diagnostics.js";
-import { type FileKind, type SourceFile, discover } from "./discover.js";
+import { discover, type FileKind, type SourceFile } from "./discover.js";
 import { shortId } from "./identity.js";
-import { type Segment, formatSegment, parseSegment } from "./segments.js";
+import { formatSegment, parseSegment, type Segment } from "./segments.js";
 
 export type RouteCategory = "command" | "component" | "event";
 

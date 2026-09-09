@@ -1,0 +1,528 @@
+import path from "node:path";
+import {
+  ApplicationCommandOptionType,
+  ApplicationCommandType,
+  type RESTPostAPIApplicationCommandsJSONBody,
+} from "discord-api-types/v10";
+import { Diagnostics } from "../compiler/diagnostics.js";
+import { loadModule } from "../compiler/load.js";
+import type { Boundary, Route, RouteTable } from "../compiler/routes.js";
+import { formatSegment } from "../compiler/segments.js";
+import type { CommandMeta, CommandOption, CommandRouteMeta, TopLevelMeta } from "./meta.js";
+import { topLevelKeysUsed, validateCommandMeta, validateCommandRouteMeta } from "./validate.js";
+
+export interface CompiledCommand {
+  name: string;
+  type: ApplicationCommandType;
+  /**
+   * Handler routes keyed by their position inside the command, using the registered names:
+   * `""` for a plain command, `"ban"` for a subcommand, `"group/sub"` inside a subcommand group.
+   */
+  handlers: Record<string, Route>;
+  payload: RESTPostAPIApplicationCommandsJSONBody;
+  /** Every file that contributed to this command. */
+  files: string[];
+}
+
+export interface CompiledCommands {
+  commands: CompiledCommand[];
+  diagnostics: Diagnostics;
+}
+
+const OPTION_TYPE: Record<CommandOption["type"], ApplicationCommandOptionType> = {
+  string: ApplicationCommandOptionType.String,
+  integer: ApplicationCommandOptionType.Integer,
+  number: ApplicationCommandOptionType.Number,
+  boolean: ApplicationCommandOptionType.Boolean,
+  user: ApplicationCommandOptionType.User,
+  channel: ApplicationCommandOptionType.Channel,
+  role: ApplicationCommandOptionType.Role,
+  mentionable: ApplicationCommandOptionType.Mentionable,
+  attachment: ApplicationCommandOptionType.Attachment,
+};
+
+const COMMAND_TYPE = {
+  chatInput: ApplicationCommandType.ChatInput,
+  user: ApplicationCommandType.User,
+  message: ApplicationCommandType.Message,
+} as const;
+
+interface LoadedRoute {
+  route: Route;
+  parts: string[];
+  meta: CommandMeta;
+}
+
+interface LoadedRouteMeta {
+  boundary: Boundary;
+  meta: CommandRouteMeta;
+  used: boolean;
+}
+
+/** Compiles the command routes of a route table into Discord command definitions. */
+export async function compileCommands(table: RouteTable): Promise<CompiledCommands> {
+  const diagnostics = new Diagnostics();
+  const commands: CompiledCommand[] = [];
+
+  const [loaded, routeMetas] = await Promise.all([
+    loadRoutes(table.routes, diagnostics),
+    loadRouteMetas(table.boundaries, diagnostics),
+  ]);
+
+  const byTopLevel = new Map<string, LoadedRoute[]>();
+  for (const entry of loaded) {
+    const top = entry.parts[0] as string;
+    byTopLevel.set(top, [...(byTopLevel.get(top) ?? []), entry]);
+  }
+
+  for (const [top, entries] of [...byTopLevel].sort(([a], [b]) => a.localeCompare(b))) {
+    const command = compileTopLevel(top, entries, routeMetas, diagnostics);
+    if (command !== null) commands.push(command);
+  }
+
+  for (const entry of routeMetas.values()) {
+    if (!entry.used) {
+      diagnostics.warn(
+        "unused-route-meta",
+        "This route.ts does not describe a command with subcommands and has no effect.",
+        { file: entry.boundary.file },
+      );
+    }
+  }
+
+  detectDuplicateNames(commands, diagnostics);
+  commands.sort((a, b) => a.type - b.type || a.name.localeCompare(b.name));
+  return { commands, diagnostics };
+}
+
+async function loadRoutes(routes: Route[], diagnostics: Diagnostics): Promise<LoadedRoute[]> {
+  const commandRoutes = routes.filter((r) => r.kind === "command");
+  const results = await Promise.all(
+    commandRoutes.map(async (route): Promise<LoadedRoute | null> => {
+      const module = await importOrReport(route.file, diagnostics);
+      if (module === null) return null;
+      const meta = validateCommandMeta(module.meta, route.file, diagnostics);
+      if (meta === null) return null;
+      return { route, parts: route.path.split("/"), meta };
+    }),
+  );
+  return results.filter((r): r is LoadedRoute => r !== null);
+}
+
+async function loadRouteMetas(
+  boundaries: Boundary[],
+  diagnostics: Diagnostics,
+): Promise<Map<string, LoadedRouteMeta>> {
+  const map = new Map<string, LoadedRouteMeta>();
+  const relevant = boundaries.filter((b) => b.kind === "route" && b.category === "command");
+  await Promise.all(
+    relevant.map(async (boundary) => {
+      const key = boundary.segments
+        .filter((s) => s.type !== "group")
+        .map(formatSegment)
+        .join("/");
+      if (key === "") {
+        diagnostics.error(
+          "route-meta-without-path",
+          "route.ts must live inside a command directory. At the commands root it describes nothing.",
+          { file: boundary.file },
+        );
+        return;
+      }
+      const module = await importOrReport(boundary.file, diagnostics);
+      if (module === null) return;
+      const meta = validateCommandRouteMeta(module.meta, boundary.file, diagnostics);
+      if (meta === null) return;
+      map.set(key, { boundary, meta, used: false });
+    }),
+  );
+  return map;
+}
+
+async function importOrReport(
+  file: string,
+  diagnostics: Diagnostics,
+): Promise<Record<string, unknown> | null> {
+  try {
+    return await loadModule(file);
+  } catch (error) {
+    diagnostics.error(
+      "module-load-failed",
+      `Could not import this file: ${error instanceof Error ? error.message : String(error)}`,
+      { file },
+    );
+    return null;
+  }
+}
+
+function compileTopLevel(
+  top: string,
+  entries: LoadedRoute[],
+  routeMetas: Map<string, LoadedRouteMeta>,
+  diagnostics: Diagnostics,
+): CompiledCommand | null {
+  const direct = entries.filter((e) => e.parts.length === 1);
+  const nested = entries.filter((e) => e.parts.length > 1);
+
+  if (direct.length > 0 && nested.length > 0) {
+    for (const entry of nested) {
+      diagnostics.error(
+        "mixed-command-and-subcommands",
+        `"${top}" has its own command.ts and also subcommands. Discord does not allow both. Either remove ${relative(direct[0]?.route.file)} or move this handler out of ${top}/.`,
+        { file: entry.route.file, route: entry.route.id },
+      );
+    }
+    return null;
+  }
+
+  const tooDeep = nested.filter((e) => e.parts.length > 3);
+  if (tooDeep.length > 0) {
+    for (const entry of tooDeep) {
+      diagnostics.error(
+        "command-too-deep",
+        `Commands can nest at most three levels (command / group / subcommand). "${entry.route.path}" has ${entry.parts.length}.`,
+        { file: entry.route.file, route: entry.route.id },
+      );
+    }
+    return null;
+  }
+
+  if (direct.length === 1) return compilePlainCommand(direct[0] as LoadedRoute, diagnostics);
+
+  return compileParentCommand(top, nested, routeMetas, diagnostics);
+}
+
+function compilePlainCommand(entry: LoadedRoute, diagnostics: Diagnostics): CompiledCommand | null {
+  const { route, meta } = entry;
+  const name = meta.name ?? route.path;
+  const type = COMMAND_TYPE[meta.type ?? "chatInput"];
+
+  if (type === ApplicationCommandType.ChatInput && !isValidChatInputName(name)) {
+    reportDirectoryName(route, name, diagnostics);
+    return null;
+  }
+
+  const payload: Record<string, unknown> = {
+    name,
+    type,
+    ...localizations(meta),
+    ...topLevelPayload(meta),
+  };
+  if (type === ApplicationCommandType.ChatInput) {
+    payload.description = meta.description;
+    if (meta.options !== undefined) payload.options = meta.options.map(optionPayload);
+  }
+
+  return {
+    name,
+    type,
+    handlers: { "": route },
+    payload: compact(payload) as unknown as RESTPostAPIApplicationCommandsJSONBody,
+    files: [route.file],
+  };
+}
+
+function compileParentCommand(
+  top: string,
+  nested: LoadedRoute[],
+  routeMetas: Map<string, LoadedRouteMeta>,
+  diagnostics: Diagnostics,
+): CompiledCommand | null {
+  const parent = requireRouteMeta(top, nested[0] as LoadedRoute, routeMetas, diagnostics);
+  if (parent === null) return null;
+  const name = parent.meta.name ?? top;
+  if (!isValidChatInputName(name)) {
+    reportDirectoryName(nested[0]?.route as Route, name, diagnostics, parent.boundary.file);
+    return null;
+  }
+
+  const handlers: Record<string, Route> = {};
+  const files = [parent.boundary.file];
+  const options: Record<string, unknown>[] = [];
+  let ok = true;
+
+  const bySecond = new Map<string, LoadedRoute[]>();
+  for (const entry of nested) {
+    const second = entry.parts[1] as string;
+    bySecond.set(second, [...(bySecond.get(second) ?? []), entry]);
+  }
+
+  if (bySecond.size > 25) {
+    diagnostics.error(
+      "too-many-subcommands",
+      `"${top}" has ${bySecond.size} subcommands and groups. Discord allows at most 25.`,
+      { file: parent.boundary.file },
+    );
+    ok = false;
+  }
+
+  for (const [second, entries] of [...bySecond].sort(([a], [b]) => a.localeCompare(b))) {
+    const subs = entries.filter((e) => e.parts.length === 2);
+    const grouped = entries.filter((e) => e.parts.length === 3);
+
+    if (subs.length > 0 && grouped.length > 0) {
+      for (const entry of grouped) {
+        diagnostics.error(
+          "mixed-subcommand-and-group",
+          `"${top}/${second}" is both a subcommand (${relative(subs[0]?.route.file)}) and a subcommand group. Discord does not allow both.`,
+          { file: entry.route.file, route: entry.route.id },
+        );
+      }
+      ok = false;
+      continue;
+    }
+
+    if (subs.length === 1) {
+      const sub = compileSubcommand(subs[0] as LoadedRoute, diagnostics);
+      if (sub === null) {
+        ok = false;
+        continue;
+      }
+      handlers[sub.name] = sub.route;
+      files.push(sub.route.file);
+      options.push(sub.payload);
+      continue;
+    }
+
+    const groupKey = `${top}/${second}`;
+    const group = requireRouteMeta(groupKey, grouped[0] as LoadedRoute, routeMetas, diagnostics);
+    if (group === null) {
+      ok = false;
+      continue;
+    }
+    const groupName = group.meta.name ?? second;
+    if (!isValidChatInputName(groupName)) {
+      reportDirectoryName(grouped[0]?.route as Route, groupName, diagnostics, group.boundary.file);
+      ok = false;
+      continue;
+    }
+    const extra = topLevelKeysUsed(group.meta);
+    if (extra.length > 0) {
+      diagnostics.error(
+        "top-level-field-on-group",
+        `${extra.map((k) => `meta.${k}`).join(", ")} only applies to top-level commands. Move it to ${relative(parent.boundary.file)}.`,
+        { file: group.boundary.file },
+      );
+      ok = false;
+      continue;
+    }
+    if (grouped.length > 25) {
+      diagnostics.error(
+        "too-many-subcommands",
+        `Group "${groupKey}" has ${grouped.length} subcommands. Discord allows at most 25.`,
+        { file: group.boundary.file },
+      );
+      ok = false;
+      continue;
+    }
+    files.push(group.boundary.file);
+    const groupOptions: Record<string, unknown>[] = [];
+    for (const entry of grouped.sort((a, b) => a.route.path.localeCompare(b.route.path))) {
+      const sub = compileSubcommand(entry, diagnostics);
+      if (sub === null) {
+        ok = false;
+        continue;
+      }
+      handlers[`${groupName}/${sub.name}`] = sub.route;
+      files.push(sub.route.file);
+      groupOptions.push(sub.payload);
+    }
+    options.push(
+      compact({
+        type: ApplicationCommandOptionType.SubcommandGroup,
+        name: groupName,
+        description: group.meta.description,
+        ...localizations(group.meta),
+        options: groupOptions,
+      }),
+    );
+  }
+
+  if (!ok) return null;
+
+  const payload = compact({
+    name,
+    type: ApplicationCommandType.ChatInput,
+    description: parent.meta.description,
+    ...localizations(parent.meta),
+    ...topLevelPayload(parent.meta),
+    options,
+  }) as RESTPostAPIApplicationCommandsJSONBody;
+
+  return { name, type: ApplicationCommandType.ChatInput, handlers, payload, files };
+}
+
+function compileSubcommand(
+  entry: LoadedRoute,
+  diagnostics: Diagnostics,
+): { name: string; route: Route; payload: Record<string, unknown> } | null {
+  const { route, meta } = entry;
+  if (meta.type !== undefined && meta.type !== "chatInput") {
+    diagnostics.error(
+      "context-menu-nested",
+      `Context menu commands cannot be subcommands. Move ${relative(route.file)} to the top of commands/.`,
+      { file: route.file, route: route.id },
+    );
+    return null;
+  }
+  const extra = topLevelKeysUsed(meta);
+  if (extra.length > 0) {
+    diagnostics.error(
+      "top-level-field-on-subcommand",
+      `${extra.map((k) => `meta.${k}`).join(", ")} only applies to top-level commands. Move it to the route.ts of "${entry.parts[0]}".`,
+      { file: route.file, route: route.id },
+    );
+    return null;
+  }
+  const name = meta.name ?? (entry.parts.at(-1) as string);
+  if (!isValidChatInputName(name)) {
+    reportDirectoryName(route, name, diagnostics);
+    return null;
+  }
+  const payload = compact({
+    type: ApplicationCommandOptionType.Subcommand,
+    name,
+    description: meta.description,
+    ...localizations(meta),
+    options: meta.options?.map(optionPayload),
+  });
+  return { name, route, payload };
+}
+
+function requireRouteMeta(
+  key: string,
+  child: LoadedRoute,
+  routeMetas: Map<string, LoadedRouteMeta>,
+  diagnostics: Diagnostics,
+): LoadedRouteMeta | null {
+  const entry = routeMetas.get(key);
+  if (entry !== undefined) {
+    entry.used = true;
+    return entry;
+  }
+  const dir = directoryForPath(child.route, key.split("/").length);
+  diagnostics.error(
+    "missing-route-meta",
+    `"${key}" has subcommands but no route.ts. Discord needs a description for it. Add ${path.join(dir, "route.ts")} exporting \`meta\` with a description.`,
+    { file: child.route.file, route: child.route.id },
+  );
+  return null;
+}
+
+/** Directory of the Nth non-group segment of a route, walking up from the handler file. */
+function directoryForPath(route: Route, depth: number): string {
+  let seen = 0;
+  let index = route.segments.length;
+  for (let i = 0; i < route.segments.length; i++) {
+    if (route.segments[i]?.type === "group") continue;
+    seen++;
+    if (seen === depth) {
+      index = i;
+      break;
+    }
+  }
+  const levelsUp = route.segments.length - index - 1;
+  let dir = path.dirname(route.file);
+  for (let i = 0; i < levelsUp; i++) dir = path.dirname(dir);
+  return dir;
+}
+
+function isValidChatInputName(name: string): boolean {
+  return /^[-_\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$/u.test(name) && name === name.toLowerCase();
+}
+
+function reportDirectoryName(route: Route, name: string, diagnostics: Diagnostics, file?: string) {
+  diagnostics.error(
+    "invalid-name",
+    `"${name}" is not a valid chat input command name. Discord requires lowercase letters, digits, hyphens, and underscores, 1 to 32 characters. Rename the directory or set \`meta.name\`.`,
+    { file: file ?? route.file, route: route.id },
+  );
+}
+
+function detectDuplicateNames(commands: CompiledCommand[], diagnostics: Diagnostics): void {
+  const seen = new Map<string, CompiledCommand>();
+  for (const command of commands) {
+    const key = `${command.type}:${command.name}`;
+    const existing = seen.get(key);
+    if (existing === undefined) {
+      seen.set(key, command);
+      continue;
+    }
+    diagnostics.error(
+      "duplicate-command-name",
+      `Two commands register as "${command.name}": ${relative(existing.files[0])} and ${relative(command.files[0])}. Check \`meta.name\` overrides.`,
+      { file: command.files[0] as string },
+    );
+  }
+}
+
+function optionPayload(option: CommandOption): Record<string, unknown> {
+  const base: Record<string, unknown> = {
+    type: OPTION_TYPE[option.type],
+    name: option.name,
+    description: option.description,
+    required: option.required,
+    ...localizations(option),
+  };
+  switch (option.type) {
+    case "string":
+      base.choices = option.choices?.map(choicePayload);
+      base.autocomplete = option.autocomplete;
+      base.min_length = option.minLength;
+      base.max_length = option.maxLength;
+      break;
+    case "integer":
+    case "number":
+      base.choices = option.choices?.map(choicePayload);
+      base.autocomplete = option.autocomplete;
+      base.min_value = option.minValue;
+      base.max_value = option.maxValue;
+      break;
+    case "channel":
+      base.channel_types = option.channelTypes;
+      break;
+  }
+  return compact(base);
+}
+
+function choicePayload(choice: {
+  name: string;
+  value: string | number;
+  nameLocalizations?: unknown;
+}) {
+  return compact({
+    name: choice.name,
+    value: choice.value,
+    name_localizations: choice.nameLocalizations,
+  });
+}
+
+function localizations(meta: { nameLocalizations?: unknown; descriptionLocalizations?: unknown }) {
+  return {
+    name_localizations: meta.nameLocalizations,
+    description_localizations: meta.descriptionLocalizations,
+  };
+}
+
+function topLevelPayload(meta: TopLevelMeta): Record<string, unknown> {
+  const perms = meta.defaultMemberPermissions;
+  return {
+    default_member_permissions:
+      perms === undefined ? undefined : perms === null ? null : String(perms),
+    nsfw: meta.nsfw,
+    contexts: meta.contexts,
+    integration_types: meta.integrationTypes,
+  };
+}
+
+function compact<T extends Record<string, unknown>>(object: T): T {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(object)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out as T;
+}
+
+function relative(file: string | undefined): string {
+  return file === undefined ? "?" : path.relative(process.cwd(), file).split(path.sep).join("/");
+}

@@ -1,5 +1,4 @@
-export const version = "0.0.0";
-
+export { type CompiledCommand, type CompiledCommands, compileCommands } from "./compile.js";
 export type {
   ChannelOption,
   CommandMeta,
@@ -13,4 +12,5 @@ export type {
   SimpleOption,
   StringOption,
   TopLevelMeta,
-} from "./commands/meta.js";
+} from "./meta.js";
+export { validateCommandMeta, validateCommandRouteMeta } from "./validate.js";
