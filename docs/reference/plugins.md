@@ -1,6 +1,6 @@
 # Plugins
 
-A plugin hooks into the build and the bot's lifecycle. Code that handlers just import, like a database client or a middleware factory, doesn't need to be a plugin.
+A plugin hooks into the build and the bot's lifecycle. Code that handlers only import, like a database client or a middleware factory, doesn't need to be a plugin.
 
 Plugins are registered in the config:
 
