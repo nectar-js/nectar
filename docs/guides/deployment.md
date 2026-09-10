@@ -1,38 +1,34 @@
 # Deploying
 
-`nectar build` compiles the app into `.nectar/`. Production runs that build and never scans `app/` for routes.
-
 ```bash
 npm ci --omit=dev
 npx nectar build
 NODE_ENV=production node .nectar/start.mjs
 ```
 
-`node .nectar/start.mjs` does the same as `nectar start`. It finds the project from its own location, so it works from any directory, and it loads `.env` from the project root if there is one. Point a discord.js `ShardingManager` or a cluster manager at the same file: `new ShardingManager(".nectar/start.mjs")`. Each shard loads the build itself.
+`node .nectar/start.mjs` is the same as `nectar start`. It works from any directory and loads `.env` from the project root.
 
 The server needs:
 
-- Node.js 22.18 or newer. TypeScript handlers run as they are; Node strips the types when it imports them.
-- The project: `app/`, `nectar.config.ts`, `package.json`, production dependencies, and `.nectar/`.
-- `DISCORD_TOKEN`, in the environment or in `.env`.
+- Node.js 22.18 or newer
+- `app/`, `nectar.config.ts`, `package.json`, production dependencies, and `.nectar/`
+- `DISCORD_TOKEN`, in the environment or in `.env`
 
-`.nectar/` refers to the project with relative paths, so you can build in CI and ship `.nectar/` with the rest.
-
-With `NODE_ENV=production`, Nectar imports every handler at startup. A file that fails to load stops the bot from starting, rather than failing the first interaction that uses it.
+`.nectar/` only contains relative paths, so you can build in CI and ship it with the project.
 
 ## Registering commands
 
-Run `nectar sync` once per release. Starting the bot never registers commands, however many processes or shards you run.
+The bot doesn't register commands when it starts. Run `nectar sync` once per release:
 
 ```bash
 NODE_ENV=production npx nectar sync
 ```
 
-It needs `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID`. In production it registers globally, or to the guilds in `commands.target`. It only writes when something changed, and `--dry-run` prints the diff without writing.
+This needs `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID`.
 
 ## Stopping
 
-On SIGTERM or SIGINT, Nectar stops taking interactions, waits up to 10 seconds for the running ones, and disconnects. Give your process manager a longer stop timeout than that. The examples below do.
+On SIGTERM or SIGINT, the bot waits up to 10 seconds for running interactions, then disconnects. Set your process manager's stop timeout higher than that.
 
 ## Docker
 
@@ -47,7 +43,7 @@ RUN npx nectar build
 CMD ["node", ".nectar/start.mjs"]
 ```
 
-Keep local files out of the image with a `.dockerignore`:
+`.dockerignore`:
 
 ```
 node_modules
@@ -61,7 +57,7 @@ docker run --rm --env-file .env my-bot npx nectar sync
 docker run -d --name my-bot --env-file .env --stop-timeout 15 my-bot
 ```
 
-Use the exec form of `CMD`, as above. The shell form runs Node under `/bin/sh`, which does not pass `docker stop`'s SIGTERM on.
+Keep the exec form of `CMD`. With the shell form, Node doesn't receive the SIGTERM from `docker stop`.
 
 ## PM2
 
@@ -69,7 +65,7 @@ Use the exec form of `CMD`, as above. The shell form runs Node under `/bin/sh`, 
 NODE_ENV=production pm2 start .nectar/start.mjs --name my-bot --kill-timeout 15000
 ```
 
-PM2 stops a process with SIGINT and kills it 1.6 seconds later unless `--kill-timeout` says otherwise.
+Without `--kill-timeout`, PM2 kills the process 1.6 seconds after SIGINT.
 
 ## systemd
 
@@ -95,4 +91,4 @@ systemctl enable --now my-bot
 journalctl -u my-bot -f
 ```
 
-systemd waits 90 seconds after SIGTERM before it kills the process, so the default is long enough.
+systemd's default stop timeout is 90 seconds, which is long enough.
