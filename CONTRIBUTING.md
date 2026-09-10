@@ -1,4 +1,4 @@
-# Contributing to Nect
+# Contributing to Nectar
 
 Thanks for taking a look. Bug reports, route cases the compiler gets wrong, and diagnostics that could name the problem better are all useful.
 
@@ -14,11 +14,11 @@ pnpm build
 `examples/basic` is the app the compiler tests run against. It exercises subcommands, a route group, dynamic component params, autocomplete, scoped middleware, and an error boundary.
 
 ```bash
-pnpm --filter basic run build    # writes .nect/manifest.json and .nect/types.d.ts
+pnpm --filter basic run build    # writes .nectar/manifest.json and .nectar/types.d.ts
 pnpm --filter basic run routes   # prints the compiled tree
 ```
 
-Those call the CLI through `node`, because pnpm links the `nect` bin at install time and `packages/core/dist` does not exist yet on a fresh clone.
+Those call the CLI through `node`, because pnpm links the `nectar` bin at install time and `packages/nectar/dist` does not exist yet on a fresh clone.
 
 ## Before you open a pull request
 
@@ -43,13 +43,13 @@ Pick the affected packages and a bump. Patch for fixes, minor for new capability
 
 Keep a pull request to one change. A bug fix that also renames things is two pull requests.
 
-Tests belong with the change. A compiler fix should come with a fixture that failed before it. A dispatch fix should come with a test using the mocked interactions in `packages/core/src/runtime`.
+Tests belong with the change. A compiler fix should come with a fixture that failed before it. A dispatch fix should come with a test using the mocked interactions in `packages/nectar/src/runtime`.
 
 Diagnostics are part of the product. When you add a compiler error, say what was found, why it is invalid, which file caused it, and what the convention is.
 
 ## Reporting a bug
 
-Include the app tree, the file that misbehaves, what you expected Discord to receive, and what it received. `pnpm exec nect routes` and `pnpm exec nect manifest --route <id>` output usually pin it down faster than a description.
+Include the app tree, the file that misbehaves, what you expected Discord to receive, and what it received. `pnpm exec nectar routes` and `pnpm exec nectar manifest --route <id>` output usually pin it down faster than a description.
 
 ## License
 
