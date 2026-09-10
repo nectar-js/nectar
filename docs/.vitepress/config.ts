@@ -36,6 +36,7 @@ export default defineConfig({
           { text: "Reserved files", link: "/reference/files" },
           { text: "Configuration", link: "/reference/config" },
           { text: "Plugins", link: "/reference/plugins" },
+          { text: "CLI", link: "/reference/cli" },
         ],
       },
     ],
