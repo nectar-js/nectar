@@ -6,3 +6,4 @@ export {
   type EventMeta,
   type EventMode,
 } from "./compile.js";
+export { checkIntents, requiredIntents } from "./intents.js";

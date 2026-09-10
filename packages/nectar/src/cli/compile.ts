@@ -1,6 +1,7 @@
 import path from "node:path";
 import type { Diagnostic } from "../compiler/diagnostics.js";
 import { buildGraph, type RouteGraph } from "../compiler/graph.js";
+import { checkIntents } from "../events/index.js";
 import type { CliIo } from "./io.js";
 import type { Project } from "./project.js";
 import { c, fail, indent, warn } from "./ui.js";
@@ -8,6 +9,9 @@ import { c, fail, indent, warn } from "./ui.js";
 /** Compiles the app and prints every diagnostic. Returns `null` when any is an error. */
 export async function compileProject(project: Project, io: CliIo): Promise<RouteGraph | null> {
   const graph = await buildGraph(project.appDir);
+  graph.diagnostics.items.push(
+    ...checkIntents(graph.events, project.config.intents, path.basename(project.configFile)),
+  );
   for (const diagnostic of graph.diagnostics.items) {
     io.err(formatDiagnostic(diagnostic, project.root));
   }
