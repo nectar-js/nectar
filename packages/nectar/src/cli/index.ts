@@ -12,11 +12,10 @@ import { CONFIG_FILES, describe, loadProject } from "./project.js";
 import { routes } from "./routes.js";
 import { start } from "./start.js";
 import { sync } from "./sync.js";
-import { block, c, fail, indent } from "./ui.js";
+import { block, c, fail, indent, setColors } from "./ui.js";
 
 export type { CliIo } from "./io.js";
 export { EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./io.js";
-export { setColors } from "./ui.js";
 
 interface Command {
   usage: string;
@@ -113,6 +112,22 @@ async function pluginCommands(io: CliIo, tolerant: boolean): Promise<Record<stri
     if (!tolerant || !(error instanceof CliError)) throw error;
   }
   return commands;
+}
+
+/** Runs `run` for this process: loads `cwd/.env`, colors a TTY, prints to the console. */
+export async function main(argv: string[], cwd: string): Promise<number> {
+  const envFile = path.join(cwd, ".env");
+  if (existsSync(envFile)) process.loadEnvFile(envFile);
+
+  const wantsColor = process.env.NO_COLOR === undefined || process.env.NO_COLOR === "";
+  setColors(process.env.FORCE_COLOR !== undefined || (wantsColor && process.stdout.isTTY === true));
+
+  return run(argv, {
+    cwd,
+    env: process.env,
+    out: (line) => console.log(line),
+    err: (line) => console.error(line),
+  });
 }
 
 /** Runs one CLI invocation. `argv` excludes the node and script entries. */

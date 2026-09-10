@@ -18,6 +18,10 @@
     "./testing": {
       "types": "./dist/testing.d.ts",
       "default": "./dist/testing.js"
+    },
+    "./start": {
+      "types": "./dist/start.d.ts",
+      "default": "./dist/start.js"
     }
   },
   "files": [
