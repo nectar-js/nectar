@@ -44,6 +44,7 @@ export default defineConfig({
           { text: "Configuration", link: "/reference/config" },
           { text: "Plugins", link: "/reference/plugins" },
           { text: "CLI", link: "/reference/cli" },
+          { text: "Compatibility", link: "/reference/compatibility" },
         ],
       },
     ],
