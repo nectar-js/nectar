@@ -45,10 +45,21 @@ export interface NectarConfig {
      */
     target?: "global" | string[];
   };
+  /**
+   * Overrides for one environment, applied once the environment is known. Each key replaces
+   * the value above it; nested objects are not merged.
+   */
+  environments?: Partial<Record<Env, Partial<Omit<NectarConfig, "env" | "environments">>>>;
 }
 
 export function defineConfig(config: NectarConfig): NectarConfig {
   return config;
+}
+
+/** The config one environment runs with: `environments[env]` over the rest. */
+export function configFor(config: NectarConfig, env: Env): NectarConfig {
+  const { environments, ...base } = config;
+  return { ...base, ...environments?.[env] };
 }
 
 export class ConfigError extends Error {
@@ -125,7 +136,31 @@ export function validateConfig(value: unknown, file: string): NectarConfig {
       fail('`commands.target` must be "global" or an array of guild ID strings.');
     }
   }
+  if (config.environments !== undefined) validateEnvironments(config, file, fail);
   return config as unknown as NectarConfig;
+}
+
+/** Each override must name an environment, and the config it produces must be valid. */
+function validateEnvironments(
+  config: Record<string, unknown>,
+  file: string,
+  fail: (detail: string) => never,
+): void {
+  if (!isRecord(config.environments)) fail("`environments` must be an object.");
+  for (const [name, override] of Object.entries(config.environments as Record<string, unknown>)) {
+    const where = `\`environments.${name}\``;
+    if (!ENVS.has(name)) fail(`${where}: use "development", "test", or "production" as the key.`);
+    if (!isRecord(override)) fail(`${where} must be an object.`);
+    for (const key of ["env", "environments"]) {
+      if (key in (override as Record<string, unknown>)) fail(`${where} cannot set \`${key}\`.`);
+    }
+    try {
+      validateConfig(configFor(config as unknown as NectarConfig, name as Env), file);
+    } catch (error) {
+      if (error instanceof ConfigError) fail(`${where}: ${error.detail}`);
+      throw error;
+    }
+  }
 }
 
 /** Names `nectar` already answers to. A plugin command cannot take one. */

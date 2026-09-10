@@ -73,6 +73,32 @@ describe("nectar", () => {
     expect(token.err).toContain("`token` must be a string");
   });
 
+  test("environments override the config for the environment that runs", async () => {
+    const root = makeProject(
+      { "commands/ping/command.ts": ping },
+      '{ intents: [], dev: { guilds: ["1"] }, environments: { production: { intents: ["Guilds"], commands: { target: ["7"] } } } }',
+    );
+    const dev = await nectar(["info"], root);
+    expect(dev.out).toMatch(/^intents +none$/m);
+    expect(dev.out).toMatch(/^registration +guild:1$/m);
+    const prod = await nectar(["info"], root, { env: { NODE_ENV: "production" } });
+    expect(prod.out).toMatch(/^env +production$/m);
+    expect(prod.out).toMatch(/^intents +Guilds$/m);
+    expect(prod.out).toMatch(/^registration +guild:7$/m);
+
+    const invalid = (environments: string) =>
+      nectar(["check"], makeProject({}, `{ intents: [], environments: ${environments} }`));
+    expect((await invalid('{ production: { logger: { level: "loud" } } }')).err).toContain(
+      "`environments.production`: `logger.level` must be",
+    );
+    expect((await invalid("{ staging: {} }")).err).toContain(
+      '`environments.staging`: use "development", "test", or "production" as the key.',
+    );
+    expect((await invalid('{ test: { env: "production" } }')).err).toContain(
+      "`environments.test` cannot set `env`.",
+    );
+  });
+
   test("credentials come from the config first, then the environment", async () => {
     const root = makeProject(
       { "commands/ping/command.ts": ping },

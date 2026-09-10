@@ -1,7 +1,7 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { loadModule } from "../compiler/load.js";
-import { ConfigError, type NectarConfig, validateConfig } from "../config.js";
+import { ConfigError, configFor, type NectarConfig, validateConfig } from "../config.js";
 import type { Env } from "../runtime/types.js";
 import { CliError } from "./io.js";
 import { c } from "./ui.js";
@@ -12,6 +12,7 @@ export interface Project {
   /** Directory holding the config file. Every relative config path resolves against it. */
   root: string;
   configFile: string;
+  /** With the overrides for `env` applied. */
   config: NectarConfig;
   appDir: string;
   outDir: string;
@@ -30,16 +31,18 @@ export async function loadProject(cwd: string, env: NodeJS.ProcessEnv): Promise<
     });
   }
   const name = path.basename(configFile);
-  let config: NectarConfig;
+  let loaded: NectarConfig;
   try {
     const module = await loadModule(configFile);
-    config = validateConfig(module.default, name);
+    loaded = validateConfig(module.default, name);
   } catch (error) {
     if (error instanceof ConfigError) {
       throw new CliError(`${name} is not valid.`, { details: [error.detail] });
     }
     throw new CliError(`Could not load ${name}.`, { details: [describe(error)] });
   }
+  const projectEnv = loaded.env ?? envFrom(env.NODE_ENV);
+  const config = configFor(loaded, projectEnv);
   const root = path.dirname(configFile);
   const appDir = path.resolve(root, config.appDir ?? "app");
   if (!existsSync(appDir)) {
@@ -53,7 +56,7 @@ export async function loadProject(cwd: string, env: NodeJS.ProcessEnv): Promise<
     config,
     appDir,
     outDir: path.resolve(root, config.outDir ?? ".nectar"),
-    env: config.env ?? envFrom(env.NODE_ENV),
+    env: projectEnv,
   };
 }
 
