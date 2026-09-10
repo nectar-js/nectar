@@ -1,6 +1,7 @@
 import type { Client } from "discord.js";
 import type { Project } from "../cli/project.js";
 import type { Severity } from "../compiler/diagnostics.js";
+import type { RouteKind } from "../compiler/routes.js";
 import type { NectarServices } from "../index.js";
 import type {
   Manifest,
@@ -45,8 +46,13 @@ type Maybe<T> = T | undefined | void;
 export type PluginChange =
   | {
       type: "middleware";
-      /** Route ID, `<category>:<path>`. A command and its autocomplete share one. */
+      /** Route ID, `<category>:<path>`. */
       route: string;
+      /**
+       * Only the route of this kind. A command and its autocomplete share an ID; without
+       * `kind`, both get the middleware, as they would from a `middleware.ts`.
+       */
+      kind?: RouteKind;
       /** Absolute path of a module whose default export is a middleware. */
       file: string;
       /** `outer` (default) runs before the app's own middleware, `inner` right before the handler. */

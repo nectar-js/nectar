@@ -62,6 +62,38 @@ describe("route transforms", () => {
     expect(close?.plugins).toEqual([]);
   });
 
+  test("kind narrows a change to one of the routes sharing an ID", async () => {
+    const root = makeApp(app);
+    const graph = await buildGraph(root);
+    await applyPlugins(graph, [
+      {
+        name: "audit",
+        transform: () => [
+          {
+            type: "middleware",
+            route: "command:search",
+            kind: "command",
+            file: middlewareIn(root),
+          },
+          {
+            type: "middleware",
+            route: "command:ping",
+            kind: "autocomplete",
+            file: middlewareIn(root),
+          },
+        ],
+      },
+    ]);
+    expect(graph.diagnostics.items.map((d) => d.message)).toEqual([
+      'Plugin "audit" adds middleware to route "command:ping (autocomplete)", which does not exist.',
+    ]);
+    const search = toManifest(graph, root).routes.filter((r) => r.id === "command:search");
+    expect(search.map((r) => [r.kind, r.plugins])).toEqual([
+      ["autocomplete", []],
+      ["command", ["audit"]],
+    ]);
+  });
+
   test("inner middleware runs right before the handler", async () => {
     const root = makeApp(app);
     const graph = await buildGraph(root);
