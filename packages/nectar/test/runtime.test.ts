@@ -63,12 +63,14 @@ const app = {
 interface FakeClient extends EventEmitter {
   login: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
+  options: { shards?: number[] };
 }
 
 function fakeClient(): FakeClient {
   const client = new EventEmitter() as FakeClient;
   client.login = vi.fn(async () => "token");
   client.destroy = vi.fn(async () => {});
+  client.options = {};
   return client;
 }
 

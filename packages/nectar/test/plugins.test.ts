@@ -212,22 +212,25 @@ describe("generated types", () => {
 });
 
 describe("runtime hooks", () => {
-  function fakeClient() {
+  /** `shards` are the IDs this process runs, as a shard manager would assign them. */
+  function fakeClient(shards?: number[]) {
     const client = new EventEmitter() as EventEmitter & {
       login: ReturnType<typeof vi.fn>;
       destroy: ReturnType<typeof vi.fn>;
+      options: { shards?: number[] };
     };
     client.login = vi.fn(async () => "token");
     client.destroy = vi.fn(async () => {});
+    client.options = shards === undefined ? {} : { shards };
     return client;
   }
 
-  async function boot(plugins: NectarPlugin[]) {
+  async function boot(plugins: NectarPlugin[], shards?: number[]) {
     const root = makeApp(app);
     const graph = await buildGraph(root);
     await applyPlugins(graph, plugins);
     expect(graph.diagnostics.items).toEqual([]);
-    const client = fakeClient();
+    const client = fakeClient(shards);
     const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
     const runtime = createRuntime({
       manifest: toManifest(graph, root),
@@ -350,10 +353,63 @@ describe("runtime hooks", () => {
     await runtime.start({ token: "t", signals: false });
     await runtime.stop();
     expect(logger.error).toHaveBeenCalledWith(
-      'Plugin "a" failed to stop.',
+      'Plugin "a": stop failed.',
       expect.objectContaining({ plugin: "a" }),
     );
     expect(client.destroy).toHaveBeenCalled();
+  });
+
+  test("global hooks run only in the process that runs shard 0", async () => {
+    const order: string[] = [];
+    const record = (name: string): NectarPlugin => ({
+      name,
+      start: () => {
+        order.push(`start ${name}`);
+      },
+      stop: () => {
+        order.push(`stop ${name}`);
+      },
+      startGlobal: () => {
+        order.push(`startGlobal ${name}`);
+      },
+      stopGlobal: () => {
+        order.push(`stopGlobal ${name}`);
+      },
+    });
+
+    const primary = await boot([record("a"), record("b")], [0, 1]);
+    await primary.runtime.start({ token: "t", signals: false });
+    await primary.runtime.stop();
+    expect(order.splice(0)).toEqual([
+      "start a",
+      "start b",
+      "startGlobal a",
+      "startGlobal b",
+      "stopGlobal b",
+      "stopGlobal a",
+      "stop b",
+      "stop a",
+    ]);
+
+    const other = await boot([record("a")], [2, 3]);
+    await other.runtime.start({ token: "t", signals: false });
+    await other.runtime.stop();
+    expect(order).toEqual(["start a", "stop a"]);
+  });
+
+  test("a throwing startGlobal hook fails startup", async () => {
+    const { runtime, client } = await boot([
+      {
+        name: "cron",
+        startGlobal: () => {
+          throw new Error("no schedule");
+        },
+      },
+    ]);
+    await expect(runtime.start({ token: "t", signals: false })).rejects.toThrow(
+      'Plugin "cron": startGlobal failed: no schedule',
+    );
+    expect(client.login).not.toHaveBeenCalled();
   });
 });
 
@@ -367,6 +423,7 @@ describe("config validation", () => {
     expect(check([{}])).toThrow("`plugins[0]` must be an object with a non-empty `name`");
     expect(check([{ name: "a" }, { name: "a" }])).toThrow('Plugin "a" is listed twice');
     expect(check([{ name: "a", transform: 1 }])).toThrow("`transform` must be a function");
+    expect(check([{ name: "a", startGlobal: 1 }])).toThrow("`startGlobal` must be a function");
   });
 
   test("plugin commands need a shape and cannot shadow built-ins", () => {

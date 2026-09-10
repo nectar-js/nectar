@@ -155,7 +155,7 @@ function validatePlugins(value: unknown, fail: (detail: string) => never): void 
     const name = plugin.name as string;
     if (names.has(name)) fail(`Plugin "${name}" is listed twice.`);
     names.add(name);
-    for (const hook of ["transform", "types", "start", "stop"]) {
+    for (const hook of ["transform", "types", "start", "stop", "startGlobal", "stopGlobal"]) {
       if (plugin[hook] !== undefined && typeof plugin[hook] !== "function") {
         fail(`Plugin "${name}": \`${hook}\` must be a function.`);
       }

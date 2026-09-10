@@ -112,6 +112,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
   const inFlight = new Set<Promise<void>>();
   let bindings: EventBinding[] = [];
   let started = false;
+  let globalStarted = false;
   let drainTimeout = 10_000;
   let stopping: Promise<void> | null = null;
   let onSignal: (() => void) | null = null;
@@ -138,6 +139,10 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     async start({ token, signals: osSignals = true, drainTimeout: timeout = 10_000 }) {
       drainTimeout = timeout;
       await startPlugins(plugins, app, state.services as Record<string, unknown>);
+      if (runsShardZero(client.options.shards)) {
+        await startGlobal(plugins, app);
+        globalStarted = true;
+      }
       if (options.config.eager ?? env === "production") {
         await state.modules.preload(manifestFiles(state.manifest, state.appDir));
       }
@@ -187,7 +192,8 @@ export function createRuntime(options: RuntimeOptions): Runtime {
           onSignal = null;
         }
         await drain(inFlight, drainTimeout, logger);
-        await stopPlugins(plugins, app, logger);
+        if (globalStarted) await stopPlugins(plugins, app, logger, "stopGlobal");
+        await stopPlugins(plugins, app, logger, "stop");
         await client.destroy();
       })();
       return stopping;
@@ -237,19 +243,40 @@ async function startPlugins(
   }
 }
 
-/** Runs `stop` hooks in reverse order. A failing hook is logged; shutdown continues. */
+/** Runs `startGlobal` hooks in config order. */
+async function startGlobal(plugins: readonly NectarPlugin[], app: PluginApp): Promise<void> {
+  for (const plugin of plugins) {
+    try {
+      await plugin.startGlobal?.(app);
+    } catch (error) {
+      throw new PluginError(plugin.name, `startGlobal failed: ${describe(error)}`);
+    }
+  }
+}
+
+/** Runs `stopGlobal` or `stop` hooks in reverse order. A failing hook is logged; shutdown continues. */
 async function stopPlugins(
   plugins: readonly NectarPlugin[],
   app: PluginApp,
   logger: Logger,
+  hook: "stop" | "stopGlobal",
 ): Promise<void> {
   for (const plugin of [...plugins].reverse()) {
     try {
-      await plugin.stop?.(app);
+      await plugin[hook]?.(app);
     } catch (error) {
-      logger.error(`Plugin "${plugin.name}" failed to stop.`, { plugin: plugin.name, error });
+      logger.error(`Plugin "${plugin.name}": ${hook} failed.`, { plugin: plugin.name, error });
     }
   }
+}
+
+/**
+ * Whether this process runs shard 0. Application-global hooks run there, so they run once
+ * however the shards are spread over processes. `auto` means this process runs them all.
+ */
+function runsShardZero(shards: Client["options"]["shards"]): boolean {
+  if (shards === undefined || shards === "auto") return true;
+  return typeof shards === "number" ? shards === 0 : shards.includes(0);
 }
 
 function describe(error: unknown): string {

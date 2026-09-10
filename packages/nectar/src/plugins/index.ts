@@ -31,12 +31,20 @@ export interface NectarPlugin {
   /** Extra `nectar <name>` commands. */
   commands?: PluginCommand[];
   /**
-   * Runs once when the runtime starts, before any handler is imported and before login.
-   * Returned services land on `ctx.services` for every handler and middleware.
+   * Runs when the runtime starts, before any handler is imported and before login. A sharded
+   * bot runs it in every process. Returned services land on `ctx.services` for every handler
+   * and middleware.
    */
   start?(app: PluginApp): Maybe<Partial<NectarServices>> | Promise<Maybe<Partial<NectarServices>>>;
   /** Runs on shutdown, after in-flight interactions drain and before the client is destroyed. */
   stop?(app: PluginApp): void | Promise<void>;
+  /**
+   * Runs once per application, in the process that runs shard 0, after every `start`. For work
+   * that must not repeat per shard process: a scheduled job, a web server, posting stats.
+   */
+  startGlobal?(app: PluginApp): void | Promise<void>;
+  /** Runs on shutdown in the process that ran `startGlobal`, before any `stop`. */
+  stopGlobal?(app: PluginApp): void | Promise<void>;
 }
 
 /** A hook may return nothing, so a body without `return` type-checks. */

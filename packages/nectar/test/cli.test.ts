@@ -319,6 +319,7 @@ describe("nectar start", () => {
     const client = Object.assign(new EventEmitter(), {
       login: () => Promise.reject(rejected),
       destroy: async () => {},
+      options: {},
     });
     const result = await nectar(["start"], root, {
       env: { DISCORD_TOKEN: "bad" },

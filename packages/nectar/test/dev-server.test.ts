@@ -19,12 +19,14 @@ const command = (value: string, description = "d") =>
 interface FakeClient extends EventEmitter {
   login: ReturnType<typeof vi.fn>;
   destroy: ReturnType<typeof vi.fn>;
+  options: object;
 }
 
 function fakeClient(): FakeClient {
   const client = new EventEmitter() as FakeClient;
   client.login = vi.fn(async () => "token");
   client.destroy = vi.fn(async () => {});
+  client.options = {};
   return client;
 }
 
