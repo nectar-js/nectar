@@ -66,6 +66,7 @@ async function invoke(
     client: state.client,
     route: routeInfo(state, route),
     env: state.env,
+    services: state.services,
   };
   try {
     const handler = await state.modules.loadDefault<EventHandler>(ctx.route.file, "The handler");

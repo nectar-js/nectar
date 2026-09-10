@@ -9,6 +9,7 @@ const ctx = (): InteractionContext => ({
   params: {},
   env: "test",
   trace: { id: "1", receivedAt: 0, elapsed: () => 0 },
+  services: {},
 });
 
 describe("runChain", () => {

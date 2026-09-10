@@ -23,6 +23,8 @@ export interface RouteGraph {
   components: ComponentRoute[];
   events: CompiledEvent[];
   autocomplete: CompiledAutocomplete[];
+  /** Plugin names that changed a route's chains, keyed by handler file. Filled by `applyPlugins`. */
+  plugins: Map<string, string[]>;
   /** Diagnostics from every stage, in pipeline order. */
   diagnostics: Diagnostics;
 }
@@ -57,6 +59,7 @@ export async function buildGraph(appDir: string): Promise<RouteGraph> {
     components: components.routes,
     events: events.events,
     autocomplete: autocomplete.autocomplete,
+    plugins: new Map(),
     diagnostics,
   };
 }

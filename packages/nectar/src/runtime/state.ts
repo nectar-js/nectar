@@ -1,5 +1,6 @@
 import path from "node:path";
 import type { Client } from "discord.js";
+import type { NectarServices } from "../index.js";
 import type { Manifest, ManifestRoute } from "../manifest/schema.js";
 import type { ModuleRegistry } from "./modules.js";
 import type { SignalEmitter } from "./signals.js";
@@ -15,6 +16,8 @@ export interface RuntimeState {
   env: Env;
   logger: Logger;
   signals: SignalEmitter;
+  /** Filled by plugin `start` hooks. */
+  services: NectarServices;
 }
 
 export function absolute(state: RuntimeState, file: string): string {

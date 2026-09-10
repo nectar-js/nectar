@@ -1,4 +1,5 @@
 import type { ClientOptions } from "discord.js";
+import type { NectarPlugin } from "./plugins/index.js";
 import type { LoggerOptions } from "./runtime/logger.js";
 import type { Signal } from "./runtime/signals.js";
 import type { Env } from "./runtime/types.js";
@@ -27,6 +28,8 @@ export interface NectarConfig {
   logger?: LoggerOptions;
   /** Called with every framework signal: interaction lifecycle, failures, gateway state, shutdown. */
   observe?: (signal: Signal) => void;
+  /** Plugins, in the order their hooks run. This is the only way to register one. */
+  plugins?: NectarPlugin[];
   /** Route directory, relative to the project root. Defaults to `app`. */
   appDir?: string;
   /** Build output, relative to the project root. Defaults to `.nectar`. */
@@ -101,6 +104,7 @@ export function validateConfig(value: unknown, file: string): NectarConfig {
   if (config.observe !== undefined && typeof config.observe !== "function") {
     fail("`observe` must be a function that receives signals.");
   }
+  if (config.plugins !== undefined) validatePlugins(config.plugins, fail);
   for (const key of ["appDir", "outDir"] as const) {
     const dir = config[key];
     if (dir !== undefined && (typeof dir !== "string" || dir === "")) {
@@ -122,6 +126,65 @@ export function validateConfig(value: unknown, file: string): NectarConfig {
     }
   }
   return config as unknown as NectarConfig;
+}
+
+/** Names `nectar` already answers to. A plugin command cannot take one. */
+const BUILTIN_COMMANDS = new Set([
+  "dev",
+  "build",
+  "check",
+  "routes",
+  "manifest",
+  "sync",
+  "start",
+  "clean",
+  "info",
+  "help",
+]);
+
+function validatePlugins(value: unknown, fail: (detail: string) => never): void {
+  if (!Array.isArray(value)) fail("`plugins` must be an array of plugins.");
+  const names = new Set<string>();
+  const commands = new Map<string, string>();
+  value.forEach((plugin: unknown, index) => {
+    if (!isRecord(plugin) || typeof plugin.name !== "string" || plugin.name === "") {
+      fail(
+        `\`plugins[${index}]\` must be an object with a non-empty \`name\`. Use definePlugin({ ... }).`,
+      );
+    }
+    const name = plugin.name as string;
+    if (names.has(name)) fail(`Plugin "${name}" is listed twice.`);
+    names.add(name);
+    for (const hook of ["transform", "types", "start", "stop"]) {
+      if (plugin[hook] !== undefined && typeof plugin[hook] !== "function") {
+        fail(`Plugin "${name}": \`${hook}\` must be a function.`);
+      }
+    }
+    if (plugin.commands === undefined) return;
+    if (!Array.isArray(plugin.commands)) fail(`Plugin "${name}": \`commands\` must be an array.`);
+    for (const command of plugin.commands as unknown[]) {
+      if (
+        !isRecord(command) ||
+        typeof command.name !== "string" ||
+        !/^[a-z][a-z0-9-]*$/.test(command.name) ||
+        typeof command.description !== "string" ||
+        typeof command.run !== "function"
+      ) {
+        fail(
+          `Plugin "${name}": every command needs a lowercase \`name\`, a \`description\`, and a \`run\` function.`,
+        );
+      }
+      const commandName = command.name as string;
+      if (BUILTIN_COMMANDS.has(commandName)) {
+        fail(`Plugin "${name}": command "${commandName}" is built into nectar. Pick another name.`);
+      }
+      const owner = commands.get(commandName);
+      if (owner !== undefined && owner !== name) {
+        fail(`Plugins "${owner}" and "${name}" both define the command "${commandName}".`);
+      }
+      commands.set(commandName, name);
+    }
+  });
 }
 
 function isGuildList(value: unknown): value is string[] {

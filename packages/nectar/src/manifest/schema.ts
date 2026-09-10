@@ -31,6 +31,8 @@ interface ManifestRouteBase {
   middleware: string[];
   /** Error boundary files, nearest first. */
   errors: string[];
+  /** Plugins that changed this route's chains, in config order. */
+  plugins: string[];
 }
 
 export interface ManifestCommandRoute extends ManifestRouteBase {

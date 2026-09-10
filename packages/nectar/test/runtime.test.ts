@@ -87,6 +87,7 @@ async function setup(files: Record<string, string> = app) {
     env: "test",
     logger,
     signals,
+    services: {},
   };
   const componentRoute = (path: string) => {
     const route = graph.components.find((c) => c.path === path);

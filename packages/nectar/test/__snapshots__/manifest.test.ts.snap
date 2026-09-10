@@ -143,6 +143,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "section",
       ],
       "path": "user/profile",
+      "plugins": [],
     },
     {
       "catchAll": null,
@@ -161,6 +162,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "page",
       ],
       "path": "pagination/[page]/next",
+      "plugins": [],
       "selectKind": null,
       "shortId": "1w74m6",
     },
@@ -181,6 +183,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "page",
       ],
       "path": "pagination/[page]/prev",
+      "plugins": [],
       "selectKind": null,
       "shortId": "1n652h",
     },
@@ -201,6 +204,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "ticketId",
       ],
       "path": "tickets/[ticketId]/close",
+      "plugins": [],
       "selectKind": null,
       "shortId": "31imou",
     },
@@ -217,6 +221,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "commands/moderation/middleware.ts",
       ],
       "path": "moderation/ban",
+      "plugins": [],
     },
     {
       "category": "command",
@@ -231,6 +236,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "commands/moderation/middleware.ts",
       ],
       "path": "moderation/kick",
+      "plugins": [],
     },
     {
       "category": "command",
@@ -244,6 +250,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "middleware.ts",
       ],
       "path": "ping",
+      "plugins": [],
     },
     {
       "category": "command",
@@ -257,6 +264,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "middleware.ts",
       ],
       "path": "user/profile",
+      "plugins": [],
     },
     {
       "category": "event",
@@ -273,6 +281,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "once": false,
       "order": 0,
       "path": "clientReady",
+      "plugins": [],
     },
     {
       "category": "event",
@@ -289,6 +298,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "once": false,
       "order": 1,
       "path": "guildMemberAdd/(audit)",
+      "plugins": [],
     },
     {
       "category": "event",
@@ -305,6 +315,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "once": false,
       "order": 0,
       "path": "guildMemberAdd/(welcome)",
+      "plugins": [],
     },
     {
       "catchAll": null,
@@ -323,6 +334,7 @@ exports[`manifest > examples/basic manifest 1`] = `
         "ticketId",
       ],
       "path": "tickets/[ticketId]/assign",
+      "plugins": [],
       "selectKind": "user",
       "shortId": "1x540s",
     },

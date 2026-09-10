@@ -7,6 +7,16 @@ export { version } from "./version.js";
 // biome-ignore lint/suspicious/noEmptyInterface: augmentation target
 export interface NectarRoutes {}
 
+/**
+ * What plugins put on `ctx.services`. A plugin declares its entry through module augmentation:
+ *
+ *     declare module "@nectar-js/nectar" {
+ *       interface NectarServices { audit: AuditLog }
+ *     }
+ */
+// biome-ignore lint/suspicious/noEmptyInterface: augmentation target
+export interface NectarServices {}
+
 export type {
   ChannelOption,
   CommandMeta,
@@ -46,6 +56,16 @@ export {
 export type { EventMeta, EventMode } from "./events/compile.js";
 export { requiredIntents } from "./events/intents.js";
 export {
+  definePlugin,
+  type NectarPlugin,
+  type PluginApp,
+  type PluginChange,
+  type PluginCommand,
+  type PluginCommandContext,
+  PluginError,
+  type PluginGraph,
+} from "./plugins/index.js";
+export {
   guildOnly,
   type PolicyOptions,
   type RoleOptions,
@@ -75,6 +95,7 @@ export type {
   RejectReason,
   Signal,
   SignalData,
+  SignalEmitter,
   SignalType,
 } from "./runtime/signals.js";
 export type {

@@ -1,5 +1,7 @@
 import type { Client, ClientOptions, Interaction } from "discord.js";
 import type { RouteCategory } from "../compiler/routes.js";
+import type { NectarServices } from "../index.js";
+import type { NectarPlugin } from "../plugins/index.js";
 import type { LogFields, LoggerOptions } from "./logger.js";
 import type { Signal } from "./signals.js";
 
@@ -17,6 +19,8 @@ export interface RuntimeConfig {
   logger?: LoggerOptions;
   /** Receives every framework signal: interactions, failures, gateway state, shutdown. */
   observe?: (signal: Signal) => void;
+  /** Started before login, stopped on shutdown. Their services land on `ctx.services`. */
+  plugins?: NectarPlugin[];
 }
 
 export interface RouteInfo {
@@ -45,12 +49,15 @@ export interface InteractionContext<I = Interaction, P = Params> {
   params: P;
   env: Env;
   trace: Trace;
+  /** What plugins provide. Empty without plugins. */
+  services: NectarServices;
 }
 
 export interface EventContext {
   client: Client;
   route: RouteInfo;
   env: Env;
+  services: NectarServices;
 }
 
 /** What a middleware's `next()` accepts: extra fields merged into the downstream context. */

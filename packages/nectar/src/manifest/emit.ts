@@ -19,6 +19,7 @@ export function toManifest(graph: RouteGraph, outDir: string): Manifest {
       file: rel(route.file),
       middleware: chains.middleware.map(rel),
       errors: chains.errors.map(rel),
+      plugins: graph.plugins.get(route.file) ?? [],
     };
   };
 

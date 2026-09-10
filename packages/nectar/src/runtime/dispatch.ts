@@ -129,6 +129,7 @@ async function run(
       receivedAt,
       elapsed: () => Date.now() - interaction.createdTimestamp,
     },
+    services: state.services,
   };
   const files = chains(state, route);
   const tag = { trace: interaction.id, interaction: meta, route: ctx.route };

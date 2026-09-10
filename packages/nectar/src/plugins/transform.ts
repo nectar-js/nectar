@@ -1,0 +1,119 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+import type { RouteGraph } from "../compiler/graph.js";
+import { toManifest } from "../manifest/emit.js";
+import type { NectarPlugin, PluginChange, PluginGraph } from "./index.js";
+
+/** A frozen copy of the graph in manifest shape, with absolute file paths. */
+export function pluginGraph(graph: RouteGraph): PluginGraph {
+  const manifest = toManifest(graph, graph.appDir);
+  const absolute = (file: string) => path.join(graph.appDir, ...file.split("/"));
+  return deepFreeze({
+    appDir: graph.appDir,
+    routes: manifest.routes.map((route) => ({
+      ...route,
+      file: absolute(route.file),
+      middleware: route.middleware.map(absolute),
+      errors: route.errors.map(absolute),
+    })),
+    commands: manifest.commands,
+    events: manifest.events,
+  });
+}
+
+/**
+ * Runs every plugin's `transform` in config order and applies the returned changes to the
+ * graph. Problems become diagnostics; a plugin never mutates the graph directly.
+ */
+export async function applyPlugins(
+  graph: RouteGraph,
+  plugins: readonly NectarPlugin[],
+): Promise<void> {
+  for (const plugin of plugins) {
+    if (plugin.transform === undefined) continue;
+    let changes: PluginChange[];
+    try {
+      changes = (await plugin.transform(pluginGraph(graph))) ?? [];
+    } catch (error) {
+      graph.diagnostics.error(
+        "plugin-failed",
+        `Plugin "${plugin.name}" threw while transforming routes: ${describe(error)}`,
+      );
+      continue;
+    }
+    if (!Array.isArray(changes)) {
+      graph.diagnostics.error(
+        "plugin-invalid-change",
+        `Plugin "${plugin.name}" returned ${typeof changes} from transform. Return an array of changes, or nothing.`,
+      );
+      continue;
+    }
+    for (const change of changes) apply(graph, plugin.name, change);
+  }
+}
+
+function apply(graph: RouteGraph, plugin: string, change: PluginChange): void {
+  const type: unknown = isRecord(change) ? change.type : undefined;
+  if (type !== "middleware" && type !== "diagnostic") {
+    graph.diagnostics.error(
+      "plugin-invalid-change",
+      `Plugin "${plugin}" returned a change of type ${JSON.stringify(type)}. Known types: middleware, diagnostic.`,
+    );
+    return;
+  }
+  if (change.type === "diagnostic") {
+    const { severity, code, message, file, route } = change;
+    const where = {
+      ...(file === undefined ? {} : { file }),
+      ...(route === undefined ? {} : { route }),
+    };
+    if (severity === "error") graph.diagnostics.error(code, message, where);
+    else graph.diagnostics.warn(code, message, where);
+    return;
+  }
+
+  const routes = graph.routes.filter((r) => r.id === change.route);
+  if (routes.length === 0) {
+    graph.diagnostics.error(
+      "plugin-unknown-route",
+      `Plugin "${plugin}" adds middleware to route "${change.route}", which does not exist.`,
+    );
+    return;
+  }
+  if (
+    typeof change.file !== "string" ||
+    !path.isAbsolute(change.file) ||
+    !existsSync(change.file)
+  ) {
+    graph.diagnostics.error(
+      "plugin-missing-file",
+      `Plugin "${plugin}" adds middleware from ${JSON.stringify(change.file)}, which is not an absolute path to an existing file.`,
+      { route: change.route },
+    );
+    return;
+  }
+  for (const route of routes) {
+    const chains = graph.chains.get(route.file);
+    if (chains === undefined || chains.middleware.includes(change.file)) continue;
+    if (change.position === "inner") chains.middleware.push(change.file);
+    else chains.middleware.unshift(change.file);
+    const touched = graph.plugins.get(route.file) ?? [];
+    if (!touched.includes(plugin)) graph.plugins.set(route.file, [...touched, plugin]);
+  }
+}
+
+function deepFreeze<T>(value: T): T {
+  if (typeof value === "object" && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const inner of Object.values(value)) deepFreeze(inner);
+  }
+  return value;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
