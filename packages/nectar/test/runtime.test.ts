@@ -485,6 +485,35 @@ describe("lifecycle", () => {
     expect(process.listenerCount("SIGINT")).toBe(before);
   });
 
+  test("losing the parent process's IPC channel stops the runtime", async () => {
+    const { state, client } = await setup({
+      "commands/ok/command.ts": cmd('{ description: "d" }', ""),
+    });
+    const runtime = createRuntime({
+      manifest: state.manifest,
+      appDir: state.appDir,
+      config: { intents: [] },
+      env: "test",
+      logger: state.logger,
+      client: client as unknown as Client,
+    });
+    // Stand in for a forked shard. The listener is called directly: emitting "disconnect"
+    // on the test runner's own process would reach the runner too.
+    const connected = process.connected;
+    process.connected = true;
+    const before = process.listeners("disconnect");
+    try {
+      await runtime.start({ token: "t" });
+      const added = process.listeners("disconnect").filter((l) => !before.includes(l));
+      expect(added).toHaveLength(1);
+      added[0]?.();
+      await vi.waitFor(() => expect(client.destroy).toHaveBeenCalledTimes(1));
+      expect(process.listeners("disconnect")).toEqual(before);
+    } finally {
+      process.connected = connected;
+    }
+  });
+
   test("a failed login stops the runtime and says why", async () => {
     const { state } = await setup({ "commands/ok/command.ts": cmd('{ description: "d" }', "") });
     const options = {

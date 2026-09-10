@@ -44,7 +44,10 @@ export class LoginError extends Error {
 
 export interface StartOptions {
   token: string;
-  /** Stop on SIGINT and SIGTERM. Defaults to `true`. */
+  /**
+   * Stop on SIGINT and SIGTERM, and when the IPC channel to a parent process closes, so a shard
+   * does not outlive the manager that spawned it. Defaults to `true`.
+   */
   signals?: boolean;
   /** How long `stop()` waits for in-flight interactions, in milliseconds. Defaults to 10000. */
   drainTimeout?: number;
@@ -156,6 +159,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
         };
         process.once("SIGINT", onSignal);
         process.once("SIGTERM", onSignal);
+        if (process.connected) process.once("disconnect", onSignal);
       }
 
       try {
@@ -179,6 +183,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
         if (onSignal !== null) {
           process.off("SIGINT", onSignal);
           process.off("SIGTERM", onSignal);
+          process.off("disconnect", onSignal);
           onSignal = null;
         }
         await drain(inFlight, drainTimeout, logger);
