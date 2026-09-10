@@ -1,15 +1,15 @@
-# @nect-js/create
+# @nectar-js/create
 
-Scaffolds a new [Nect](https://github.com/OMouta/Neat) project.
+Scaffolds a new [Nectar](https://github.com/nectar-js/nectar) project.
 
 ```bash
-npm create @nect-js
+npm create @nectar-js
 ```
 
 Asks for a directory, TypeScript or JavaScript, and a package manager, then prints the steps to get the bot running.
 
 ```
-npm create @nect-js [directory] [options]
+npm create @nectar-js [directory] [options]
 
   --ts, --js        Language. Asked when omitted.
   --pm <name>       Package manager: npm, pnpm, yarn, or bun. Detected from the one running this.
@@ -19,4 +19,4 @@ npm create @nect-js [directory] [options]
 
 ## License
 
-MIT. See [LICENSE](https://github.com/OMouta/Neat/blob/main/LICENSE).
+MIT. See [LICENSE](https://github.com/nectar-js/nectar/blob/main/LICENSE).

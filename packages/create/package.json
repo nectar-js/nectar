@@ -1,14 +1,14 @@
 {
-  "name": "@nect-js/create",
+  "name": "@nectar-js/create",
   "version": "0.0.0",
-  "description": "Create a new Nect project.",
+  "description": "Create a new Nectar project.",
   "license": "MIT",
   "type": "module",
   "engines": {
     "node": ">=22.18"
   },
   "bin": {
-    "create-nect": "./dist/index.js"
+    "create-nectar": "./dist/index.js"
   },
   "files": [
     "dist"

@@ -50,9 +50,9 @@ export function templateFiles(options: ScaffoldOptions): Record<string, string> 
   const ext = ts ? "ts" : "js";
   const files: Record<string, string> = {
     "package.json": packageJson(options),
-    [`nect.config.${ext}`]: config(),
+    [`nectar.config.${ext}`]: config(),
     ".env.example": "DISCORD_TOKEN=\nDISCORD_APPLICATION_ID=\n",
-    ".gitignore": "node_modules/\n.nect/\n.env\n",
+    ".gitignore": "node_modules/\n.nectar/\n.env\n",
     [`app/middleware.${ext}`]: middleware(ts),
     [`app/commands/ping/command.${ext}`]: pingCommand(ts),
     [`app/components/counter/[count]/button.${ext}`]: counterButton(ts),
@@ -78,20 +78,20 @@ export function scaffold(dir: string, options: ScaffoldOptions): string[] {
 
 function packageJson({ name, language }: ScaffoldOptions): string {
   const scripts: Record<string, string> = {
-    dev: "nect dev",
-    build: "nect build",
-    start: "nect start",
-    check: "nect check",
-    sync: "nect sync",
+    dev: "nectar dev",
+    build: "nectar build",
+    start: "nectar start",
+    check: "nectar check",
+    sync: "nectar sync",
   };
-  if (language === "ts") scripts.typecheck = "nect build && tsc --noEmit";
+  if (language === "ts") scripts.typecheck = "nectar build && tsc --noEmit";
   const pkg = {
     name,
     private: true,
     type: "module",
     engines: { node: ">=22.18" },
     scripts,
-    dependencies: { "@nect-js/core": `^${version}`, "discord.js": DISCORD_JS },
+    dependencies: { "@nectar-js/nectar": `^${version}`, "discord.js": DISCORD_JS },
     ...(language === "ts"
       ? { devDependencies: { "@types/node": "^22.20.1", typescript: "^5.9.0" } }
       : {}),
@@ -100,7 +100,7 @@ function packageJson({ name, language }: ScaffoldOptions): string {
 }
 
 function config(): string {
-  return `import { defineConfig } from "@nect-js/core";
+  return `import { defineConfig } from "@nectar-js/nectar";
 
 export default defineConfig({
   token: process.env.DISCORD_TOKEN,
@@ -129,7 +129,7 @@ function tsconfig(): string {
         skipLibCheck: true,
         verbatimModuleSyntax: true,
       },
-      include: ["app", "nect.config.ts", ".nect/types.d.ts"],
+      include: ["app", "nectar.config.ts", ".nectar/types.d.ts"],
     },
     null,
     2,
@@ -137,7 +137,7 @@ function tsconfig(): string {
 }
 
 function middleware(ts: boolean): string {
-  return `import { defineMiddleware } from "@nect-js/core";
+  return `import { defineMiddleware } from "@nectar-js/nectar";
 
 // Runs before every interaction. Whatever you pass to next() is on ctx downstream${ts ? ", typed" : ""}.
 export default defineMiddleware(async (_ctx, next) => {
@@ -149,11 +149,11 @@ export default defineMiddleware(async (_ctx, next) => {
 function pingCommand(ts: boolean): string {
   const meta = ts
     ? `export const meta: CommandMeta = {`
-    : `/** @type {import("@nect-js/core").CommandMeta} */
+    : `/** @type {import("@nectar-js/nectar").CommandMeta} */
 export const meta = {`;
   const imports = ts
-    ? `import { type CommandMeta, customId, defineCommand } from "@nect-js/core";`
-    : `import { customId, defineCommand } from "@nect-js/core";`;
+    ? `import { type CommandMeta, customId, defineCommand } from "@nectar-js/nectar";`
+    : `import { customId, defineCommand } from "@nectar-js/nectar";`;
   return `${imports}
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
@@ -175,7 +175,7 @@ export default defineCommand("ping", async (ctx) => {
 }
 
 function counterButton(ts: boolean): string {
-  return `import { customId, defineComponent } from "@nect-js/core";
+  return `import { customId, defineComponent } from "@nectar-js/nectar";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 // The directory name [count] makes ctx.params.count a string decoded from the custom ID.
@@ -193,7 +193,7 @@ export default defineComponent("counter/[count]", async (ctx) => {
 }
 
 function readyEvent(): string {
-  return `import { defineEvent } from "@nect-js/core";
+  return `import { defineEvent } from "@nectar-js/nectar";
 
 export default defineEvent("clientReady", async (client) => {
   console.log(\`Logged in as \${client.user.tag}\`);

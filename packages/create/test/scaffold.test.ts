@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test } from "vitest";
-import { run } from "../../core/src/cli/index.js";
+import { run } from "../../nectar/src/cli/index.js";
 import { detectPackageManager, nextSteps, scaffold, templateFiles } from "../src/scaffold.js";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
@@ -22,19 +22,23 @@ afterEach(() => {
 });
 
 function tempDir(): string {
-  const dir = mkdtempSync(path.join(tmpdir(), "nect-create-"));
+  const dir = mkdtempSync(path.join(tmpdir(), "nectar-create-"));
   temps.push(dir);
   return path.join(dir, "my-bot");
 }
 
 /**
- * Stands in for `npm install`: links the workspace's `@nect-js/core` and `discord.js` into the
+ * Stands in for `npm install`: links the workspace's `@nectar-js/nectar` and `discord.js` into the
  * generated project. Junctions, so no privileges are needed on Windows.
  */
 function linkDependencies(dir: string): void {
   const modules = path.join(dir, "node_modules");
-  mkdirSync(path.join(modules, "@nect-js"), { recursive: true });
-  symlinkSync(path.join(repo, "packages/core"), path.join(modules, "@nect-js/core"), "junction");
+  mkdirSync(path.join(modules, "@nectar-js"), { recursive: true });
+  symlinkSync(
+    path.join(repo, "packages/nectar"),
+    path.join(modules, "@nectar-js/nectar"),
+    "junction",
+  );
   symlinkSync(
     realpathSync(path.join(repo, "examples/basic/node_modules/discord.js")),
     path.join(modules, "discord.js"),
@@ -55,12 +59,12 @@ async function check(cwd: string) {
 }
 
 describe("scaffold", () => {
-  test.each(["ts", "js"] as const)("a %s project passes nect check", async (language) => {
+  test.each(["ts", "js"] as const)("a %s project passes nectar check", async (language) => {
     const dir = tempDir();
     const files = scaffold(dir, { name: "my-bot", language, packageManager: "npm" });
     expect(files).toHaveLength(language === "ts" ? 9 : 8);
     expect(files.some((f) => f.startsWith("app/components/counter/[count]/button."))).toBe(true);
-    expect(readFileSync(path.join(dir, ".gitignore"), "utf8")).toContain(".nect/");
+    expect(readFileSync(path.join(dir, ".gitignore"), "utf8")).toContain(".nectar/");
 
     linkDependencies(dir);
     const result = await check(dir);
@@ -73,8 +77,8 @@ describe("scaffold", () => {
     const files = templateFiles({ name: "bot", language: "ts", packageManager: "pnpm" });
     const pkg = JSON.parse(files["package.json"] ?? "{}");
     expect(pkg.name).toBe("bot");
-    expect(pkg.scripts.dev).toBe("nect dev");
-    expect(pkg.dependencies["@nect-js/core"]).toMatch(/^\^\d/);
+    expect(pkg.scripts.dev).toBe("nectar dev");
+    expect(pkg.dependencies["@nectar-js/nectar"]).toMatch(/^\^\d/);
     expect(pkg.dependencies["discord.js"]).toMatch(/^\^14/);
     expect(pkg.devDependencies.typescript).toBeDefined();
     expect(
@@ -91,7 +95,7 @@ describe("scaffold", () => {
     expect(() => scaffold(dir, { name: "my-bot", language: "js", packageManager: "npm" })).toThrow(
       "not empty",
     );
-    expect(existsSync(path.join(dir, "nect.config.js"))).toBe(true);
+    expect(existsSync(path.join(dir, "nectar.config.js"))).toBe(true);
   });
 
   test("package manager detection and next steps", () => {
