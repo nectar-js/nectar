@@ -133,4 +133,4 @@ Registration signals only come from `nectar dev`.
 
 ## `plugins`
 
-Plugins, in the order their hooks run.
+Plugins, in the order their hooks run. See [Plugins](./plugins).
