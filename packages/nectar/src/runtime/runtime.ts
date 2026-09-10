@@ -2,6 +2,7 @@ import path from "node:path";
 import { Client, Events } from "discord.js";
 import { registerComponentRoutes } from "../components/registry.js";
 import type { Manifest, ManifestComponentRoute } from "../manifest/schema.js";
+import { type NectarPlugin, type PluginApp, PluginError } from "../plugins/index.js";
 import { createInteractionDispatcher } from "./dispatch.js";
 import { bindEvents, type EventBinding } from "./events.js";
 import { createLogger } from "./logger.js";
@@ -74,6 +75,17 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     env,
     logger,
     signals,
+    services: {},
+  };
+  const plugins = options.config.plugins ?? [];
+  const app: PluginApp = {
+    client,
+    env,
+    logger,
+    signals,
+    get manifest() {
+      return state.manifest;
+    },
   };
 
   registerComponentRoutes(componentRoutes(state.manifest));
@@ -106,6 +118,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
 
     async start({ token, signals: osSignals = true, drainTimeout: timeout = 10_000 }) {
       drainTimeout = timeout;
+      await startPlugins(plugins, app, state.services as Record<string, unknown>);
       if (options.config.eager ?? env === "production") {
         await state.modules.preload(manifestFiles(state.manifest, state.appDir));
       }
@@ -148,6 +161,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
           onSignal = null;
         }
         await drain(inFlight, drainTimeout, logger);
+        await stopPlugins(plugins, app, logger);
         await client.destroy();
       })();
       return stopping;
@@ -163,6 +177,57 @@ export function createRuntime(options: RuntimeOptions): Runtime {
       }
     },
   };
+}
+
+/** Runs `start` hooks in config order. Two plugins offering the same service is a startup failure. */
+async function startPlugins(
+  plugins: readonly NectarPlugin[],
+  app: PluginApp,
+  services: Record<string, unknown>,
+): Promise<void> {
+  const providers = new Map<string, string>();
+  for (const plugin of plugins) {
+    let provided: unknown;
+    try {
+      provided = await plugin.start?.(app);
+    } catch (error) {
+      throw new PluginError(plugin.name, `start failed: ${describe(error)}`);
+    }
+    if (provided === undefined || provided === null) continue;
+    if (typeof provided !== "object") {
+      throw new PluginError(plugin.name, `start must return an object of services or nothing.`);
+    }
+    for (const [name, service] of Object.entries(provided)) {
+      const owner = providers.get(name);
+      if (owner !== undefined) {
+        throw new PluginError(
+          plugin.name,
+          `provides service "${name}", which plugin "${owner}" already provides.`,
+        );
+      }
+      providers.set(name, plugin.name);
+      services[name] = service;
+    }
+  }
+}
+
+/** Runs `stop` hooks in reverse order. A failing hook is logged; shutdown continues. */
+async function stopPlugins(
+  plugins: readonly NectarPlugin[],
+  app: PluginApp,
+  logger: Logger,
+): Promise<void> {
+  for (const plugin of [...plugins].reverse()) {
+    try {
+      await plugin.stop?.(app);
+    } catch (error) {
+      logger.error(`Plugin "${plugin.name}" failed to stop.`, { plugin: plugin.name, error });
+    }
+  }
+}
+
+function describe(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 async function drain(inFlight: Set<Promise<void>>, timeout: number, logger: Logger) {
