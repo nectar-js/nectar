@@ -1,6 +1,12 @@
 import type { AutocompleteInteraction, Interaction } from "discord.js";
 import { ApplicationCommandType } from "discord-api-types/v10";
-import { type ComponentKind, createMatcher } from "../components/index.js";
+import {
+  type ComponentKind,
+  createMatcher,
+  findInvalidParam,
+  type ParamValidators,
+  paramValidatorsOf,
+} from "../components/index.js";
 import type {
   ManifestAutocompleteRoute,
   ManifestCommand,
@@ -10,6 +16,7 @@ import type {
 } from "../manifest/schema.js";
 import { handleError, logFields } from "./errors.js";
 import { runChain } from "./middleware.js";
+import { HandlerLoadError } from "./modules.js";
 import { type InteractionMeta, interactionMeta } from "./signals.js";
 import { chains, type RuntimeState, routeInfo } from "./state.js";
 import type { Handler, InteractionContext, Middleware } from "./types.js";
@@ -33,7 +40,7 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
         commandKey(ApplicationCommandType.ChatInput, interaction.commandName, key),
       );
       if (route === undefined) {
-        return unknown(state, `chat input command /${interaction.commandName} ${key}`.trim());
+        return unknown(state, interaction, meta, `chat input command /${meta.command}`);
       }
       return run(state, route, interaction, meta, {}, receivedAt);
     }
@@ -43,7 +50,7 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
         commandKey(interaction.commandType, interaction.commandName, ""),
       );
       if (route === undefined) {
-        return unknown(state, `context menu command "${interaction.commandName}"`);
+        return unknown(state, interaction, meta, `context menu command "${meta.command}"`);
       }
       return run(state, route, interaction, meta, {}, receivedAt);
     }
@@ -58,7 +65,7 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
       const route = command === undefined ? undefined : tables.autocomplete.get(command.id);
       const option = interaction.options.getFocused(true).name;
       if (route === undefined || !route.options.includes(option)) {
-        return unknown(state, `autocomplete for /${interaction.commandName} option "${option}"`);
+        return unknown(state, interaction, meta, `autocomplete for /${meta.command} "${option}"`);
       }
       return run(state, route, interaction, meta, {}, receivedAt, option);
     }
@@ -70,18 +77,32 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
         : interaction.isModalSubmit()
           ? ["modal", interaction.customId]
           : null;
-    if (component === null) return;
+    if (component === null) {
+      // Not a type Nectar routes. The app may listen for it on the client itself.
+      state.signals.emit({
+        type: "interaction:reject",
+        trace: interaction.id,
+        interaction: meta,
+        reason: "unknown-interaction",
+      });
+      return;
+    }
 
     const [kind, customId] = component;
     const match = tables.matcher.match(kind, customId);
     if (!match.ok) {
-      if (match.reason !== "not-nectar") {
-        state.logger.warn(`Ignoring ${kind} with custom ID "${meta.customId}": ${match.reason}.`, {
-          trace: interaction.id,
-          interaction: kind,
-          customId: meta.customId,
-        });
-      }
+      if (match.reason === "not-nectar") return;
+      state.logger.warn(`Ignoring ${kind} with custom ID "${meta.customId}": ${match.reason}.`, {
+        trace: interaction.id,
+        interaction: kind,
+        customId: meta.customId,
+      });
+      state.signals.emit({
+        type: "interaction:reject",
+        trace: interaction.id,
+        interaction: meta,
+        reason: match.reason,
+      });
       return;
     }
     return run(state, match.route, interaction, meta, match.params, receivedAt);
@@ -126,6 +147,27 @@ async function run(
             autocompleteOption,
             "The autocomplete handler",
           );
+    if (route.kind === "button" || route.kind === "select" || route.kind === "modal") {
+      const invalid = await findInvalidParam(validators(ctx.route.file, handler, route), params);
+      if (invalid !== null) {
+        state.logger.warn(
+          `Rejected ${route.kind} for ${ctx.route.id}: "${invalid}" failed validation.`,
+          {
+            ...logFields(ctx, meta),
+            param: invalid,
+          },
+        );
+        state.signals.emit({
+          type: "interaction:reject",
+          trace: interaction.id,
+          interaction: meta,
+          reason: "invalid-param",
+          route: ctx.route,
+          param: invalid,
+        });
+        return;
+      }
+    }
     await runChain(middleware, ctx, handler, {
       middleware: (index) =>
         state.signals.emit({
@@ -180,9 +222,48 @@ async function closeAutocomplete(interaction: AutocompleteInteraction): Promise<
   }
 }
 
-function unknown(state: RuntimeState, what: string): void {
-  state.logger.warn(`No route for ${what}. Run \`nectar sync\` if commands changed.`);
+function unknown(
+  state: RuntimeState,
+  interaction: Interaction,
+  meta: InteractionMeta,
+  what: string,
+): void {
+  state.logger.warn(`No route for ${what}. Run \`nectar sync\` if commands changed.`, {
+    trace: interaction.id,
+    interaction: meta.type,
+    command: meta.command,
+  });
+  state.signals.emit({
+    type: "interaction:reject",
+    trace: interaction.id,
+    interaction: meta,
+    reason: "no-route",
+  });
 }
+
+/**
+ * The route's parameter validators, checked once per handler instance. The compiler checked
+ * the shape at build time; this repeats it so a JavaScript project or a hot-reloaded file
+ * fails the same way instead of at the first click.
+ */
+function validators(
+  file: string,
+  handler: Handler,
+  route: ManifestComponentRoute,
+): ParamValidators {
+  const cached = validatorCache.get(handler);
+  if (cached !== undefined) return cached;
+  let result: ParamValidators;
+  try {
+    result = paramValidatorsOf(handler, route);
+  } catch (error) {
+    throw new HandlerLoadError(file, error instanceof Error ? error.message : String(error));
+  }
+  validatorCache.set(handler, result);
+  return result;
+}
+
+const validatorCache = new WeakMap<Handler, ParamValidators>();
 
 interface Tables {
   /** `${type}:${name}:${handlerKey}` to the handler route. */

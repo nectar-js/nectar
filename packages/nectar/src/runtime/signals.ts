@@ -67,12 +67,37 @@ export type SignalData =
       /** The `error.ts` that handled it, or `null` for the default boundary. */
       boundary: string | null;
     }
+  | {
+      /** The interaction was refused before any application code ran. */
+      type: "interaction:reject";
+      trace: string;
+      interaction: InteractionMeta;
+      reason: RejectReason;
+      /** Known when the route matched but a parameter failed validation. */
+      route?: RouteInfo;
+      /** The parameter that failed, for `invalid-param`. Its value is never included. */
+      param?: string;
+    }
   | { type: "event:fail"; event: string; route: RouteInfo; error: unknown; boundary: string | null }
   | { type: "registration:start"; scopes: string[] }
   | { type: "registration:complete"; scopes: RegistrationScopeResult[]; duration: number }
   | { type: "gateway:connect"; shard: number; resumed: boolean }
   | { type: "gateway:disconnect"; shard: number; code: number }
   | { type: "shutdown" };
+
+export type RejectReason =
+  /** A command, autocomplete option, or context menu Discord sent that no route serves. */
+  | "no-route"
+  /** An interaction type Nectar does not route at all. */
+  | "unknown-interaction"
+  /** A Nectar custom ID that cannot be decoded. */
+  | "malformed"
+  /** A decoded custom ID whose short ID names no route of that kind. */
+  | "unknown-route"
+  /** The wrong number of values for the route. */
+  | "param-count"
+  /** A route's own validator refused a value. */
+  | "invalid-param";
 
 export type SignalType = SignalData["type"];
 

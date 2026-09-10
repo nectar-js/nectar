@@ -4,6 +4,7 @@ import { loadModule } from "../compiler/load.js";
 import type { Route, RouteTable } from "../compiler/routes.js";
 import { formatSegment } from "../compiler/segments.js";
 import { BASE_OVERHEAD, encodeCustomId, MAX_CUSTOM_ID_LENGTH } from "./customId.js";
+import { paramValidatorsOf } from "./params.js";
 
 export type ComponentKind = "button" | "select" | "modal";
 
@@ -122,6 +123,16 @@ async function compileRoute(
   }
 
   if (!checkDeclaredRoute(module, route, diagnostics)) return null;
+  try {
+    paramValidatorsOf(module.default, route);
+  } catch (error) {
+    diagnostics.error(
+      "invalid-param-validator",
+      `${error instanceof Error ? error.message : String(error)} Pass validators as defineComponent's third argument: { params: { name: (value) => ... } }.`,
+      { file: route.file, route: route.id },
+    );
+    return null;
+  }
 
   let selectKind: SelectKind | null = null;
   if (kind === "select") {

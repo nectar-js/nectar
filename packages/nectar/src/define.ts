@@ -13,6 +13,7 @@ import type {
 } from "discord.js";
 import type { CommandType, OptionType } from "./commands/meta.js";
 import type { SelectKind } from "./components/compile.js";
+import type { ParamValidator } from "./components/params.js";
 import { encodeComponentRoute } from "./components/registry.js";
 import type { NectarRoutes } from "./index.js";
 import type {
@@ -131,11 +132,23 @@ export function defineCommand<P extends CommandPath>(
   return routed("defineCommand", route, handler);
 }
 
+export interface ComponentOptions<P extends ComponentPath> {
+  /**
+   * Validators for the route's parameters, run on every incoming custom ID before middleware.
+   * A parameter without one accepts any string. When a validator fails the interaction is
+   * dropped and reported; the handler never sees it.
+   */
+  params?: { [K in keyof ComponentParams<P>]?: ParamValidator<ComponentParams<P>[K]> };
+}
+
 export function defineComponent<P extends ComponentPath>(
   route: P,
   handler: (ctx: ComponentContext<P>) => unknown,
+  options: ComponentOptions<P> = {},
 ): Routed<typeof handler> {
-  return routed("defineComponent", route, handler);
+  const defined = routed("defineComponent", route, handler);
+  if (options.params !== undefined) Object.assign(defined, { params: options.params });
+  return defined;
 }
 
 export function defineEvent<Name extends keyof ClientEvents>(

@@ -23,6 +23,7 @@ export type {
 } from "./commands/meta.js";
 export type { SelectKind } from "./components/compile.js";
 export { CustomIdTooLongError, MAX_CUSTOM_ID_LENGTH } from "./components/customId.js";
+export type { ParamValidator, StandardSchemaLike } from "./components/params.js";
 export { ConfigError, defineConfig, type NectarConfig, validateConfig } from "./config.js";
 export {
   type CommandContext,
@@ -30,6 +31,7 @@ export {
   type CommandRoutes,
   type ComponentContext,
   type ComponentKindName,
+  type ComponentOptions,
   type ComponentParams,
   type ComponentPath,
   type ComponentRoutes,
@@ -42,6 +44,14 @@ export {
   type Routed,
 } from "./define.js";
 export type { EventMeta, EventMode } from "./events/compile.js";
+export { requiredIntents } from "./events/intents.js";
+export {
+  guildOnly,
+  type PolicyOptions,
+  type RoleOptions,
+  requirePermissions,
+  requireRoles,
+} from "./policy.js";
 export {
   type CommandDiff,
   RegistrationError,
@@ -62,6 +72,7 @@ export type {
 } from "./runtime/logger.js";
 export type {
   InteractionMeta,
+  RejectReason,
   Signal,
   SignalData,
   SignalType,

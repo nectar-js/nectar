@@ -220,3 +220,26 @@ describe("matcher", () => {
     expect(matcher.match("button", "n:000000")).toEqual({ ok: false, reason: "unknown-route" });
   });
 });
+
+describe("param validators", () => {
+  const withParams = (params: string) =>
+    `const handler = async () => {};\nhandler.params = ${params};\nexport default handler;\n`;
+
+  test("valid validators compile", async () => {
+    const { codes } = await compile({
+      "components/tickets/[id]/button.ts": withParams("{ id: (v) => /^d+$/.test(v) }"),
+    });
+    expect(codes).toEqual([]);
+  });
+
+  test("validators for unknown parameters or of the wrong type are errors", async () => {
+    const { codes, diagnostics } = await compile({
+      "components/tickets/[id]/button.ts": withParams("{ id: 'digits' }"),
+      "components/confirm/button.ts": withParams("{ id: () => true }"),
+    });
+    expect(codes).toEqual(["invalid-param-validator", "invalid-param-validator"]);
+    expect(diagnostics[0]?.message).toContain('"id", which is not a parameter');
+    expect(diagnostics[0]?.message).toContain("It has none.");
+    expect(diagnostics[1]?.message).toContain("`params.id` must be a function");
+  });
+});

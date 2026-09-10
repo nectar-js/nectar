@@ -23,6 +23,13 @@ export {
   type MatchResult,
 } from "./matcher.js";
 export {
+  findInvalidParam,
+  type ParamValidator,
+  type ParamValidators,
+  paramValidatorsOf,
+  type StandardSchemaLike,
+} from "./params.js";
+export {
   encodeComponentRoute,
   type RegisteredComponentRoute,
   registerComponentRoutes,

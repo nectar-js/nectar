@@ -24,6 +24,7 @@ export {
   type InteractionMeta,
   interactionMeta,
   type RegistrationScopeResult,
+  type RejectReason,
   redactCustomId,
   type Signal,
   type SignalData,

@@ -647,3 +647,75 @@ describe("signals", () => {
     expect(client.listenerCount("shardReady")).toBe(0);
   });
 });
+
+describe("rejections", () => {
+  const rejects = async (files: Record<string, string>) => {
+    const s = await setup(files);
+    const seen: Extract<Signal, { type: "interaction:reject" }>[] = [];
+    s.signals.on((sig) => {
+      if (sig.type === "interaction:reject") seen.push(sig);
+    });
+    return { ...s, dispatch: createInteractionDispatcher(s.state), seen };
+  };
+
+  test("a failed param validator drops the interaction before middleware", async () => {
+    const { dispatch, seen, logger, componentRoute } = await rejects({
+      "middleware.ts": `export default async function (ctx, next) { ${push('"mw"')} return next(); }\n`,
+      "components/tickets/[id]/button.ts": `const h = async () => { ${push('"open"')} };\nh.params = { id: (v) => /^\\d+$/.test(v) };\nexport default h;\n`,
+    });
+    const route = componentRoute("tickets/[id]");
+    await dispatch(component("isButton", customIdFor(route, { id: "42" })));
+    expect(calls()).toEqual([["mw"], ["open"]]);
+
+    await dispatch(component("isButton", customIdFor(route, { id: "secret-not-digits" })));
+    expect(calls()).toEqual([]);
+    expect(seen).toMatchObject([
+      { reason: "invalid-param", param: "id", route: { id: "component:tickets/[id]" } },
+    ]);
+    expect(JSON.stringify(seen)).not.toContain("secret");
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('"id" failed validation'),
+      expect.objectContaining({ param: "id", route: "component:tickets/[id]" }),
+    );
+    expect(JSON.stringify(logger.warn.mock.calls)).not.toContain("secret");
+  });
+
+  test("a broken params export is a load error, not a silent pass", async () => {
+    // The compiler refuses this shape, so the registry is stubbed to hand out what a hot
+    // reload or a JavaScript project could produce after the build.
+    const { dispatch, logger, componentRoute, state } = await rejects({
+      "components/confirm/button.ts": "export default async () => {};\n",
+    });
+    const broken = Object.assign(
+      async () => {
+        globalThis.__nectar.push(["ran"]);
+      },
+      { params: { nope: () => true } },
+    );
+    vi.spyOn(state.modules, "loadDefault").mockResolvedValue(broken);
+    await dispatch(component("isButton", customIdFor(componentRoute("confirm"))));
+    expect(calls()).toEqual([]);
+    expect(logger.error.mock.calls[0]?.[1]?.error).toMatchObject({
+      name: "HandlerLoadError",
+      message: expect.stringContaining('"nope"'),
+    });
+  });
+
+  test("unroutable interactions are reported with a reason", async () => {
+    const { dispatch, seen, componentRoute } = await rejects(app);
+    await dispatch(chatInput("nope"));
+    await dispatch(component("isButton", "n:zzzzzz"));
+    await dispatch(component("isButton", "n:!!"));
+    await dispatch(component("isButton", `n:${componentRoute("tickets/[id]/close").shortId}`));
+    await dispatch(component("isButton", "hand-built"));
+    await dispatch(interaction({}));
+    expect(seen.map((s) => s.reason)).toEqual([
+      "no-route",
+      "unknown-route",
+      "malformed",
+      "param-count",
+      "unknown-interaction",
+    ]);
+    expect(seen[0]).toMatchObject({ interaction: { type: "chatInput", command: "nope" } });
+  });
+});
