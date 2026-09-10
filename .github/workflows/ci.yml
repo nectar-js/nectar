@@ -34,7 +34,7 @@ jobs:
 
       - run: pnpm test
 
-      # Generates .nect/types.d.ts so the example type-checks against real route types.
+      # Generates .nectar/types.d.ts so the example type-checks against real route types.
       - run: pnpm --filter basic run build
 
       - run: pnpm typecheck

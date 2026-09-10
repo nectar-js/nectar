@@ -1,6 +1,6 @@
 .plan/
 node_modules/
 dist/
-.nect/
+.nectar/
 *.tsbuildinfo
 .env
