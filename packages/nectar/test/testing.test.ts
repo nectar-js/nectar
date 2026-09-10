@@ -193,3 +193,42 @@ describe("autocomplete", () => {
     );
   });
 });
+
+describe("events", () => {
+  test("handlers run in manifest order, once handlers once, failures reach boundaries", async () => {
+    const app = await testApp({
+      "error.ts": "export default async function () {}\n",
+      "events/messageCreate/(a)/event.ts":
+        'export const meta = { order: 1 };\nexport default async function (message) { message.seen.push("a"); }\n',
+      "events/messageCreate/(b)/event.ts":
+        'export const meta = { order: 0 };\nexport default async function (message) { await new Promise((r) => setTimeout(r, 5)); message.seen.push("b"); }\n',
+      "events/guildMemberAdd/event.ts":
+        "export const meta = { once: true };\nexport default async function (member, ctx) { member.seen.push(ctx.route.id); }\n",
+      "events/guildMemberRemove/event.ts":
+        'export default async function () { throw new Error("left"); }\n',
+    });
+
+    // Stubs stand in for discord.js objects; the handlers only touch `seen`.
+    const message = { seen: [] as string[] };
+    expect(await app.event("messageCreate", message as never)).toEqual({ failures: [] });
+    expect(message.seen).toEqual(["b", "a"]);
+
+    const member = { seen: [] as string[] };
+    await app.event("guildMemberAdd", member as never);
+    await app.event("guildMemberAdd", member as never);
+    expect(member.seen).toEqual(["event:guildMemberAdd"]);
+
+    const { failures } = await app.event("guildMemberRemove", {} as never);
+    expect(failures).toMatchObject([
+      {
+        event: "guildMemberRemove",
+        error: { message: "left" },
+        boundary: expect.stringMatching(/error\.ts$/),
+      },
+    ]);
+
+    await expect(app.event("channelCreate", {} as never)).rejects.toThrow(
+      'No event route "channelCreate"',
+    );
+  });
+});

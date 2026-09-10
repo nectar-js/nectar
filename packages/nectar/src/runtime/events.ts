@@ -5,7 +5,8 @@ import type { EventContext, EventHandler } from "./types.js";
 
 export interface EventBinding {
   name: string;
-  listener: (...args: unknown[]) => void;
+  /** Resolves once every handler it fanned out to has finished. */
+  listener: (...args: unknown[]) => Promise<void>;
 }
 
 /**
@@ -34,7 +35,7 @@ export function bindEvents(state: RuntimeState): EventBinding[] {
       const live = handlers.filter((h) => !spent.has(h.id));
       for (const h of live) if (h.once) spent.add(h.id);
       if (spent.size === handlers.length) state.client.off(event.name, listener);
-      void fanOut(state, event, live, args);
+      return fanOut(state, event, live, args);
     };
 
     state.client.on(event.name, listener);

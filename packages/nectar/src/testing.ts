@@ -7,6 +7,7 @@ import {
   type ButtonInteraction,
   type Channel,
   Client,
+  type ClientEvents,
   CommandInteractionOptionResolver,
   type GuildMember,
   type Interaction,
@@ -39,6 +40,7 @@ import {
   type ManifestComponentRoute,
 } from "./manifest/index.js";
 import {
+  bindEvents,
   createInteractionDispatcher,
   createLogger,
   createSignals,
@@ -138,6 +140,11 @@ export interface InteractionResult<I> {
   signals: Signal[];
 }
 
+export interface EventResult {
+  /** One per handler that threw, naming the boundary that took the error. */
+  failures: Extract<Signal, { type: "event:fail" }>[];
+}
+
 export interface TestAppOptions {
   /** Handlers see it as `ctx.client`. Defaults to a discord.js client that never logs in. */
   client?: Client;
@@ -151,8 +158,8 @@ export interface TestAppOptions {
 
 /**
  * Runs routes from a built manifest through the runtime's own dispatch, without a gateway.
- * Every method builds a stubbed discord.js interaction for the route and resolves once the
- * middleware chain, handler, and error boundaries are done.
+ * The interaction methods build a stubbed discord.js interaction for the route and resolve
+ * once the middleware chain, handler, and error boundaries are done.
  */
 export interface TestApp {
   readonly client: Client;
@@ -190,6 +197,11 @@ export interface TestApp {
     path: P,
     ...args: ComponentArgs<P, ModalSubmitInteraction>
   ): Promise<InteractionResult<ModalSubmitInteraction>>;
+  /**
+   * Emits a discord.js event to its routes, in manifest order and mode, and resolves once they
+   * finish. A `once` handler runs on the first call only, as it would in the runtime.
+   */
+  event<N extends keyof ClientEvents>(name: N, ...args: ClientEvents[N]): Promise<EventResult>;
 }
 
 /** `manifestFile` is a `.nectar/manifest.json` written by `nectar build` or `nectar dev`. */
@@ -212,6 +224,7 @@ export function createTestApp(manifestFile: string | URL, options: TestAppOption
   };
   registerComponentRoutes(manifest.routes.filter(isComponentRoute));
   const dispatch = createInteractionDispatcher(state);
+  const events = bindEvents(state);
 
   async function invoke<I>({ interaction, responses }: Stub): Promise<InteractionResult<I>> {
     const seen: Signal[] = [];
@@ -313,6 +326,21 @@ export function createTestApp(manifestFile: string | URL, options: TestAppOption
 
     async modal(path, ...args) {
       return invoke(component("modal", path, args[0], args[1]));
+    },
+
+    async event(name, ...args) {
+      const binding = events.find((b) => b.name === name);
+      if (binding === undefined) throw missing("event", name);
+      const failures: EventResult["failures"] = [];
+      const off = signals.on((signal) => {
+        if (signal.type === "event:fail" && signal.event === name) failures.push(signal);
+      });
+      try {
+        await binding.listener(...args);
+      } finally {
+        off();
+      }
+      return { failures };
     },
   };
 }
