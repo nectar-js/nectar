@@ -42,8 +42,19 @@ export async function compileComponents(table: RouteTable): Promise<CompiledComp
   const diagnostics = new Diagnostics();
   const candidates = table.routes.filter((r) => r.category === "component");
 
-  const results = await Promise.all(candidates.map((route) => compileRoute(route, diagnostics)));
-  const routes = results.filter((r): r is ComponentRoute => r !== null);
+  // Each route reports into its own list, so diagnostics come out in route order rather than
+  // in whatever order the imports finish.
+  const results = await Promise.all(
+    candidates.map(async (route) => {
+      const own = new Diagnostics();
+      return { route: await compileRoute(route, own), diagnostics: own };
+    }),
+  );
+  const routes: ComponentRoute[] = [];
+  for (const result of results) {
+    diagnostics.items.push(...result.diagnostics.items);
+    if (result.route !== null) routes.push(result.route);
+  }
 
   detectShortIdCollisions(routes, diagnostics);
   detectDuplicatePatterns(routes, diagnostics);
