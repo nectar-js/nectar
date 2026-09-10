@@ -121,6 +121,8 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     const task = dispatch(interaction).finally(() => inFlight.delete(task));
     inFlight.add(task);
   };
+  // The parent that forked this process closed the channel: a shard manager that exited.
+  const onDisconnect = () => void runtime.stop();
   const gateway = {
     [Events.ShardReady]: (shard: number) =>
       signals.emit({ type: "gateway:connect", shard, resumed: false }),
@@ -130,7 +132,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
       signals.emit({ type: "gateway:disconnect", shard, code: event.code }),
   };
 
-  return {
+  const runtime: Runtime = {
     client,
     env,
     modules: state.modules,
@@ -164,7 +166,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
         };
         process.once("SIGINT", onSignal);
         process.once("SIGTERM", onSignal);
-        if (process.connected) process.once("disconnect", onSignal);
+        if (process.connected) process.once("disconnect", onDisconnect);
       }
 
       try {
@@ -188,12 +190,13 @@ export function createRuntime(options: RuntimeOptions): Runtime {
         if (onSignal !== null) {
           process.off("SIGINT", onSignal);
           process.off("SIGTERM", onSignal);
-          process.off("disconnect", onSignal);
           onSignal = null;
         }
+        process.off("disconnect", onDisconnect);
         await drain(inFlight, drainTimeout, logger);
         if (globalStarted) await stopPlugins(plugins, app, logger, "stopGlobal");
         await stopPlugins(plugins, app, logger, "stop");
+        if (process.send !== undefined) ignoreClosedChannel();
         await client.destroy();
       })();
       return stopping;
@@ -209,6 +212,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
       }
     },
   };
+  return runtime;
 }
 
 /** Runs `start` hooks in config order. Two plugins offering the same service is a startup failure. */
@@ -241,6 +245,22 @@ async function startPlugins(
       services[name] = service;
     }
   }
+}
+
+let ignoringClosedChannel = false;
+
+/**
+ * discord.js's shard client reports gateway events to the manager with `process.send`, and
+ * destroying the client produces some. If the manager has gone, each report fails with an
+ * `error` event on `process` that would crash it. Only that failure is dropped; the listener
+ * stays, since the failures arrive on a later tick.
+ */
+function ignoreClosedChannel(): void {
+  if (ignoringClosedChannel) return;
+  ignoringClosedChannel = true;
+  process.on("error", (error: NodeJS.ErrnoException) => {
+    if (error.code !== "ERR_IPC_CHANNEL_CLOSED") throw error;
+  });
 }
 
 /** Runs `startGlobal` hooks in config order. */
