@@ -377,11 +377,17 @@ describe("events", () => {
     client.emit("guildMemberRemove");
     await vi.waitFor(() => expect(globalThis.__nectar.length).toBe(5));
 
-    // Events do not wait for each other, so the slow messageCreate pair lands last.
-    expect(calls()).toEqual([
-      ["ready", "event:clientReady", "object"],
-      ["member"],
-      ["root-error", "event-boom", "event:guildMemberRemove"],
+    // Events do not wait for each other, so only the order inside messageCreate is fixed: b
+    // (order 0) finishes its 10ms wait before a starts.
+    const seen = calls() as string[][];
+    expect(seen).toEqual(
+      expect.arrayContaining([
+        ["ready", "event:clientReady", "object"],
+        ["member"],
+        ["root-error", "event-boom", "event:guildMemberRemove"],
+      ]),
+    );
+    expect(seen.filter(([name]) => name === "a" || name === "b")).toEqual([
       ["b", "m1"],
       ["a", "m1"],
     ]);
