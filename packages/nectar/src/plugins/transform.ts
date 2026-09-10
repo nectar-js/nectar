@@ -8,17 +8,20 @@ import type { NectarPlugin, PluginChange, PluginGraph } from "./index.js";
 export function pluginGraph(graph: RouteGraph): PluginGraph {
   const manifest = toManifest(graph, graph.appDir);
   const absolute = (file: string) => path.join(graph.appDir, ...file.split("/"));
-  return deepFreeze({
-    appDir: graph.appDir,
-    routes: manifest.routes.map((route) => ({
-      ...route,
-      file: absolute(route.file),
-      middleware: route.middleware.map(absolute),
-      errors: route.errors.map(absolute),
-    })),
-    commands: manifest.commands,
-    events: manifest.events,
-  });
+  // Cloned because the manifest shares arrays and payloads with the graph itself.
+  return deepFreeze(
+    structuredClone({
+      appDir: graph.appDir,
+      routes: manifest.routes.map((route) => ({
+        ...route,
+        file: absolute(route.file),
+        middleware: route.middleware.map(absolute),
+        errors: route.errors.map(absolute),
+      })),
+      commands: manifest.commands,
+      events: manifest.events,
+    }),
+  );
 }
 
 /**
@@ -92,11 +95,12 @@ function apply(graph: RouteGraph, plugin: string, change: PluginChange): void {
     );
     return;
   }
+  const file = path.normalize(change.file);
   for (const route of routes) {
     const chains = graph.chains.get(route.file);
-    if (chains === undefined || chains.middleware.includes(change.file)) continue;
-    if (change.position === "inner") chains.middleware.push(change.file);
-    else chains.middleware.unshift(change.file);
+    if (chains === undefined || chains.middleware.includes(file)) continue;
+    if (change.position === "inner") chains.middleware.push(file);
+    else chains.middleware.unshift(file);
     const touched = graph.plugins.get(route.file) ?? [];
     if (!touched.includes(plugin)) graph.plugins.set(route.file, [...touched, plugin]);
   }
