@@ -32,9 +32,9 @@ jobs:
 
       - run: pnpm build
 
-      - run: pnpm test
-
-      # Generates .nectar/types.d.ts so the example type-checks against real route types.
+      # Writes the example's .nectar/, which its tests and type check read.
       - run: pnpm --filter basic run build
+
+      - run: pnpm test
 
       - run: pnpm typecheck
