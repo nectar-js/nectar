@@ -6,9 +6,16 @@ export default defineConfig({
   head: [["link", { rel: "icon", type: "image/png", href: "/logo.png" }]],
   themeConfig: {
     logo: "/logo.png",
-    nav: [{ text: "Guides", link: "/guides/deployment" }],
+    nav: [
+      { text: "Concepts", link: "/concepts/app-directory" },
+      { text: "Guides", link: "/guides/deployment" },
+    ],
     sidebar: [
       { text: "Introduction", link: "/introduction" },
+      {
+        text: "Concepts",
+        items: [{ text: "The app directory", link: "/concepts/app-directory" }],
+      },
       {
         text: "Guides",
         items: [{ text: "Deploying", link: "/guides/deployment" }],
