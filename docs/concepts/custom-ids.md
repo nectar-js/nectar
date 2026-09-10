@@ -39,7 +39,7 @@ export default defineComponent("tickets/[ticketId]/close", async (ctx) => {
 
 One route defines both the ID you send and the way it's parsed, so the two can't drift apart. With the generated types, `customId` rejects a path that doesn't exist and a missing or misspelled parameter.
 
-`customId` returns a plain string for any discord.js builder or raw component. Nectar has no component API of its own. It looks the route up in the running bot's manifest, so call it from handlers and not at the top level of a module.
+`customId` returns a plain string, so it works with any discord.js builder or raw component object. Nectar has no component API of its own. It looks the route up in the running bot's manifest, so call it from handlers and not at the top level of a module.
 
 ## The format
 
@@ -93,7 +93,7 @@ export default defineComponent(
 );
 ```
 
-A validator is either a function, which fails by returning `false` or throwing, or a Standard Schema such as a zod, valibot, or ArkType schema. Schemas only pass or fail the value. The handler still gets the original string.
+A validator is a function or a Standard Schema, such as a zod, valibot, or ArkType schema. A function fails by returning `false` or throwing. A schema only passes or fails the value, and the handler still gets the original string.
 
 When a check fails, Nectar drops the interaction before middleware runs and logs a warning. Parameter values never reach the logs. A Nectar custom ID shows up there as `n:31imou:*`, and a failed validator is reported by the parameter's name.
 

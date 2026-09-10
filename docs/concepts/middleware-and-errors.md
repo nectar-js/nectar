@@ -1,6 +1,6 @@
 # Middleware and errors
 
-A `middleware.ts` runs before every handler in its directory and the directories below it. An `error.ts` handles errors thrown in its directory and below. A file's location is the only thing that decides what it covers.
+A `middleware.ts` runs before every handler in its directory and the directories below it. An `error.ts` handles errors thrown in its directory and below. Where the file sits decides what it covers.
 
 ## Middleware scope
 
@@ -112,4 +112,4 @@ export default defineError(async (error, ctx) => {
 
 The default boundary logs the error with the route ID and file. If nothing has answered the interaction, it also replies with an ephemeral "Something went wrong while handling that." Every error ends up either handled by an `error.ts` or in the log.
 
-Error boundaries also cover event handlers, with the same scope rules. `app/error.ts` covers every route, and `app/events/error.ts` covers every event handler. An event handler's context has no `interaction`, which is why the example above checks for one.
+Error boundaries also cover event handlers, with the same scope rules. `app/error.ts` covers every route, and `app/events/error.ts` covers every event handler. When the error comes from an event handler, the `ctx` a boundary receives has no `interaction`, which is why the example checks for one.

@@ -33,7 +33,7 @@ export default defineCommand("ping", async (ctx) => {
 
 `ctx.interaction` is the interaction discord.js created, and `ctx.client` is the discord.js client. Nectar doesn't wrap either, so the discord.js documentation applies as written.
 
-Nectar reads `app/` before the bot starts. It checks every file against Discord's rules and writes what it found to `.nectar/manifest.json`. The running bot works from that manifest: it looks up the handler for each interaction there and imports the file. The concept pages go through each step.
+Nectar reads `app/` before the bot starts. It checks every file against Discord's rules and writes what it found to `.nectar/manifest.json`. The running bot works from that manifest: it looks up the handler for each interaction there and imports the file. [The concept pages](/concepts/app-directory) go through each step.
 
 ## Create a project
 

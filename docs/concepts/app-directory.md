@@ -107,4 +107,4 @@ export default defineCommand("moderation/ban", async (ctx) => {
 });
 ```
 
-TypeScript uses the string to look up the handler's types: its options, its parameters, and whatever its middleware adds to `ctx`. The compiler checks that the string matches the file's location, so moving a file means editing the string. Event handlers pass the event name, as in `defineEvent("guildMemberAdd", ...)`.
+TypeScript uses the string to look up the handler's types: the interaction type, the parameters, and whatever its middleware adds to `ctx`. The compiler checks that the string matches the file's location, so moving a file means editing the string. Event handlers pass the event name, as in `defineEvent("guildMemberAdd", ...)`.

@@ -17,7 +17,7 @@ Every CLI command that needs your routes compiles first: `nectar build`, `nectar
 
 `nectar check` does all of this except the last step.
 
-Step 3 runs your code. Top-level code in a handler file, and in everything it imports, runs during `nectar build`. If a handler module opens a database connection when it's imported, the build opens one too. Do that work inside the handler, or in a module that connects on first use.
+Step 3 runs your code. Top-level code in a handler file, and in everything it imports, runs every time Nectar compiles. If a handler module opens a database connection when it's imported, `nectar build` opens one too. Do that work inside the handler, or in a module that connects on first use.
 
 Middleware and error files aren't imported until the bot runs.
 
@@ -25,7 +25,7 @@ Middleware and error files aren't imported until the bot runs.
 
 The compiler catches what Discord would reject when you register the commands, and what would fail when the bot runs:
 
-- Command, subcommand, and option names are lowercase and 1 to 32 characters. Descriptions are 1 to 100.
+- Slash command, subcommand, and option names are lowercase and 1 to 32 characters. Descriptions are 1 to 100.
 - A command has at most 25 options, 25 subcommands and groups, and 25 choices per option. Required options come before optional ones.
 - Commands nest at most three levels, a command with subcommands has no `command.ts` of its own, and every parent and group has a `route.ts`.
 - No two commands register under the same name, and no two component routes have the same shape. `tickets/[id]/close` and `tickets/[ticketId]/close` would claim the same custom IDs.
@@ -62,7 +62,7 @@ An error stops the command. `nectar build` writes nothing and exits with code 1.
 
 File paths in the manifest are relative, so a manifest built on one machine works on another.
 
-The bot never scans `app/` to find routes. When an interaction arrives, the runtime looks up its route in tables built from the manifest and imports the handler file listed there.
+The runtime never scans `app/` to find routes. When an interaction arrives, the runtime looks up its route in tables built from the manifest and imports the handler file listed there.
 
 `.nectar/` holds metadata, not compiled code. Nectar doesn't bundle or transpile your handlers. Node imports them from `app/`, so a deployment needs `app/` next to `.nectar/`.
 
@@ -75,7 +75,7 @@ The bot never scans `app/` to find routes. When an interaction arrives, the runt
 - the options of each command, for the testing helpers
 - what each route's middleware adds to `ctx`
 
-So a typo in a parameter name fails type checking instead of failing when someone clicks:
+So a misspelled parameter fails type checking instead of throwing when the bot runs:
 
 ```ts
 customId("tickets/[ticketId]/close", { ticket: "42" }); // type error: the parameter is ticketId
