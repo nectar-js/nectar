@@ -21,6 +21,7 @@ export default defineConfig({
           { text: "Custom IDs", link: "/concepts/custom-ids" },
           { text: "Middleware and errors", link: "/concepts/middleware-and-errors" },
           { text: "What Nectar owns", link: "/concepts/ownership" },
+          { text: "Command registration", link: "/concepts/registration" },
         ],
       },
       {
