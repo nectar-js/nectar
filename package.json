@@ -12,7 +12,9 @@
     "typecheck": "pnpm -r run typecheck",
     "lint": "biome check .",
     "format": "biome format --write .",
-    "changeset": "changeset"
+    "changeset": "changeset",
+    "docs:dev": "pnpm --filter docs dev",
+    "docs:build": "pnpm --filter docs build"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
