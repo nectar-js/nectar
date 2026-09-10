@@ -1,104 +1,86 @@
 # The app directory
 
-Everything Nectar routes lives in `app/` at the project root. Set `appDir` in `nectar.config.ts` to use another directory.
+Nectar reads routes from `app/` in the project root. Set `appDir` in `nectar.config.ts` to use a different directory.
 
-`app/` has three areas, one for each kind of thing Discord sends:
+Routes go in three directories:
 
-- `commands/` for slash commands and context menu commands.
-- `components/` for buttons, select menus, and modals.
-- `events/` for discord.js client events.
+- `commands/` for slash commands and context menu commands
+- `components/` for buttons, select menus, and modals
+- `events/` for discord.js events
 
-A `middleware.ts` or `error.ts` directly in `app/` applies to all three areas. Every other reserved file has to be inside one of them. `app/command.ts` and `app/lib/command.ts` are both compile errors.
+A `middleware.ts` or `error.ts` directly in `app/` applies to all of them.
 
 ## Reserved files
 
-Nectar only looks at files with these names. Any other file is ordinary code that Nectar ignores, wherever it is, so a helper can sit next to the handler that uses it.
+Nectar only reads files with these names and ignores everything else.
 
-| File | What it is |
+| File | Purpose |
 | --- | --- |
-| `command.ts` | A slash command, subcommand, or context menu command. |
-| `autocomplete.ts` | Autocomplete for the options of the `command.ts` next to it. |
-| `route.ts` | The description of a command that has subcommands, or of a subcommand group. |
-| `button.ts` | A button. |
-| `select.ts` | A select menu. |
-| `modal.ts` | A modal submission. |
-| `event.ts` | A handler for one discord.js event. |
-| `middleware.ts` | Runs before every handler in its directory and below. |
-| `error.ts` | Handles errors thrown in its directory and below. |
+| `command.ts` | Slash command, subcommand, or context menu command |
+| `autocomplete.ts` | Autocomplete for the `command.ts` in the same directory |
+| `route.ts` | Description of a parent command or subcommand group |
+| `button.ts` | Button handler |
+| `select.ts` | Select menu handler |
+| `modal.ts` | Modal submit handler |
+| `event.ts` | Event handler |
+| `middleware.ts` | Middleware for its directory and everything below |
+| `error.ts` | Error boundary for its directory and everything below |
 
-Each name also works with `.js`, `.mts`, and `.mjs`. Test files such as `command.test.ts` are ignored.
+`.js`, `.mts`, and `.mjs` work too. Test files like `command.test.ts` are ignored.
 
 ## Directory names
 
-The directories between the area and the file make up the route's path. A directory name can be one of four kinds:
-
-| Directory | Meaning |
+| Name | Meaning |
 | --- | --- |
-| `ban/` | A static segment. It becomes part of the command name or the custom ID. |
-| `[ticketId]/` | A parameter. The custom ID carries a value in this position, and the handler reads it as `ctx.params.ticketId`. |
-| `[...path]/` | A catch-all parameter. It takes any number of values and must come last. |
-| `(staff)/` | A route group. It organizes files and scopes middleware without appearing in the route. |
+| `ban` | Static segment |
+| `[ticketId]` | Parameter, available as `ctx.params.ticketId` |
+| `[...path]` | Catch-all parameter, an array of strings. Must be the last segment. |
+| `(staff)` | Route group, left out of the route |
 
-Only component routes take parameters. `[param]` under `commands/` or `events/` is a compile error.
+Parameters only work under `components/`.
 
 ## Commands
 
-A `command.ts` is a command, and its path is the command's name. Up to three levels map onto Discord's commands, subcommand groups, and subcommands:
+`commands/ping/command.ts` registers `/ping`. Nesting adds subcommands and subcommand groups, up to three levels. `commands/moderation/ban/command.ts` is `/moderation ban`, and `commands/settings/roles/add/command.ts` is `/settings roles add`.
 
+A command with subcommands can't have its own `command.ts`. Give it a `route.ts` with a description instead. Settings for the whole command, like `defaultMemberPermissions`, go there too.
+
+```ts
+// app/commands/moderation/route.ts
+import type { CommandRouteMeta } from "@nectar-js/nectar";
+
+export const meta: CommandRouteMeta = {
+  description: "Moderation tools",
+};
 ```
-commands/ping/command.ts                  /ping
-commands/moderation/ban/command.ts        /moderation ban
-commands/settings/roles/add/command.ts    /settings roles add
-```
 
-Discord can't run `/moderation` on its own once it has subcommands, so `moderation/` can't have a `command.ts` of its own. It needs a `route.ts` instead, exporting the description Discord shows for `/moderation` and any settings for the whole command, such as `defaultMemberPermissions`. A subcommand group like `settings/roles/` needs a `route.ts` with a description too.
+Subcommand groups need a `route.ts` with a description as well.
 
-A user or message context menu command is a top-level command, like `commands/report/command.ts`, with `meta.type` set to `"user"` or `"message"`. Context menu names can have spaces and capitals, which directory names can't. Set `meta.name` for a name like `"Report message"`.
+For a context menu command, set `meta.type` to `"user"` or `"message"` in a top-level `command.ts`. Set `meta.name` if the name needs spaces or capital letters.
 
 ## Components
 
-A `button.ts`, `select.ts`, or `modal.ts` handles that kind of component. Its path is what the [custom ID](./custom-ids) encodes:
+`button.ts`, `select.ts`, and `modal.ts` handle components. The path, including its parameters, is encoded into the component's custom ID. See [Custom IDs](./custom-ids).
 
-```
-components/tickets/[ticketId]/close/button.ts     closes one ticket
-components/tickets/[ticketId]/assign/select.ts    assigns it to a member
-components/pagination/[page]/next/button.ts       shows the next page
-```
-
-A button and a modal can share a directory. That suits a button that opens a modal, since both carry the same parameters.
+`components/tickets/[ticketId]/close/button.ts` handles a button with a `ticketId` parameter. A `button.ts` and a `modal.ts` can share a directory.
 
 ## Events
 
-An `event.ts` in `events/<name>/` runs when discord.js emits that event. The name is a value of discord.js's `Events` enum, such as `messageCreate` or `guildMemberAdd`. The compiler rejects names discord.js doesn't emit, and it points out the right spelling for mistakes like `GuildMemberAdd` or the renamed `ready`.
+`events/messageCreate/event.ts` runs on discord.js's `messageCreate` event. The directory name has to be a value of discord.js's `Events` enum.
 
-To give one event several handlers, put each one in a route group:
-
-```
-events/guildMemberAdd/(welcome)/event.ts
-events/guildMemberAdd/(audit)/event.ts
-```
+To handle one event in several files, put each in a route group, like `events/guildMemberAdd/(welcome)/event.ts` and `events/guildMemberAdd/(audit)/event.ts`.
 
 ## Route groups
 
-A route group doesn't change the route. `commands/(staff)/ban/command.ts` is `/ban`, the same as `commands/ban/command.ts`.
-
-Use groups to split a large `app/` by feature or by team, and to give a set of routes their own middleware. A `middleware.ts` inside `(staff)/` runs only for the routes in that group.
+Groups don't change the route. `commands/(staff)/ban/command.ts` registers `/ban`. A `middleware.ts` or `error.ts` inside a group only applies to routes in that group.
 
 ## Route IDs
 
-Every route has an ID made of its area and its path:
+Every route has an ID: `command:moderation/ban`, `component:tickets/[ticketId]/close`, `event:guildMemberAdd/(welcome)`. Groups are left out, except for events. Logs use these IDs, and a handler can read its own from `ctx.route.id`.
 
-```
-command:moderation/ban
-component:tickets/[ticketId]/close
-event:guildMemberAdd/(welcome)
-```
+## Route strings
 
-Groups are left out, except under `events/`, where they tell the handlers of one event apart. Logs and error reports name routes by this ID, and handlers can read it as `ctx.route.id`.
-
-## The route string
-
-Each handler repeats its path as the first argument:
+Handlers take their path as the first argument:
 
 ```ts
 // app/commands/moderation/ban/command.ts
@@ -107,4 +89,4 @@ export default defineCommand("moderation/ban", async (ctx) => {
 });
 ```
 
-TypeScript uses the string to look up the handler's types: the interaction type, the parameters, and whatever its middleware adds to `ctx`. The compiler checks that the string matches the file's location, so moving a file means editing the string. Event handlers pass the event name, as in `defineEvent("guildMemberAdd", ...)`.
+The generated types use it to type `ctx`, and the compiler fails if it doesn't match the file's location. Event handlers take the event name, as in `defineEvent("guildMemberAdd", ...)`.
