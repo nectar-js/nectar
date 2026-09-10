@@ -1,5 +1,5 @@
 {
-  "name": "nect-monorepo",
+  "name": "nectar-monorepo",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.1.2",
@@ -7,7 +7,7 @@
     "node": ">=22.18"
   },
   "scripts": {
-    "build": "pnpm -r --filter \"@nect-js/*\" run build",
+    "build": "pnpm -r --filter \"@nectar-js/*\" run build",
     "test": "vitest run",
     "typecheck": "pnpm -r run typecheck",
     "lint": "biome check .",

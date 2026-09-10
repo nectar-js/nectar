@@ -29,14 +29,14 @@ importers:
 
   examples/basic:
     dependencies:
-      '@nect-js/core':
+      '@nectar-js/nectar':
         specifier: workspace:*
-        version: link:../../packages/core
+        version: link:../../packages/nectar
       discord.js:
         specifier: ^14.27.0
         version: 14.27.0
 
-  packages/core:
+  packages/nectar:
     dependencies:
       discord-api-types:
         specifier: ^0.38.55
