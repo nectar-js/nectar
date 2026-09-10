@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { Client, Interaction } from "discord.js";
 import { beforeEach, describe, expect, test, vi } from "vitest";
 import { run } from "../src/cli/index.js";
@@ -450,5 +451,45 @@ describe("cli", () => {
     const result = await nectar(["audit"], root);
     expect(result.code).toBe(1);
     expect(result.err).toContain("non-empty `name`");
+  });
+});
+
+describe("examples/plugin", () => {
+  const example = path.resolve(import.meta.dirname, "../../../examples/plugin");
+
+  async function nectar(argv: string[]) {
+    const out: string[] = [];
+    const code = await run(argv, { cwd: example, env: {}, out: (l) => out.push(l), err: () => {} });
+    return { code, out: out.join("\n") };
+  }
+
+  test("every command gets the usage middleware and nectar gains a usage command", async () => {
+    const ping = await nectar(["manifest", "--route", "command:ping"]);
+    expect(ping.code).toBe(0);
+    expect(JSON.parse(ping.out)[0]).toMatchObject({
+      middleware: ["../plugins/usage/middleware.ts"],
+      plugins: ["usage"],
+    });
+    expect(await nectar(["usage"])).toEqual({ code: 0, out: "No command runs logged yet." });
+  });
+
+  test("the service writes the log that nectar usage counts", async () => {
+    const url = pathToFileURL(path.join(example, "plugins", "usage", "index.ts")).href;
+    const { usage } = (await import(url)) as { usage: (o: { file: string }) => NectarPlugin };
+    const dir = makeApp({});
+    const plugin = usage({ file: path.join(dir, "usage.log") });
+
+    const services = (await plugin.start?.({} as never)) as {
+      usage: { record(command: string, userId: string): void };
+    };
+    services.usage.record("ping", "1");
+    services.usage.record("user/profile", "1");
+    services.usage.record("ping", "2");
+    await plugin.stop?.({} as never);
+
+    const out: string[] = [];
+    const project = { root: dir } as never;
+    await plugin.commands?.[0]?.run({ project, flags: {}, out: (l) => out.push(l), err() {} });
+    expect(out).toEqual(["     2  /ping", "     1  /user profile"]);
   });
 });

@@ -36,6 +36,17 @@ importers:
         specifier: ^14.27.0
         version: 14.27.0
 
+  examples/plugin:
+    dependencies:
+      '@nectar-js/nectar':
+        specifier: workspace:*
+        version: link:../../packages/nectar
+      discord.js:
+        specifier: ^14.27.0
+        version: 14.27.0
+
+  packages/create: {}
+
   packages/nectar:
     dependencies:
       discord-api-types:
@@ -45,8 +56,6 @@ importers:
       discord.js:
         specifier: ^14.27.0
         version: 14.27.0
-
-  packages/create: {}
 
 packages:
 
