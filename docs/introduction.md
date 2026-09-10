@@ -1,24 +1,6 @@
 # Introduction
 
-Nectar is a framework for Discord bots, built on discord.js. Each command, button, select menu, modal, and event handler is a file under `app/`, and its path says what it handles:
-
-```
-app/
-├── middleware.ts                           runs before every command and component
-├── commands/
-│   ├── ping/command.ts                     /ping
-│   └── moderation/
-│       ├── route.ts                        description of /moderation
-│       ├── middleware.ts                   runs before every /moderation command
-│       ├── ban/command.ts                  /moderation ban
-│       └── kick/command.ts                 /moderation kick
-├── components/
-│   └── tickets/[ticketId]/close/button.ts  a button that carries a ticket ID
-└── events/
-    └── guildMemberAdd/event.ts             runs when a member joins
-```
-
-No file lists the commands, and no switch statement picks a handler for a custom ID. Adding a command means adding a directory.
+Nectar is a framework for Discord bots built on discord.js. Commands, components, and events are files in `app/`. Nectar registers the commands and routes each interaction to its file.
 
 ```ts
 // app/commands/ping/command.ts
@@ -31,9 +13,7 @@ export default defineCommand("ping", async (ctx) => {
 });
 ```
 
-`ctx.interaction` is the interaction discord.js created, and `ctx.client` is the discord.js client. Nectar doesn't wrap either, so the discord.js documentation applies as written.
-
-Nectar reads `app/` before the bot starts. It checks every file against Discord's rules and writes what it found to `.nectar/manifest.json`. The running bot works from that manifest: it looks up the handler for each interaction there and imports the file. [The concept pages](/concepts/app-directory) go through each step.
+This registers `/ping`. `ctx.interaction` is the discord.js `ChatInputCommandInteraction`.
 
 ## Create a project
 
@@ -41,22 +21,16 @@ Nectar reads `app/` before the bot starts. It checks every file against Discord'
 npm create @nectar-js
 ```
 
-It asks for a directory, TypeScript or JavaScript, and a package manager. The project it writes has one command, one button, one event, and a middleware. Then:
-
-1. Copy `.env.example` to `.env` and fill in `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID`. Both are in the [Discord Developer Portal](https://discord.com/developers/applications).
-2. Put your test server's ID in `dev.guilds` in `nectar.config.ts`.
-3. Install the dependencies and run `npm run dev`.
-
-`nectar dev` registers the commands in your test server, logs in, and reloads handlers when you save.
+Copy `.env.example` to `.env` and fill in `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID` from the [Developer Portal](https://discord.com/developers/applications). Add your test server's ID to `dev.guilds` in `nectar.config.ts`, then run `npm run dev`.
 
 ## Requirements
 
-- Node.js 22.18 or newer.
-- discord.js 14.
-- ESM. Projects have `"type": "module"` in `package.json`.
+- Node.js 22.18 or newer
+- discord.js 14
+- ESM, with `"type": "module"` in `package.json`
 
-Nectar has no TypeScript build step. Node strips the types when it imports a file, so your TypeScript can only use syntax Node knows how to erase: no `enum`, no `namespace` with runtime code, no constructor parameter properties. The `erasableSyntaxOnly` compiler option makes the editor flag them.
+Node runs your TypeScript directly by stripping the types, so only erasable syntax works: no enums, namespaces with runtime code, or constructor parameter properties. Turn on `erasableSyntaxOnly` in `tsconfig.json` to catch them.
 
-For the same reason, imports between your own files keep the `.ts` extension, as in `import { db } from "./db.ts"`. TypeScript accepts that with the `allowImportingTsExtensions` option.
+Local imports need the `.ts` extension, as in `import { db } from "./db.ts"`. TypeScript allows that with `allowImportingTsExtensions`.
 
-JavaScript projects work the same way. Only the generated route types are TypeScript-specific.
+JavaScript projects are supported. Generated route types are TypeScript only.
