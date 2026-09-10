@@ -194,6 +194,35 @@ describe("autocomplete", () => {
   });
 });
 
+describe("middleware", () => {
+  test("the result holds the context the handler got, or null when middleware stopped", async () => {
+    const app = await testApp({
+      ...files,
+      "middleware.ts":
+        "export default async function (ctx, next) { if (ctx.interaction.guildId === null) return; return next({ member: ctx.interaction.member }); }\n",
+    });
+    const target = { id: "1", tag: "someone#0001" };
+
+    const stopped = await app.command("moderation/ban", { target });
+    expect(stopped.context).toBeNull();
+    expect(stopped.outcome).toMatchObject({ type: "interaction:complete", handled: false });
+    expect(stopped.responses).toEqual([]);
+
+    const member = { displayName: "Mod" };
+    const inGuild = { guildId: "1", member };
+    const ban = await app.command("moderation/ban", { target }, inGuild);
+    expect(ban.context?.member).toBe(member);
+    expect(ban.context?.interaction).toBe(ban.interaction);
+
+    const close = await app.button("tickets/[ticketId]/close", { ticketId: "7" }, inGuild);
+    expect(close.context?.params).toEqual({ ticketId: "7" });
+    expect(close.context?.member).toBe(member);
+
+    const suggest = await app.autocomplete("moderation/ban", "reason", {}, inGuild);
+    expect(suggest.context?.member).toBe(member);
+  });
+});
+
 describe("events", () => {
   test("handlers run in manifest order, once handlers once, failures reach boundaries", async () => {
     const app = await testApp({
