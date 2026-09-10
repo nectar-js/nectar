@@ -1,14 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { EventEmitter } from "node:events";
-import {
-  existsSync,
-  mkdirSync,
-  mkdtempSync,
-  readFileSync,
-  rmSync,
-  symlinkSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -337,12 +329,11 @@ describe("nectar start", () => {
     expect(result.err).toContain("The token from DISCORD_TOKEN is wrong, or it was reset.");
   });
 
-  test("the build's start.js runs with node alone, from any directory", async () => {
+  test("the build's start.mjs runs with node alone, from any directory", async () => {
     const root = makeProject(
       { "commands/ping/command.ts": ping },
       '{ intents: [], outDir: "build/nectar" }',
     );
-    writeFileSync(path.join(root, "package.json"), '{ "type": "module" }\n');
     mkdirSync(path.join(root, "node_modules/@nectar-js"), { recursive: true });
     symlinkSync(
       path.resolve(basic, "../../packages/nectar"),
@@ -350,10 +341,10 @@ describe("nectar start", () => {
       "junction",
     );
     const build = await nectar(["build"], root);
-    expect(build.out).toContain("build/nectar/start.js");
+    expect(build.out).toContain("build/nectar/start.mjs");
 
     // An empty token stops it before login, after it has found the project and its build.
-    const result = spawnSync(process.execPath, [path.join(root, "build/nectar/start.js")], {
+    const result = spawnSync(process.execPath, [path.join(root, "build/nectar/start.mjs")], {
       cwd: tmpdir(),
       env: { ...process.env, DISCORD_TOKEN: "", NO_COLOR: "1" },
       encoding: "utf8",

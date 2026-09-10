@@ -7,9 +7,10 @@ import { type CliIo, EXIT_FAILURE, EXIT_OK } from "./io.js";
 import { loadProject, type Project } from "./project.js";
 import { c, ok, warn } from "./ui.js";
 
-const START_FILE = "start.js";
+/** `.mjs` so it loads as ESM whatever the project's `package.json` says, and PM2 imports it. */
+const START_FILE = "start.mjs";
 
-/** `nectar build`: compile, then write the manifest, generated types, and `start.js` into `outDir`. */
+/** `nectar build`: compile, then write the manifest, generated types, and `start.mjs` into `outDir`. */
 export async function build(io: CliIo): Promise<number> {
   const project = await loadProject(io.cwd, io.env);
   const graph = await compileProject(project, io);
@@ -26,7 +27,7 @@ export async function build(io: CliIo): Promise<number> {
 }
 
 /**
- * `node .nectar/start.js` does what `nectar start` does, from any working directory. It is the
+ * `node .nectar/start.mjs` does what `nectar start` does, from any working directory. It is the
  * file to hand a ShardingManager or cluster manager: each shard loads the manifest itself and
  * none of them registers commands.
  */
