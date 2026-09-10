@@ -13,7 +13,7 @@ export async function build(io: CliIo): Promise<number> {
   if (graph === null) return EXIT_FAILURE;
 
   const manifestFile = writeManifest(toManifest(graph, project.outDir), project.outDir);
-  const typesFile = writeTypes(graph, project.outDir);
+  const typesFile = writeTypes(graph, project.outDir, project.config.plugins);
   io.out(ok(`Built ${summary(graph)}.`));
   io.out(`  ${c.dim(relative(project.root, manifestFile))}`);
   io.out(`  ${c.dim(relative(project.root, typesFile))}`);

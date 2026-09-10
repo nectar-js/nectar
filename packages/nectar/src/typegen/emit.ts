@@ -4,6 +4,7 @@ import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-ap
 import type { RouteGraph } from "../compiler/graph.js";
 import type { Route } from "../compiler/routes.js";
 import type { ComponentRoute } from "../components/compile.js";
+import { type NectarPlugin, PluginError, pluginGraph } from "../plugins/index.js";
 
 export const TYPES_FILE = "types.d.ts";
 
@@ -30,9 +31,14 @@ const OPTION_TYPE: Record<number, string> = {
 /**
  * Renders `types.d.ts`: a module augmentation of `@nectar-js/nectar` that lists every route with
  * its parameters, options, and the context its middleware chain adds. Handler and middleware
- * types are pulled in with `import()` type queries relative to `outDir`.
+ * types are pulled in with `import()` type queries relative to `outDir`. Whatever a plugin's
+ * `types` hook returns is appended after the augmentation.
  */
-export function toTypes(graph: RouteGraph, outDir: string): string {
+export function toTypes(
+  graph: RouteGraph,
+  outDir: string,
+  plugins: readonly NectarPlugin[] = [],
+): string {
   const absoluteOut = path.resolve(outDir);
   const middlewareAliases = new Map<string, string>();
   const aliasFor = (file: string): string => {
@@ -112,13 +118,35 @@ export function toTypes(graph: RouteGraph, outDir: string): string {
     "",
     "export {};",
     "",
+    ...pluginTypes(graph, plugins),
   ].join("\n");
 }
 
-export function writeTypes(graph: RouteGraph, outDir: string): string {
+function pluginTypes(graph: RouteGraph, plugins: readonly NectarPlugin[]): string[] {
+  const lines: string[] = [];
+  for (const plugin of plugins) {
+    if (plugin.types === undefined) continue;
+    let extra: unknown;
+    try {
+      extra = plugin.types(pluginGraph(graph));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : String(error);
+      throw new PluginError(plugin.name, `types failed: ${detail}`);
+    }
+    if (typeof extra !== "string" || extra.trim() === "") continue;
+    lines.push(`// From plugin ${JSON.stringify(plugin.name)}`, extra.trim(), "");
+  }
+  return lines;
+}
+
+export function writeTypes(
+  graph: RouteGraph,
+  outDir: string,
+  plugins: readonly NectarPlugin[] = [],
+): string {
   mkdirSync(outDir, { recursive: true });
   const file = path.join(outDir, TYPES_FILE);
-  writeFileSync(file, toTypes(graph, outDir));
+  writeFileSync(file, toTypes(graph, outDir, plugins));
   return file;
 }
 

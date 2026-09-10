@@ -44,6 +44,7 @@ export async function info(io: CliIo): Promise<number> {
       ["partials", config.partials === undefined ? "none" : String(config.partials.length)],
       ["eager", String(config.eager ?? project.env === "production")],
       ["registration", scopes.length === 0 ? c.yellow("none") : scopes.map(scopeKey).join(", ")],
+      ["plugins", (config.plugins ?? []).map((p) => p.name).join(", ") || "none"],
     );
   } catch (error) {
     if (!(error instanceof CliError)) throw error;

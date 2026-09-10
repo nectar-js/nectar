@@ -92,7 +92,7 @@ export function createDevServer(
   function emit(graph: RouteGraph): Manifest {
     const next = toManifest(graph, current.outDir);
     writeManifest(next, current.outDir);
-    writeTypes(graph, current.outDir);
+    writeTypes(graph, current.outDir, current.config.plugins);
     return next;
   }
 

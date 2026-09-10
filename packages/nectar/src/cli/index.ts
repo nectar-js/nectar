@@ -1,11 +1,14 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import { parseArgs } from "node:util";
+import { PluginError } from "../plugins/index.js";
 import { version } from "../version.js";
 import { build, check } from "./build.js";
 import { dev } from "./dev.js";
 import { CliError, type CliIo, EXIT_FAILURE, EXIT_OK, EXIT_USAGE } from "./io.js";
 import { manifest } from "./manifest.js";
 import { clean, info } from "./misc.js";
-import { describe } from "./project.js";
+import { CONFIG_FILES, describe, loadProject } from "./project.js";
 import { routes } from "./routes.js";
 import { start } from "./start.js";
 import { sync } from "./sync.js";
@@ -80,18 +83,59 @@ const COMMANDS: Record<string, Command> = {
   },
 };
 
+/**
+ * Commands contributed by the config's plugins. Loading the config can fail; for help that is
+ * silent, for a command it is the error the user needs to see.
+ */
+async function pluginCommands(io: CliIo, tolerant: boolean): Promise<Record<string, Command>> {
+  if (!CONFIG_FILES.some((file) => existsSync(path.join(io.cwd, file)))) return {};
+  const commands: Record<string, Command> = {};
+  try {
+    const project = await loadProject(io.cwd, io.env);
+    for (const plugin of project.config.plugins ?? []) {
+      for (const command of plugin.commands ?? []) {
+        const options = command.options ?? {};
+        const usage = [
+          command.name,
+          ...Object.entries(options).map(
+            ([key, opt]) => `[--${key}${opt.type === "string" ? " <value>" : ""}]`,
+          ),
+        ].join(" ");
+        commands[command.name] = {
+          usage,
+          description: command.description,
+          options,
+          run: async (io, flags) => command.run({ project, flags, out: io.out, err: io.err }),
+        };
+      }
+    }
+  } catch (error) {
+    if (!tolerant || !(error instanceof CliError)) throw error;
+  }
+  return commands;
+}
+
 /** Runs one CLI invocation. `argv` excludes the node and script entries. */
 export async function run(argv: string[], io: CliIo): Promise<number> {
   const [name, ...rest] = argv;
   if (name === undefined || name === "--help" || name === "-h" || name === "help") {
-    io.out(help());
+    io.out(help(await pluginCommands(io, true)));
     return name === undefined ? EXIT_USAGE : EXIT_OK;
   }
   if (name === "--version" || name === "-v") {
     io.out(version);
     return EXIT_OK;
   }
-  const command = COMMANDS[name];
+  let command = COMMANDS[name];
+  if (command === undefined) {
+    try {
+      command = (await pluginCommands(io, false))[name];
+    } catch (error) {
+      if (!(error instanceof CliError)) throw error;
+      io.err(block(fail(error.message), error.details));
+      return error.code;
+    }
+  }
   if (command === undefined) {
     io.err(
       block(fail(`Unknown command ${c.bold(`"${name}"`)}.`), [
@@ -133,6 +177,10 @@ export async function run(argv: string[], io: CliIo): Promise<number> {
       io.err(block(fail(error.message), error.details));
       return error.code;
     }
+    if (error instanceof PluginError) {
+      io.err(block(fail(error.message), [`Fix or remove the plugin in your config.`]));
+      return EXIT_FAILURE;
+    }
     io.err(
       block(fail("Something went wrong inside Nectar."), [
         "This is a bug in Nectar, not in your app. The details:",
@@ -146,17 +194,20 @@ export async function run(argv: string[], io: CliIo): Promise<number> {
   }
 }
 
-function help(): string {
-  const width = Math.max(...Object.values(COMMANDS).map((cmd) => cmd.usage.length));
+function help(plugins: Record<string, Command>): string {
+  const all = [...Object.values(COMMANDS), ...Object.values(plugins)];
+  const width = Math.max(...all.map((cmd) => cmd.usage.length));
+  const row = (cmd: Command) => `  ${c.cyan(cmd.usage.padEnd(width))}  ${c.dim(cmd.description)}`;
   return [
     `${c.bold("nectar")} ${c.dim(`v${version}`)}  A filesystem-based meta-framework for discord.js.`,
     "",
     `${c.bold("Usage:")} nectar <command> [options]`,
     "",
     c.bold("Commands:"),
-    ...Object.values(COMMANDS).map(
-      (cmd) => `  ${c.cyan(cmd.usage.padEnd(width))}  ${c.dim(cmd.description)}`,
-    ),
+    ...Object.values(COMMANDS).map(row),
+    ...(Object.keys(plugins).length === 0
+      ? []
+      : ["", c.bold("Plugin commands:"), ...Object.values(plugins).map(row)]),
     "",
     c.bold("Options:"),
     `  ${c.cyan("--help, -h".padEnd(width))}  ${c.dim("Show help for nectar or a command.")}`,
