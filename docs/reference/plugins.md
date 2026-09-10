@@ -106,7 +106,7 @@ Runs on shutdown, after running interactions finish and before the client discon
 
 ## `startGlobal` and `stopGlobal`
 
-Like `start` and `stop`, but only in the process that runs shard 0, so they run once however the bot is sharded. `startGlobal` runs after every `start`, and `stopGlobal` before every `stop`. Use them for work that shouldn't repeat per shard, like scheduled jobs.
+Like `start` and `stop`, but only in the process that runs shard 0, so they run once however the bot is sharded. `startGlobal` runs after every `start`, and `stopGlobal` before every `stop`. Use them for work that shouldn't repeat per shard, like scheduled jobs. See [Sharding](../guides/sharding).
 
 ## In development
 

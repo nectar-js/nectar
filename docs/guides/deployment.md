@@ -6,7 +6,7 @@ npx nectar build
 NODE_ENV=production node .nectar/start.mjs
 ```
 
-`node .nectar/start.mjs` is the same as `nectar start`. It works from any directory and loads `.env` from the project root.
+`node .nectar/start.mjs` is the same as `nectar start`. It works from any directory and loads `.env` from the project root. To run it under a `ShardingManager`, see [Sharding](./sharding).
 
 The server needs:
 
