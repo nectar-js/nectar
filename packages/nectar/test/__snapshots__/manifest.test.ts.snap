@@ -1,0 +1,332 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`manifest > examples/basic manifest 1`] = `
+{
+  "appDir": "../app",
+  "commands": [
+    {
+      "handlers": {
+        "ban": "command:moderation/ban",
+        "kick": "command:moderation/kick",
+      },
+      "name": "moderation",
+      "payload": {
+        "default_member_permissions": "1099511627776",
+        "description": "Moderation tools",
+        "name": "moderation",
+        "options": [
+          {
+            "description": "Ban a member",
+            "name": "ban",
+            "options": [
+              {
+                "description": "Who to ban",
+                "name": "target",
+                "required": true,
+                "type": 6,
+              },
+              {
+                "description": "Why",
+                "max_length": 512,
+                "name": "reason",
+                "type": 3,
+              },
+              {
+                "description": "Days of messages to delete",
+                "max_value": 7,
+                "min_value": 0,
+                "name": "days",
+                "type": 4,
+              },
+            ],
+            "type": 1,
+          },
+          {
+            "description": "Kick a member",
+            "name": "kick",
+            "options": [
+              {
+                "description": "Who to kick",
+                "name": "target",
+                "required": true,
+                "type": 6,
+              },
+              {
+                "description": "Why",
+                "name": "reason",
+                "type": 3,
+              },
+            ],
+            "type": 1,
+          },
+        ],
+        "type": 1,
+      },
+      "type": 1,
+    },
+    {
+      "handlers": {
+        "": "command:ping",
+      },
+      "name": "ping",
+      "payload": {
+        "description": "Check that the bot is alive",
+        "name": "ping",
+        "type": 1,
+      },
+      "type": 1,
+    },
+    {
+      "handlers": {
+        "profile": "command:user/profile",
+      },
+      "name": "user",
+      "payload": {
+        "description": "User utilities",
+        "name": "user",
+        "options": [
+          {
+            "description": "Show a profile",
+            "name": "profile",
+            "options": [
+              {
+                "description": "Who to look up",
+                "name": "target",
+                "type": 6,
+              },
+              {
+                "autocomplete": true,
+                "description": "Which section to show",
+                "name": "section",
+                "type": 3,
+              },
+            ],
+            "type": 1,
+          },
+        ],
+        "type": 1,
+      },
+      "type": 1,
+    },
+  ],
+  "events": [
+    {
+      "handlers": [
+        "event:clientReady",
+      ],
+      "mode": "sequential",
+      "name": "clientReady",
+    },
+    {
+      "handlers": [
+        "event:guildMemberAdd/(welcome)",
+        "event:guildMemberAdd/(audit)",
+      ],
+      "mode": "sequential",
+      "name": "guildMemberAdd",
+    },
+  ],
+  "nectar": "0.0.0",
+  "routes": [
+    {
+      "category": "command",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "commands/user/profile/autocomplete.ts",
+      "id": "command:user/profile",
+      "kind": "autocomplete",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "options": [
+        "section",
+      ],
+      "path": "user/profile",
+    },
+    {
+      "catchAll": null,
+      "category": "component",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "components/pagination/[page]/next/button.ts",
+      "id": "component:pagination/[page]/next",
+      "kind": "button",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "overhead": 9,
+      "params": [
+        "page",
+      ],
+      "path": "pagination/[page]/next",
+      "selectKind": null,
+      "shortId": "1w74m6",
+    },
+    {
+      "catchAll": null,
+      "category": "component",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "components/pagination/[page]/prev/button.ts",
+      "id": "component:pagination/[page]/prev",
+      "kind": "button",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "overhead": 9,
+      "params": [
+        "page",
+      ],
+      "path": "pagination/[page]/prev",
+      "selectKind": null,
+      "shortId": "1n652h",
+    },
+    {
+      "catchAll": null,
+      "category": "component",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "components/tickets/[ticketId]/close/button.ts",
+      "id": "component:tickets/[ticketId]/close",
+      "kind": "button",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "overhead": 9,
+      "params": [
+        "ticketId",
+      ],
+      "path": "tickets/[ticketId]/close",
+      "selectKind": null,
+      "shortId": "31imou",
+    },
+    {
+      "category": "command",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "commands/moderation/ban/command.ts",
+      "id": "command:moderation/ban",
+      "kind": "command",
+      "middleware": [
+        "middleware.ts",
+        "commands/moderation/middleware.ts",
+      ],
+      "path": "moderation/ban",
+    },
+    {
+      "category": "command",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "commands/moderation/kick/command.ts",
+      "id": "command:moderation/kick",
+      "kind": "command",
+      "middleware": [
+        "middleware.ts",
+        "commands/moderation/middleware.ts",
+      ],
+      "path": "moderation/kick",
+    },
+    {
+      "category": "command",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "commands/ping/command.ts",
+      "id": "command:ping",
+      "kind": "command",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "path": "ping",
+    },
+    {
+      "category": "command",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "commands/user/profile/command.ts",
+      "id": "command:user/profile",
+      "kind": "command",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "path": "user/profile",
+    },
+    {
+      "category": "event",
+      "errors": [
+        "error.ts",
+      ],
+      "event": "clientReady",
+      "file": "events/clientReady/event.ts",
+      "id": "event:clientReady",
+      "kind": "event",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "once": false,
+      "order": 0,
+      "path": "clientReady",
+    },
+    {
+      "category": "event",
+      "errors": [
+        "error.ts",
+      ],
+      "event": "guildMemberAdd",
+      "file": "events/guildMemberAdd/(audit)/event.ts",
+      "id": "event:guildMemberAdd/(audit)",
+      "kind": "event",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "once": false,
+      "order": 1,
+      "path": "guildMemberAdd/(audit)",
+    },
+    {
+      "category": "event",
+      "errors": [
+        "error.ts",
+      ],
+      "event": "guildMemberAdd",
+      "file": "events/guildMemberAdd/(welcome)/event.ts",
+      "id": "event:guildMemberAdd/(welcome)",
+      "kind": "event",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "once": false,
+      "order": 0,
+      "path": "guildMemberAdd/(welcome)",
+    },
+    {
+      "catchAll": null,
+      "category": "component",
+      "errors": [
+        "error.ts",
+      ],
+      "file": "components/tickets/[ticketId]/assign/select.ts",
+      "id": "component:tickets/[ticketId]/assign",
+      "kind": "select",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "overhead": 9,
+      "params": [
+        "ticketId",
+      ],
+      "path": "tickets/[ticketId]/assign",
+      "selectKind": "user",
+      "shortId": "1x540s",
+    },
+  ],
+  "version": 1,
+}
+`;
