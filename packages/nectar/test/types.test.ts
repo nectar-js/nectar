@@ -44,6 +44,11 @@ declare module "../src/index.js" {
         context: MiddlewareExtension<AuthModule>;
       };
       info: { type: "user"; options: Empty; context: Empty };
+      "admin/roles/give": {
+        type: "chatInput";
+        options: { role: "role"; days: "integer" };
+        context: Empty;
+      };
     };
     components: {
       confirm: { kind: "button"; params: Empty; context: Empty };
@@ -64,7 +69,7 @@ declare module "../src/index.js" {
       };
     };
     events: { clientReady: true };
-    autocomplete: Empty;
+    autocomplete: { "moderation/ban": "reason" };
   }
 }
 
