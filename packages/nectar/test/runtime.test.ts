@@ -12,6 +12,7 @@ import {
   createRuntime,
   createSignals,
   GENERIC_ERROR_REPLY,
+  LoginError,
   ModuleRegistry,
   type RuntimeState,
   type Signal,
@@ -482,6 +483,34 @@ describe("lifecycle", () => {
     process.emit("SIGINT");
     await vi.waitFor(() => expect(client.destroy).toHaveBeenCalledTimes(1));
     expect(process.listenerCount("SIGINT")).toBe(before);
+  });
+
+  test("a failed login stops the runtime and says why", async () => {
+    const { state } = await setup({ "commands/ok/command.ts": cmd('{ description: "d" }', "") });
+    const options = {
+      manifest: state.manifest,
+      appDir: state.appDir,
+      config: { intents: [] },
+      env: "test",
+      logger: state.logger,
+    } as const;
+    // A real client: discord.js rejects an empty token before it touches the network.
+    const rejected = createRuntime(options);
+    const before = process.listenerCount("SIGINT");
+    const error = await rejected.start({ token: "" }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(LoginError);
+    expect(error).toMatchObject({ invalidToken: true, message: "Discord rejected the bot token." });
+    expect(process.listenerCount("SIGINT")).toBe(before);
+    expect(rejected.client.listenerCount("interactionCreate")).toBe(0);
+
+    const client = fakeClient();
+    client.login.mockRejectedValue(new TypeError("fetch failed"));
+    const offline = createRuntime({ ...options, client: client as unknown as Client });
+    await expect(offline.start({ token: "t", signals: false })).rejects.toMatchObject({
+      invalidToken: false,
+      message: "Could not log in: fetch failed",
+    });
+    expect(client.destroy).toHaveBeenCalledTimes(1);
   });
 });
 

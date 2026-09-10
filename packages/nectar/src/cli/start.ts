@@ -2,11 +2,11 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import type { Client } from "discord.js";
 import { loadManifest, MANIFEST_FILE } from "../manifest/index.js";
-import { createRuntime } from "../runtime/index.js";
+import { createRuntime, LoginError } from "../runtime/index.js";
 import { relative } from "./compile.js";
 import { CliError, type CliIo, EXIT_OK } from "./io.js";
 import { loadProject } from "./project.js";
-import { credential } from "./sync.js";
+import { credential, loginFailure } from "./sync.js";
 import { c, ok } from "./ui.js";
 
 /** `nectar start`: run the bot from the last `nectar build`. No source discovery happens here. */
@@ -21,11 +21,21 @@ export async function start(io: CliIo): Promise<number> {
   const token = credential(project, io, "token");
 
   const { manifest, appDir } = loadManifest(manifestFile);
-  const runtime = createRuntime({ manifest, appDir, config: project.config, env: project.env });
+  const runtime = createRuntime({
+    manifest,
+    appDir,
+    config: project.config,
+    env: project.env,
+    ...(io.client === undefined ? {} : { client: io.client(project.config) }),
+  });
   runtime.client.once("clientReady", (client) => {
     io.out(ok(`Logged in as ${c.bold(client.user.tag)} (${project.env}${shards(client)}).`));
   });
-  await runtime.start({ token });
+  try {
+    await runtime.start({ token });
+  } catch (error) {
+    throw error instanceof LoginError ? loginFailure(error, project) : error;
+  }
   return EXIT_OK;
 }
 

@@ -10,7 +10,7 @@ export interface CliIo {
   err(line: string): void;
   /** Builds the REST client `sync` talks to. Tests swap in a fake. */
   rest?: (token: string) => Promise<CommandRest>;
-  /** Builds the discord.js client `dev` runs. Tests swap in a fake that never logs in. */
+  /** Builds the discord.js client `dev` and `start` run. Tests swap in a fake that never logs in. */
   client?: (config: NectarConfig) => Client;
 }
 

@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Client, Events } from "discord.js";
+import { Client, DiscordjsError, DiscordjsErrorCodes, Events } from "discord.js";
 import { registerComponentRoutes } from "../components/registry.js";
 import type { Manifest, ManifestComponentRoute } from "../manifest/schema.js";
 import { type NectarPlugin, type PluginApp, PluginError } from "../plugins/index.js";
@@ -26,6 +26,22 @@ export interface RuntimeOptions {
   client?: Client;
 }
 
+/** `client.login` failed: Discord refused the token, or could not be reached. */
+export class LoginError extends Error {
+  readonly invalidToken: boolean;
+
+  constructor(cause: unknown) {
+    const invalidToken =
+      cause instanceof DiscordjsError && cause.code === DiscordjsErrorCodes.TokenInvalid;
+    super(
+      invalidToken ? "Discord rejected the bot token." : `Could not log in: ${describe(cause)}`,
+      { cause },
+    );
+    this.name = "LoginError";
+    this.invalidToken = invalidToken;
+  }
+}
+
 export interface StartOptions {
   token: string;
   /** Stop on SIGINT and SIGTERM. Defaults to `true`. */
@@ -40,7 +56,7 @@ export interface Runtime {
   readonly modules: ModuleRegistry;
   /** Framework signals. `config.observe` is subscribed already. */
   readonly signals: SignalEmitter;
-  /** Loads handlers, attaches listeners, and logs in. */
+  /** Loads handlers, attaches listeners, and logs in. A failed login stops it and throws `LoginError`. */
   start(options: StartOptions): Promise<void>;
   /**
    * Stops taking interactions, waits for the in-flight ones, detaches listeners, and
@@ -142,7 +158,12 @@ export function createRuntime(options: RuntimeOptions): Runtime {
         process.once("SIGTERM", onSignal);
       }
 
-      await client.login(token);
+      try {
+        await client.login(token);
+      } catch (error) {
+        await this.stop();
+        throw new LoginError(error);
+      }
     },
 
     stop() {

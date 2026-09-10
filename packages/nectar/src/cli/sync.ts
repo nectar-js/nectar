@@ -9,10 +9,11 @@ import {
   syncCommands,
   UnsafeSyncError,
 } from "../registration/index.js";
+import type { LoginError } from "../runtime/index.js";
 import { compileProject } from "./compile.js";
 import { CliError, type CliIo, EXIT_FAILURE, EXIT_OK } from "./io.js";
-import { loadProject, type Project } from "./project.js";
-import { c, credentialHint, info, ok, warn } from "./ui.js";
+import { describe, loadProject, type Project } from "./project.js";
+import { c, credentialHint, info, link, ok, PORTAL_URL, warn } from "./ui.js";
 
 export const TOKEN_VAR = "DISCORD_TOKEN";
 export const APPLICATION_ID_VAR = "DISCORD_APPLICATION_ID";
@@ -118,6 +119,23 @@ export function credential(project: Project, io: CliIo, kind: Credential): strin
     });
   }
   return value;
+}
+
+/** A failed login as something to fix: the token, or the connection to Discord. */
+export function loginFailure(error: LoginError, project: Project): CliError {
+  if (!error.invalidToken) {
+    return new CliError("Could not log in to Discord.", { details: [describe(error.cause)] });
+  }
+  const source = project.config.token
+    ? `${c.bold("token")} in ${projectConfigName(project)}`
+    : c.bold(TOKEN_VAR);
+  return new CliError("Discord rejected the bot token.", {
+    details: [
+      `The token from ${source} is wrong, or it was reset.`,
+      "Get a new one from the Developer Portal under your application → Bot → Reset Token:",
+      link(PORTAL_URL),
+    ],
+  });
 }
 
 export function registrationHint(project: Project): string[] {

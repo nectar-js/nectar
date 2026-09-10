@@ -14,6 +14,7 @@ export { type ChainHooks, runChain } from "./middleware.js";
 export { HandlerLoadError, ModuleRegistry } from "./modules.js";
 export {
   createRuntime,
+  LoginError,
   manifestFiles,
   type Runtime,
   type RuntimeOptions,

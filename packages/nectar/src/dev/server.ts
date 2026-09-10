@@ -9,6 +9,7 @@ import {
   credential,
   describeScope,
   findCredential,
+  loginFailure,
   projectConfigName,
   registerCommands,
   registrationHint,
@@ -23,6 +24,7 @@ import {
   createSignals,
   HandlerLoadError,
   type Logger,
+  LoginError,
   manifestFiles,
   type Runtime,
 } from "../runtime/index.js";
@@ -145,7 +147,11 @@ export function createDevServer(
     });
     watchConnection(next.client);
     runtime = next;
-    await next.start({ token, signals: false });
+    try {
+      await next.start({ token, signals: false });
+    } catch (error) {
+      throw error instanceof LoginError ? loginFailure(error, current) : error;
+    }
   }
 
   function watchConnection(client: Client): void {

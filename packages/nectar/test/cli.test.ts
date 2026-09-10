@@ -1,4 +1,5 @@
 import { spawnSync } from "node:child_process";
+import { EventEmitter } from "node:events";
 import {
   existsSync,
   mkdirSync,
@@ -11,6 +12,7 @@ import {
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { Client } from "discord.js";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { type CliIo, run } from "../src/cli/index.js";
 import { version } from "../src/version.js";
@@ -315,6 +317,24 @@ describe("nectar start", () => {
     expect(noToken.code).toBe(1);
     expect(noToken.err).toContain("DISCORD_TOKEN is not set");
     expect(noToken.err).toContain("https://discord.com/developers/applications");
+  });
+
+  test("a rejected token is reported as one", async () => {
+    const root = makeProject({ "commands/ping/command.ts": ping });
+    await nectar(["build"], root);
+    // discord.js's own error for a bad token, without a trip to Discord.
+    const rejected = await new Client({ intents: [] }).login("").catch((e: unknown) => e);
+    const client = Object.assign(new EventEmitter(), {
+      login: () => Promise.reject(rejected),
+      destroy: async () => {},
+    });
+    const result = await nectar(["start"], root, {
+      env: { DISCORD_TOKEN: "bad" },
+      client: () => client as unknown as Client,
+    });
+    expect(result.code).toBe(1);
+    expect(result.err).toContain("✖ Discord rejected the bot token.");
+    expect(result.err).toContain("The token from DISCORD_TOKEN is wrong, or it was reset.");
   });
 
   test("the build's start.js runs with node alone, from any directory", async () => {
