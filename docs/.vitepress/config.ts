@@ -19,6 +19,7 @@ export default defineConfig({
           { text: "Compilation", link: "/concepts/compilation" },
           { text: "Interactions", link: "/concepts/interactions" },
           { text: "Custom IDs", link: "/concepts/custom-ids" },
+          { text: "Middleware and errors", link: "/concepts/middleware-and-errors" },
         ],
       },
       {

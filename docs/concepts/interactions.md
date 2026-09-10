@@ -1,6 +1,6 @@
 # Interactions
 
-When Discord sends an interaction, Nectar finds the route for it, builds a context object, runs the route's middleware, and calls the handler. This page covers finding the route and what the handler receives.
+When Discord sends an interaction, Nectar finds the route for it, builds a context object, runs the route's middleware, and calls the handler. This page covers finding the route and what the handler receives. [Middleware and errors](./middleware-and-errors) covers the rest.
 
 ## From interaction to file
 
