@@ -10,7 +10,7 @@
 
 Nectar is a framework for Discord bots. You define commands, components, and events as files under `app/`, and Nectar handles command registration, custom ID encoding, and interaction routing.
 
-The path is the route. `app/commands/ping/command.ts` is `/ping`. `app/commands/moderation/ban/command.ts` is `/moderation ban`. `app/components/tickets/[ticketId]/close/button.ts` handles that button, with `ticketId` decoded from the custom ID and typed. Handlers receive the native discord.js interaction and client.
+`app/commands/ping/command.ts` registers `/ping`, and `app/commands/moderation/ban/command.ts` registers `/moderation ban`. `app/components/tickets/[ticketId]/close/button.ts` handles a button whose custom ID carries a typed `ticketId`. Handlers get the discord.js interaction and client.
 
 ```bash
 npm create @nectar-js
@@ -30,10 +30,11 @@ export default defineCommand("ping", async (ctx) => {
 ```bash
 nectar dev      # run the bot, reloading handlers on save
 nectar build    # compile to .nectar/
+nectar sync     # register commands with Discord
 nectar start    # run the compiled build
 ```
 
-`nectar --help` lists the rest.
+`nectar --help` lists the rest. The documentation is in [`docs/`](https://github.com/nectar-js/nectar/tree/main/docs).
 
 ## Requirements
 
