@@ -32,6 +32,7 @@ export default defineConfig({
           { text: "Components", link: "/guides/components" },
           { text: "Middleware", link: "/guides/middleware" },
           { text: "Error handling", link: "/guides/errors" },
+          { text: "Testing", link: "/guides/testing" },
           { text: "Deploying", link: "/guides/deployment" },
         ],
       },
