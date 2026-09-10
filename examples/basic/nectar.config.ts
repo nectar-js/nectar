@@ -1,4 +1,4 @@
-import { defineConfig } from "@nect-js/core";
+import { defineConfig } from "@nectar-js/nectar";
 
 export default defineConfig({
   token: process.env.DISCORD_TOKEN,

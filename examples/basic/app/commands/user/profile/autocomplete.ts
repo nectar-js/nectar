@@ -1,4 +1,4 @@
-import type { InteractionContext } from "@nect-js/core";
+import type { InteractionContext } from "@nectar-js/nectar";
 import type { AutocompleteInteraction } from "discord.js";
 
 const SECTIONS = ["overview", "activity", "badges"];

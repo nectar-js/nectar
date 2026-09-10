@@ -1,4 +1,4 @@
-import { defineComponent } from "@nect-js/core";
+import { defineComponent } from "@nectar-js/nectar";
 
 export const kind = "user";
 

@@ -1,4 +1,4 @@
-import { defineMiddleware } from "@nect-js/core";
+import { defineMiddleware } from "@nectar-js/nectar";
 
 export default defineMiddleware(async (_ctx, next) => {
   const startedAt = Date.now();

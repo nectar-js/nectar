@@ -1,4 +1,4 @@
-import type { CommandRouteMeta } from "@nect-js/core";
+import type { CommandRouteMeta } from "@nectar-js/nectar";
 
 export const meta: CommandRouteMeta = {
   description: "Moderation tools",

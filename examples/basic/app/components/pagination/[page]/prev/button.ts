@@ -1,4 +1,4 @@
-import { customId, defineComponent } from "@nect-js/core";
+import { customId, defineComponent } from "@nectar-js/nectar";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
 export default defineComponent("pagination/[page]/prev", async (ctx) => {

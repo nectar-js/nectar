@@ -3,13 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "nect": "node ../../packages/core/dist/cli.js",
-    "build": "pnpm nect build",
-    "routes": "pnpm nect routes",
+    "nectar": "node ../../packages/nectar/dist/cli.js",
+    "build": "pnpm nectar build",
+    "routes": "pnpm nectar routes",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nect-js/core": "workspace:*",
+    "@nectar-js/nectar": "workspace:*",
     "discord.js": "^14.27.0"
   }
 }

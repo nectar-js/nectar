@@ -1,4 +1,4 @@
-import { type CommandMeta, defineCommand } from "@nect-js/core";
+import { type CommandMeta, defineCommand } from "@nectar-js/nectar";
 
 export const meta: CommandMeta = {
   description: "Kick a member",
