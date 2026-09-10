@@ -1,28 +1,31 @@
 # Interactions
 
-When Discord sends an interaction, Nectar finds the route for it, builds a context object, runs the route's middleware, and calls the handler. This page covers finding the route and what the handler receives. [Middleware and errors](./middleware-and-errors) covers the rest.
+## Commands
 
-## From interaction to file
+Slash commands match by name, subcommand group, and subcommand. `/moderation ban` runs `commands/moderation/ban/command.ts`. Context menu commands match by type and name.
 
-| Discord sends | Nectar runs |
-| --- | --- |
-| `/ping` | `commands/ping/command.ts` |
-| `/moderation ban` | `commands/moderation/ban/command.ts` |
-| `/settings roles add` | `commands/settings/roles/add/command.ts` |
-| A user or message context menu command | The top-level `command.ts` with that name and `meta.type` |
-| Autocomplete for the `section` option of `/user profile` | The `section` export of `commands/user/profile/autocomplete.ts` |
-| A button click, select menu choice, or modal submission | The `button.ts`, `select.ts`, or `modal.ts` whose route the custom ID names |
+## Autocomplete
 
-Commands match by name. Discord sends the command name along with the subcommand group and subcommand, and Nectar looks those up in a table built from the manifest.
+`autocomplete.ts` exports one function per option with `autocomplete: true`, named after the option:
 
-Components match by custom ID. Discord sends back the custom ID the bot put on the component, and Nectar decodes the route and its parameters from it. [Custom IDs](./custom-ids) covers the format.
+```ts
+// app/commands/user/profile/autocomplete.ts
+import type { InteractionContext } from "@nectar-js/nectar";
+import type { AutocompleteInteraction } from "discord.js";
+
+export async function section(ctx: InteractionContext<AutocompleteInteraction>) {
+  await ctx.interaction.respond([{ name: "Overview", value: "overview" }]);
+}
+```
+
+## Components
+
+Buttons, select menus, and modal submits match by custom ID. See [Custom IDs](./custom-ids).
 
 ## Events
 
-Events come from discord.js, not from the interaction flow. Nectar attaches one listener for each event that has routes and calls every `event.ts` for that event:
-
 ```ts
-// app/events/guildMemberAdd/(welcome)/event.ts
+// app/events/guildMemberAdd/event.ts
 import { defineEvent } from "@nectar-js/nectar";
 
 export default defineEvent("guildMemberAdd", async (member, ctx) => {
@@ -30,44 +33,36 @@ export default defineEvent("guildMemberAdd", async (member, ctx) => {
 });
 ```
 
-The handler gets the arguments a discord.js listener would, plus a context object at the end.
+Event handlers get the discord.js listener arguments followed by `ctx`.
 
-By default the handlers of one event run one after another, sorted by `meta.order` and then by route ID. `mode: "concurrent"` starts them all at once instead. All handlers of an event share one mode, so set it in one file. `once: true` runs a handler for the first emission only.
+Handlers for the same event run one at a time, sorted by `meta.order` and then by route ID. `meta.mode: "concurrent"` runs them in parallel. `meta.once: true` runs a handler on the first event only.
 
-```ts
-export const meta = { order: 1, once: true };
-```
+## Context
 
-## The context object
+Command, autocomplete, and component handlers receive `ctx`:
 
-Command, autocomplete, and component handlers receive one argument, `ctx`:
-
-| Field | What it holds |
+| Field | |
 | --- | --- |
-| `interaction` | The discord.js interaction, typed for the route: `ChatInputCommandInteraction` in a slash command, `ButtonInteraction` in a button, and so on. |
-| `client` | The discord.js `Client`. |
-| `params` | The component route's parameters, decoded from the custom ID. Empty for commands. |
-| `route` | The route's `id`, `category`, `path`, and absolute `file`. |
-| `env` | `"development"`, `"test"`, or `"production"`. |
-| `trace` | `id` is the interaction ID, `receivedAt` is when Nectar received it, and `elapsed()` returns the milliseconds since Discord created it. |
-| `services` | What plugins provide. Empty without plugins. |
+| `interaction` | The discord.js interaction |
+| `client` | The discord.js client |
+| `params` | Component parameters from the custom ID |
+| `route` | `id`, `category`, `path`, and `file` of the route |
+| `env` | `"development"`, `"test"`, or `"production"` |
+| `trace` | `id`, `receivedAt`, and `elapsed()`, the milliseconds since Discord created the interaction |
+| `services` | Services provided by plugins |
 
-Middleware can add fields. Event handlers get a smaller context with `client`, `route`, `env`, and `services`.
+Middleware can add more fields. Event handlers get `client`, `route`, `env`, and `services`.
 
-## Responding is up to you
+## Responses
 
-Nectar doesn't reply to, defer, or acknowledge interactions on its own. Discord gives the bot three seconds to respond before it shows the user an error. If a handler can take longer, call `ctx.interaction.deferReply()` first. `ctx.trace.elapsed()` tells you how much of that time has gone.
+Nectar doesn't reply to or defer interactions. If a handler can take longer than three seconds, call `deferReply()` first.
 
-Nectar answers in three cases:
+Nectar only responds itself in three cases:
 
-- An error that no `error.ts` handles gets a generic ephemeral reply, if nothing has answered the interaction yet.
-- An autocomplete handler that throws gets an empty list, so Discord stops loading.
-- The opt-in policy middleware, `guildOnly`, `requirePermissions`, and `requireRoles`, replies when it turns an interaction away.
+- An unhandled error gets a generic ephemeral reply, unless the interaction was already answered.
+- An autocomplete handler that throws gets an empty list.
+- `guildOnly`, `requirePermissions`, and `requireRoles` reply when they reject an interaction.
 
-## What Nectar leaves alone
+## Unrouted interactions
 
-- A button, select menu, or modal whose custom ID doesn't start with `n:` isn't Nectar's. Components you build by hand keep working.
-- A command with no route, such as one still registered from an older version of the bot, is dropped with a warning that suggests running `nectar sync`.
-- Interaction types Nectar doesn't route are dropped.
-
-To handle any of these yourself, add `events/interactionCreate/event.ts`. It receives every interaction, including the ones Nectar routes.
+Components whose custom ID doesn't start with `n:` are ignored. Commands without a route are logged as a warning and ignored. Handle either yourself in `events/interactionCreate/event.ts`, which receives every interaction.
