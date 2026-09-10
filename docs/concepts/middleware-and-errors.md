@@ -1,41 +1,17 @@
 # Middleware and errors
 
-A `middleware.ts` runs before every handler in its directory and the directories below it. An `error.ts` handles errors thrown in its directory and below. Where the file sits decides what it covers.
+## Middleware
 
-## Middleware scope
+A `middleware.ts` runs before every command, autocomplete, and component handler in its directory and below. Event handlers don't run middleware.
 
-```
-app/
-├── middleware.ts                         every command, autocomplete, and component
-├── commands/
-│   ├── middleware.ts                     every command and its autocomplete
-│   ├── ping/command.ts
-│   └── moderation/
-│       ├── middleware.ts                 /moderation ban and /moderation kick
-│       ├── ban/command.ts
-│       └── kick/command.ts
-└── components/
-    └── tickets/
-        ├── middleware.ts                 every ticket component
-        └── [ticketId]/close/button.ts
-```
-
-For `/moderation ban`, the middleware runs from the root down, then the handler:
+Middleware runs from the root down. For `/moderation ban`, that's:
 
 1. `app/middleware.ts`
 2. `app/commands/middleware.ts`
 3. `app/commands/moderation/middleware.ts`
 4. `app/commands/moderation/ban/command.ts`
 
-The compiler works out this list for every route and stores it in the manifest. `nectar manifest --route command:moderation/ban` prints it.
-
-A route group counts as a directory here. `commands/(staff)/middleware.ts` covers the commands inside `(staff)/`, and their names stay the same.
-
-Middleware runs for commands, autocomplete, and components. Event handlers don't go through middleware.
-
-## Writing middleware
-
-A middleware receives the handler's context and a `next` function:
+Directories without a `middleware.ts` are skipped.
 
 ```ts
 // app/middleware.ts
@@ -47,28 +23,18 @@ export default defineMiddleware(async (ctx, next) => {
 });
 ```
 
-What it does with `next` decides what happens below it:
-
-- `return next()` moves on to the next middleware, or to the handler.
-- `return next({ settings })` moves on and adds `settings` to the context of everything below. Handlers see `ctx.settings` with the type you passed.
-- Returning without calling `next` stops the chain, and the handler never runs. Answer the interaction first if the user should see something.
+- `return next()` continues to the next middleware or the handler.
+- `return next({ settings })` also adds `ctx.settings`, typed, for everything below.
+- Returning without calling `next` stops the chain. Reply to the interaction first if the user should see something.
 - Throwing sends the error to the error boundaries.
 
-Code after `await next()` runs once the handler has finished:
+Code after `await next()` runs after the handler.
 
-```ts
-export default defineMiddleware(async (ctx, next) => {
-  const started = Date.now();
-  await next();
-  console.log(`${ctx.route.id} took ${Date.now() - started}ms`);
-});
-```
-
-An `autocomplete.ts` runs the same middleware as the command next to it. A middleware that stops an autocomplete interaction should answer it with `ctx.interaction.respond([])`, or the user sees the options fail to load. `ctx.interaction.isAutocomplete()` tells the two apart.
+`autocomplete.ts` runs the same middleware as its command. If a middleware stops an autocomplete interaction, answer it with `ctx.interaction.respond([])`.
 
 ## Policy helpers
 
-Nectar exports three middleware for common checks. Export one from a `middleware.ts` to apply it to that directory:
+`guildOnly`, `requirePermissions`, and `requireRoles` return middleware you can export from a `middleware.ts`:
 
 ```ts
 // app/commands/moderation/middleware.ts
@@ -77,20 +43,13 @@ import { requirePermissions } from "@nectar-js/nectar";
 export default requirePermissions("BanMembers");
 ```
 
-`guildOnly()` lets through interactions from a server. `requirePermissions(permissions)` lets through members who have those permissions in the channel. `requireRoles(roleIds)` lets through members with any of the roles, or with all of them when you pass `{ mode: "all" }`. A failed check answers with a short ephemeral message and stops the chain. Nectar applies none of them unless you export one.
+When the check fails, they reply with an ephemeral message and stop the chain. `requireRoles` passes if the member has any of the roles, or all of them with `{ mode: "all" }`.
 
-`defaultMemberPermissions` on a command is a separate thing. It tells Discord who sees the command, and server admins can change it per role and per channel. A check that has to hold belongs in middleware.
+`defaultMemberPermissions` only sets who can see a command, and server admins can override it. Enforce permissions in middleware.
 
 ## Error boundaries
 
-When a handler or middleware throws, Nectar hands the error to the nearest `error.ts` above the route, then the next one up. For `/moderation ban`, that order is:
-
-1. `app/commands/moderation/error.ts`
-2. `app/commands/error.ts`
-3. `app/error.ts`
-4. Nectar's default boundary
-
-Only the files that exist take part. An error boundary decides what happens by how it returns:
+When a handler or middleware throws, Nectar calls the nearest `error.ts`, then the next one up, ending at `app/error.ts`.
 
 ```ts
 // app/components/tickets/error.ts
@@ -106,10 +65,8 @@ export default defineError(async (error, ctx) => {
 });
 ```
 
-- Returning `"unhandled"` passes the error to the next boundary up.
-- Throwing passes the new error up instead.
-- Returning anything else, or nothing, marks the error handled. The boundaries above it don't run.
+Return `"unhandled"` or throw to pass the error to the next boundary. Returning anything else stops it there.
 
-The default boundary logs the error with the route ID and file. If nothing has answered the interaction, it also replies with an ephemeral "Something went wrong while handling that." Every error ends up either handled by an `error.ts` or in the log.
+If no boundary handles the error, Nectar logs it and replies with "Something went wrong while handling that." as an ephemeral message, unless the interaction was already answered.
 
-Error boundaries also cover event handlers, with the same scope rules. `app/error.ts` covers every route, and `app/events/error.ts` covers every event handler. When the error comes from an event handler, the `ctx` a boundary receives has no `interaction`, which is why the example checks for one.
+Error boundaries apply to event handlers too. For those, `ctx` has no `interaction`.
