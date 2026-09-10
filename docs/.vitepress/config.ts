@@ -17,6 +17,7 @@ export default defineConfig({
         items: [
           { text: "The app directory", link: "/concepts/app-directory" },
           { text: "Compilation", link: "/concepts/compilation" },
+          { text: "Interactions", link: "/concepts/interactions" },
         ],
       },
       {
