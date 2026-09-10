@@ -62,7 +62,7 @@ For a context menu command, set `meta.type` to `"user"` or `"message"` in a top-
 
 `button.ts`, `select.ts`, and `modal.ts` handle components. The path, including its parameters, is encoded into the component's custom ID. See [Custom IDs](./custom-ids).
 
-`components/tickets/[ticketId]/close/button.ts` handles a button with a `ticketId` parameter. A `button.ts` and a `modal.ts` can share a directory.
+`components/tickets/[ticketId]/close/button.ts` handles a button with a `ticketId` parameter.
 
 ## Events
 
