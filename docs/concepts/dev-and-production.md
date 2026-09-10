@@ -1,22 +1,18 @@
 # Development and production
 
-Two things decide how the bot runs: the command that started it, and the environment.
+## Environment
 
-`nectar dev` runs from source. It compiles `app/`, watches the project, and applies your changes while the bot stays connected. `nectar start` and `node .nectar/start.mjs` run the output of the last `nectar build`, and never look through `app/` for routes.
+`NODE_ENV` sets the environment. `production` and `test` are used as is, and anything else is `development`. Set `env` in the config to override it.
 
-## The environment
-
-The environment comes from `NODE_ENV`. `production` and `test` are taken as they are, and any other value, or none, means `development`. Setting `env` in the config overrides `NODE_ENV`.
-
-| | `development` | `test` | `production` |
+| | development | test | production |
 | --- | --- | --- | --- |
-| Commands register to | `dev.guilds` | `dev.guilds` | `commands.target`, global by default |
-| Handlers are imported | on first use | on first use | all at startup |
-| Unhandled errors are logged as | a full report | one line | one line |
+| Commands register to | `dev.guilds` | `dev.guilds` | `commands.target` |
+| Handlers load | on first use | on first use | at startup |
+| Unhandled errors log | a full report | one line | one line |
 
-Set `eager` in the config to choose when handlers are imported, whatever the environment.
+Set `eager` in the config to choose when handlers load.
 
-`environments` in the config replaces top-level settings for one environment:
+`environments` overrides config values for one environment. Each value replaces the top-level one, and objects aren't merged.
 
 ```ts
 export default defineConfig({
@@ -28,33 +24,27 @@ export default defineConfig({
 });
 ```
 
-Each key replaces the top-level value as a whole. Nested objects aren't merged.
+The CLI and `.nectar/start.mjs` load `.env` from the project root.
 
-Every `nectar` command loads `.env` from the project root when there is one, and so does `start.mjs`.
+## nectar dev
 
-## Development
+`nectar dev` compiles the app, registers commands to `dev.guilds`, logs in, and watches for changes:
 
-`nectar dev` compiles the app, writes `.nectar/`, registers the commands in `dev.guilds`, and logs in. Then it watches the project and handles each change with the smallest update that keeps the bot correct:
+- Editing a handler, middleware, or error boundary reloads that file.
+- Adding, moving, or deleting route files, or editing `meta`, recompiles the routes. Commands are registered again if their payloads changed.
+- Editing any other file reloads every project module.
+- Editing `nectar.config.ts` restarts the client.
 
-| You change | What happens |
-| --- | --- |
-| The code of a handler, middleware, or error boundary | Nectar imports that file again. The next interaction runs the new code. |
-| The routes: a reserved file or directory added, moved, or removed, or a `meta` edited | Nectar recompiles and swaps in the new routes and event listeners. If a command's payload changed, it registers the commands again. |
-| Any other source file, such as a helper a handler imports | Every project module is imported again on its next use, because Nectar doesn't track which handlers import which files. |
-| `nectar.config.ts` | The client disconnects and a new one logs in with the new config. |
+Only config changes reconnect to the gateway. If a change fails to compile, the previous routes keep running.
 
-Only a config change reconnects to the gateway. A compile error keeps the previous routes and handlers running until you fix the file.
+`nectar dev --verbose` also prints the route tree and discord.js warnings.
 
-When an error reaches the default boundary in development, the log names the route and its file, describes the interaction with its guild, channel, and user, gives the time since Discord created it, lists the middleware that ran, and prints the stack. `nectar dev --verbose` also prints the route tree after every rebuild, along with discord.js's warnings.
+Reloading has limits:
 
-### What reloading can't do
-
-Reloading imports a new copy of a module. The old copy keeps whatever it set up:
-
-- Module-level state starts over. A `Map` at the top of a handler file is empty again after you save. Keep state that has to outlive a save in a database or a file.
-- Timers, intervals, and connections opened at the top level of a module keep running after it reloads. Clean them up, or don't start them at import time.
-- Listeners you add to `ctx.client` stay attached, and the next copy adds another one. Event routes don't have this problem, because Nectar rebinds them itself.
-- Old copies stay in memory until the process exits, since ESM modules can't be unloaded. Restart `nectar dev` after a long session.
+- Module-level state resets when the module reloads.
+- Timers, intervals, and connections opened at module level keep running.
+- Listeners added to `ctx.client` stay attached.
+- Old versions of modules stay in memory until `nectar dev` restarts.
 
 ## Production
 
@@ -63,12 +53,8 @@ nectar build
 NODE_ENV=production node .nectar/start.mjs
 ```
 
-`nectar build` compiles the app and writes `manifest.json`, `types.d.ts`, and `start.mjs` to `.nectar/`. It fails on any compile error. `start.mjs` does the same as `nectar start`, from any working directory, and it's the file to give a discord.js `ShardingManager`.
+`nectar start` does the same thing as `node .nectar/start.mjs`. In production, every handler loads at startup, so a broken import stops the bot before it logs in. The bot doesn't compile or register commands.
 
-When the bot starts in production, the runtime loads the config and the manifest, then imports every handler, middleware, and error boundary the manifest lists. A file that fails to import stops the bot before it logs in, instead of failing the first interaction that needs it. Then it attaches its listeners and logs in.
+On SIGINT or SIGTERM, the bot stops accepting interactions, waits up to 10 seconds for the running ones, and disconnects.
 
-It doesn't compile, doesn't look through `app/` for routes, and doesn't register commands. Run `nectar sync` for that, once per release.
-
-In production, an unhandled error is logged as one line with the route ID and file, followed by the error. The user sees only the generic ephemeral reply.
-
-On SIGINT or SIGTERM, the bot stops taking interactions, waits up to 10 seconds for the ones in progress, and disconnects. A second signal exits right away. [Deploying](../guides/deployment) has setups for Docker, PM2, and systemd.
+See [Deploying](../guides/deployment) for Docker, PM2, and systemd.
