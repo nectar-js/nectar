@@ -57,7 +57,7 @@ A user or message context menu command is a top-level command, like `commands/re
 
 ## Components
 
-A `button.ts`, `select.ts`, or `modal.ts` handles that kind of component. Its path is what the custom ID encodes:
+A `button.ts`, `select.ts`, or `modal.ts` handles that kind of component. Its path is what the [custom ID](./custom-ids) encodes:
 
 ```
 components/tickets/[ticketId]/close/button.ts     closes one ticket

@@ -18,6 +18,7 @@ export default defineConfig({
           { text: "The app directory", link: "/concepts/app-directory" },
           { text: "Compilation", link: "/concepts/compilation" },
           { text: "Interactions", link: "/concepts/interactions" },
+          { text: "Custom IDs", link: "/concepts/custom-ids" },
         ],
       },
       {

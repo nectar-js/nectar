@@ -15,7 +15,7 @@ When Discord sends an interaction, Nectar finds the route for it, builds a conte
 
 Commands match by name. Discord sends the command name along with the subcommand group and subcommand, and Nectar looks those up in a table built from the manifest.
 
-Components match by custom ID. Discord sends back the custom ID the bot put on the component, and Nectar decodes the route and its parameters from it. The next page covers the format.
+Components match by custom ID. Discord sends back the custom ID the bot put on the component, and Nectar decodes the route and its parameters from it. [Custom IDs](./custom-ids) covers the format.
 
 ## Events
 
