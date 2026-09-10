@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import type { Client } from "discord.js";
 import { loadManifest, MANIFEST_FILE } from "../manifest/index.js";
 import { createRuntime } from "../runtime/index.js";
 import { relative } from "./compile.js";
@@ -21,9 +22,16 @@ export async function start(io: CliIo): Promise<number> {
 
   const { manifest, appDir } = loadManifest(manifestFile);
   const runtime = createRuntime({ manifest, appDir, config: project.config, env: project.env });
-  runtime.client.once("clientReady", () => {
-    io.out(ok(`Logged in as ${c.bold(runtime.client.user?.tag ?? "unknown")} (${project.env}).`));
+  runtime.client.once("clientReady", (client) => {
+    io.out(ok(`Logged in as ${c.bold(client.user.tag)} (${project.env}${shards(client)}).`));
   });
   await runtime.start({ token });
   return EXIT_OK;
+}
+
+/** `, shard 2 of 4` when the bot is sharded, so each shard process's line says which it is. */
+function shards(client: Client): string {
+  const { shards: ids, shardCount } = client.options;
+  if (!Array.isArray(ids) || shardCount === undefined || shardCount < 2) return "";
+  return `, shard${ids.length === 1 ? "" : "s"} ${ids.join(", ")} of ${shardCount}`;
 }
