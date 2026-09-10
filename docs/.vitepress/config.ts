@@ -8,7 +8,7 @@ export default defineConfig({
     logo: "/logo.png",
     nav: [
       { text: "Concepts", link: "/concepts/app-directory" },
-      { text: "Guides", link: "/guides/deployment" },
+      { text: "Guides", link: "/guides/components" },
       { text: "Reference", link: "/reference/files" },
     ],
     sidebar: [
@@ -28,7 +28,10 @@ export default defineConfig({
       },
       {
         text: "Guides",
-        items: [{ text: "Deploying", link: "/guides/deployment" }],
+        items: [
+          { text: "Components", link: "/guides/components" },
+          { text: "Deploying", link: "/guides/deployment" },
+        ],
       },
       {
         text: "Reference",
