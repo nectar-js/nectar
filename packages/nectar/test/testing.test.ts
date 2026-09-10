@@ -92,6 +92,8 @@ describe("commands", () => {
     await expect(app.command("admin/roles/give", { nope: 1 })).rejects.toThrow(
       'Route command:admin/roles/give has no option "nope". It takes: role, days.',
     );
+    // @ts-expect-error ping takes no options
+    await expect(app.command("ping", { nope: 1 })).rejects.toThrow("It takes none.");
     // @ts-expect-error unknown command
     await expect(app.command("nope")).rejects.toThrow('No command route "nope"');
   });

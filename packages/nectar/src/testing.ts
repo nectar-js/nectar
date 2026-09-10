@@ -79,9 +79,9 @@ type OptionTypes<P extends CommandPath> = CommandRoutes[P] extends { options: in
   : Record<string, OptionType>;
 
 /** Option values by name, typed from the command's generated options. */
-export type CommandOptions<P extends CommandPath> = {
-  [K in keyof OptionTypes<P>]?: OptionValues[OptionTypes<P>[K] & OptionType];
-};
+export type CommandOptions<P extends CommandPath> = [keyof OptionTypes<P>] extends [never]
+  ? Record<string, never>
+  : { [K in keyof OptionTypes<P>]?: OptionValues[OptionTypes<P>[K] & OptionType] };
 
 type AutocompleteRoutes = NectarRoutes extends { autocomplete: infer A }
   ? A
