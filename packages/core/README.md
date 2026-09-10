@@ -8,7 +8,9 @@
 
 <br />
 
-Put handler files in `app/`. Nect compiles the directory tree into slash commands, component handlers, and event listeners, registers the commands with Discord, and routes interactions to the right handler. Handlers get the native discord.js interaction and client.
+Nect is a framework for Discord bots. You define commands, components, and events as files under `app/`, and Nect handles command registration, custom ID encoding, and interaction routing.
+
+The path is the route. `app/commands/ping/command.ts` is `/ping`. `app/commands/moderation/ban/command.ts` is `/moderation ban`. `app/components/tickets/[ticketId]/close/button.ts` handles that button, with `ticketId` decoded from the custom ID and typed. Handlers receive the native discord.js interaction and client.
 
 ```bash
 npm create @nect-js
@@ -26,7 +28,7 @@ export default defineCommand("ping", async (ctx) => {
 ```
 
 ```bash
-nect dev      # run the bot, reloading on changes
+nect dev      # run the bot, reloading handlers on save
 nect build    # compile to .nect/
 nect start    # run the compiled build
 ```
