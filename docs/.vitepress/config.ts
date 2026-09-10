@@ -30,6 +30,7 @@ export default defineConfig({
         text: "Guides",
         items: [
           { text: "Components", link: "/guides/components" },
+          { text: "Middleware", link: "/guides/middleware" },
           { text: "Deploying", link: "/guides/deployment" },
         ],
       },
