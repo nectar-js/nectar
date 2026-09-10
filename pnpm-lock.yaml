@@ -53,9 +53,15 @@ importers:
         specifier: ^0.38.55
         version: 0.38.55
     devDependencies:
+      '@types/ws':
+        specifier: ^8.18.1
+        version: 8.18.1
       discord.js:
         specifier: ^14.27.0
         version: 14.27.0
+      ws:
+        specifier: ^8.21.3
+        version: 8.21.3
 
 packages:
 
