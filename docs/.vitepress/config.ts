@@ -32,7 +32,10 @@ export default defineConfig({
       },
       {
         text: "Reference",
-        items: [{ text: "Reserved files", link: "/reference/files" }],
+        items: [
+          { text: "Reserved files", link: "/reference/files" },
+          { text: "Configuration", link: "/reference/config" },
+        ],
       },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/nectar-js/nectar" }],
