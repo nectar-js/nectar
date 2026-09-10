@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -217,9 +218,11 @@ export interface TestApp {
 
 /** `manifestFile` is a `.nectar/manifest.json` written by `nectar build` or `nectar dev`. */
 export function createTestApp(manifestFile: string | URL, options: TestAppOptions = {}): TestApp {
-  const { manifest, appDir } = loadManifest(
-    manifestFile instanceof URL ? fileURLToPath(manifestFile) : manifestFile,
-  );
+  const file = manifestFile instanceof URL ? fileURLToPath(manifestFile) : manifestFile;
+  if (!existsSync(file)) {
+    throw new Error(`${file} not found. Run \`nectar build\` before the tests.`);
+  }
+  const { manifest, appDir } = loadManifest(file);
   const client = options.client ?? new Client({ intents: [] });
   const logger = options.logger ?? createLogger();
   const signals = createSignals(logger);

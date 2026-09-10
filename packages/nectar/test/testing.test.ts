@@ -59,6 +59,11 @@ async function testApp(app: Record<string, string> = files, options: TestAppOpti
   return createTestApp(manifest, { logger: quiet(), ...options });
 }
 
+test("a missing manifest asks for a build", () => {
+  const missing = path.join(makeApp({}), "manifest.json");
+  expect(() => createTestApp(missing)).toThrow(`${missing} not found. Run \`nectar build\``);
+});
+
 describe("commands", () => {
   test("responses are recorded and the outcome closes the signals", async () => {
     const { interaction, responses, outcome, signals } = await (await testApp()).command("ping");
