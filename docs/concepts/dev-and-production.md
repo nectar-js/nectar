@@ -32,7 +32,7 @@ The CLI and `.nectar/start.mjs` load `.env` from the project root.
 
 - Editing a handler, middleware, or error boundary reloads that file.
 - Adding, moving, or deleting route files, or editing `meta`, recompiles the routes. Commands are registered again if their payloads changed.
-- Editing any other file reloads every project module.
+- Editing any other source file reloads every project module.
 - Editing `nectar.config.ts` restarts the client.
 
 Only config changes reconnect to the gateway. If a change fails to compile, the previous routes keep running.
