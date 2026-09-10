@@ -10,9 +10,11 @@ import { toManifest } from "../src/manifest/index.js";
 import {
   createInteractionDispatcher,
   createRuntime,
+  createSignals,
   GENERIC_ERROR_REPLY,
   ModuleRegistry,
   type RuntimeState,
+  type Signal,
 } from "../src/runtime/index.js";
 import { makeApp } from "./helpers.js";
 
@@ -75,7 +77,8 @@ async function setup(files: Record<string, string> = app) {
   expect(graph.diagnostics.items.filter((d) => d.severity === "error")).toEqual([]);
   const manifest = toManifest(graph, root);
   const client = fakeClient();
-  const logger = { error: vi.fn(), warn: vi.fn() };
+  const logger = { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+  const signals = createSignals(logger);
   const state: RuntimeState = {
     manifest,
     appDir: root,
@@ -83,13 +86,14 @@ async function setup(files: Record<string, string> = app) {
     modules: new ModuleRegistry(),
     env: "test",
     logger,
+    signals,
   };
   const componentRoute = (path: string) => {
     const route = graph.components.find((c) => c.path === path);
     if (route === undefined) throw new Error(`no component route ${path}`);
     return route;
   };
-  return { root, manifest, client, logger, state, componentRoute, graph };
+  return { root, manifest, client, logger, signals, state, componentRoute, graph };
 }
 
 function calls(): unknown[] {
@@ -288,7 +292,11 @@ describe("error boundaries", () => {
     await dispatch(fresh);
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining("command:fail"),
-      expect.objectContaining({ message: "unhandled!" }),
+      expect.objectContaining({
+        route: "command:fail",
+        trace: "123",
+        error: expect.objectContaining({ message: "unhandled!" }),
+      }),
     );
     expect((fresh as unknown as { reply: ReturnType<typeof vi.fn> }).reply).toHaveBeenCalledWith({
       content: GENERIC_ERROR_REPLY,
@@ -315,8 +323,16 @@ describe("error boundaries", () => {
     await createInteractionDispatcher(state)(
       chatInput("mod", null, "ban", { guildId: "g1", channelId: "c1", user: { id: "u1" } }),
     );
-    const [message, error] = logger.error.mock.calls[0] ?? [];
-    expect(error).toMatchObject({ message: "nope" });
+    const [message, fields] = logger.error.mock.calls[0] ?? [];
+    expect(fields).toMatchObject({
+      error: { message: "nope" },
+      route: "command:mod/ban",
+      guild: "g1",
+      channel: "c1",
+      user: "u1",
+      interaction: "chatInput",
+      command: "mod ban",
+    });
     const lines = String(message).split("\n");
     expect(lines[0]).toBe("Unhandled error in command:mod/ban");
     expect(lines[1]).toMatch(/^ {2}file {9}.*commands[\\/]mod[\\/]ban[\\/]command\.ts$/);
@@ -332,7 +348,7 @@ describe("error boundaries", () => {
       "commands/bad/command.ts": 'export const meta = { description: "d" };\nexport default 42;\n',
     });
     await createInteractionDispatcher(state)(chatInput("bad"));
-    expect(logger.error.mock.calls[0]?.[1]).toMatchObject({
+    expect(logger.error.mock.calls[0]?.[1]?.error).toMatchObject({
       name: "HandlerLoadError",
       message: expect.stringContaining("got number"),
     });
@@ -501,5 +517,133 @@ describe("update", () => {
     expect(client.login).toHaveBeenCalledTimes(1);
     await runtime.stop();
     expect(client.listenerCount("guildMemberAdd")).toBe(0);
+  });
+});
+
+describe("signals", () => {
+  const types = (seen: Signal[]) => seen.map((s) => s.type);
+
+  test("fire in order across a full interaction lifecycle", async () => {
+    const { state, signals, componentRoute } = await setup();
+    const seen: Signal[] = [];
+    signals.on((s) => seen.push(s));
+    const dispatch = createInteractionDispatcher(state);
+
+    await dispatch(chatInput("ping", null, null, { guildId: "g1", user: { id: "u1" } }));
+    expect(types(seen)).toEqual([
+      "interaction:start",
+      "route:match",
+      "middleware:enter",
+      "handler:enter",
+      "handler:complete",
+      "interaction:complete",
+    ]);
+    const start = seen[0];
+    expect(start).toMatchObject({
+      trace: "123",
+      interaction: { type: "chatInput", command: "ping", guildId: "g1", userId: "u1" },
+    });
+    expect(seen[2]).toMatchObject({ file: expect.stringMatching(/middleware\.ts$/) });
+    expect(seen[5]).toMatchObject({ route: { id: "command:ping" }, handled: true });
+    expect(seen.every((s) => typeof s.at === "number")).toBe(true);
+
+    // Middleware stopping the chain: no handler signals, complete says so.
+    seen.length = 0;
+    await dispatch(chatInput("mod", null, "ban", { blocked: true }));
+    expect(types(seen)).toEqual([
+      "interaction:start",
+      "route:match",
+      "middleware:enter",
+      "middleware:enter",
+      "interaction:complete",
+    ]);
+    expect(seen[4]).toMatchObject({ handled: false });
+
+    // A component: the custom ID reaches listeners with its params hidden.
+    seen.length = 0;
+    const id = customIdFor(componentRoute("tickets/[id]/close"), { id: "secret" });
+    await dispatch(component("isButton", id));
+    expect(seen[0]).toMatchObject({
+      interaction: { type: "button", customId: `${id.slice(0, id.lastIndexOf(":"))}:*` },
+    });
+    expect(JSON.stringify(seen)).not.toContain("secret");
+  });
+
+  test("failures report the boundary that handled them", async () => {
+    const { state, signals } = await setup();
+    const seen: Signal[] = [];
+    signals.on((s) => seen.push(s));
+    const dispatch = createInteractionDispatcher(state);
+
+    await dispatch(chatInput("boom"));
+    expect(types(seen).slice(-2)).toEqual(["handler:enter", "interaction:fail"]);
+    expect(seen.at(-1)).toMatchObject({
+      route: { id: "command:boom" },
+      error: { message: "boom" },
+      boundary: expect.stringMatching(/[\\/]error\.ts$/),
+    });
+    expect((seen.at(-1) as { boundary: string }).boundary).not.toMatch(/commands[\\/]boom/);
+  });
+
+  test("the default boundary reports as null", async () => {
+    const { state, signals } = await setup({
+      "commands/fail/command.ts": cmd('{ description: "d" }', 'throw new Error("nobody")'),
+    });
+    const seen: Signal[] = [];
+    signals.on((s) => seen.push(s));
+    await createInteractionDispatcher(state)(chatInput("fail"));
+    expect(seen.at(-1)).toMatchObject({ type: "interaction:fail", boundary: null });
+  });
+
+  test("a throwing listener is logged and does not break dispatch", async () => {
+    const { state, signals, logger } = await setup();
+    signals.on(() => {
+      throw new Error("listener");
+    });
+    await createInteractionDispatcher(state)(chatInput("ping"));
+    expect(calls()).toEqual([["root-mw"], ["ping", true, 0]]);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining("interaction:start"),
+      expect.objectContaining({ error: expect.objectContaining({ message: "listener" }) }),
+    );
+  });
+
+  test("event failures, gateway state, shutdown, and config.observe", async () => {
+    const { state, client } = await setup();
+    const seen: Signal[] = [];
+    const runtime = createRuntime({
+      manifest: state.manifest,
+      appDir: state.appDir,
+      config: { intents: [], observe: (s) => seen.push(s) },
+      env: "test",
+      logger: state.logger,
+      client: client as unknown as Client,
+    });
+    await runtime.start({ token: "t", signals: false });
+
+    client.emit("shardReady", 0);
+    client.emit("shardDisconnect", { code: 1006 }, 0);
+    client.emit("shardResume", 0, 3);
+    client.emit("guildMemberRemove");
+    await vi.waitFor(() => expect(globalThis.__nectar.length).toBe(1));
+    await runtime.stop();
+
+    expect(types(seen)).toEqual([
+      "gateway:connect",
+      "gateway:disconnect",
+      "gateway:connect",
+      "event:fail",
+      "shutdown",
+    ]);
+    expect(seen[0]).toMatchObject({ shard: 0, resumed: false });
+    expect(seen[1]).toMatchObject({ shard: 0, code: 1006 });
+    expect(seen[2]).toMatchObject({ resumed: true });
+    expect(seen[3]).toMatchObject({
+      event: "guildMemberRemove",
+      route: { id: "event:guildMemberRemove" },
+      error: { message: "event-boom" },
+      boundary: expect.stringMatching(/error\.ts$/),
+    });
+    expect(client.listenerCount("shardReady")).toBe(0);
   });
 });
