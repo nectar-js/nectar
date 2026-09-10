@@ -9,6 +9,7 @@ export default defineConfig({
     nav: [
       { text: "Concepts", link: "/concepts/app-directory" },
       { text: "Guides", link: "/guides/deployment" },
+      { text: "Reference", link: "/reference/files" },
     ],
     sidebar: [
       { text: "Introduction", link: "/introduction" },
@@ -28,6 +29,10 @@ export default defineConfig({
       {
         text: "Guides",
         items: [{ text: "Deploying", link: "/guides/deployment" }],
+      },
+      {
+        text: "Reference",
+        items: [{ text: "Reserved files", link: "/reference/files" }],
       },
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/nectar-js/nectar" }],
