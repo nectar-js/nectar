@@ -20,6 +20,7 @@ export default defineConfig({
           { text: "Interactions", link: "/concepts/interactions" },
           { text: "Custom IDs", link: "/concepts/custom-ids" },
           { text: "Middleware and errors", link: "/concepts/middleware-and-errors" },
+          { text: "What Nectar owns", link: "/concepts/ownership" },
         ],
       },
       {
