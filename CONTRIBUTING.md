@@ -14,9 +14,11 @@ pnpm build
 `examples/basic` is the app the compiler tests run against. It exercises subcommands, a route group, dynamic component params, autocomplete, scoped middleware, and an error boundary.
 
 ```bash
-pnpm --filter basic exec nect build   # writes .nect/manifest.json and .nect/types.d.ts
-pnpm --filter basic exec nect routes  # prints the compiled tree
+pnpm --filter basic run build    # writes .nect/manifest.json and .nect/types.d.ts
+pnpm --filter basic run routes   # prints the compiled tree
 ```
+
+Those call the CLI through `node`, because pnpm links the `nect` bin at install time and `packages/core/dist` does not exist yet on a fresh clone.
 
 ## Before you open a pull request
 

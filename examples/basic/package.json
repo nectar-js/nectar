@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "nect": "node ../../packages/core/dist/cli.js",
+    "build": "pnpm nect build",
+    "routes": "pnpm nect routes",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
