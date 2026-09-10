@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/nectar-js/nectar/main/assets/NectarFullSmall.png" alt="Nectar" width="96" />
+  <img src="https://raw.githubusercontent.com/nectar-js/nectar/main/assets/NectarFullSmall.png" alt="Nectar" width="192" />
 </p>
 
 <h1 align="center">Nectar</h1>
