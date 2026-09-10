@@ -14,7 +14,10 @@ export default defineConfig({
       { text: "Introduction", link: "/introduction" },
       {
         text: "Concepts",
-        items: [{ text: "The app directory", link: "/concepts/app-directory" }],
+        items: [
+          { text: "The app directory", link: "/concepts/app-directory" },
+          { text: "Compilation", link: "/concepts/compilation" },
+        ],
       },
       {
         text: "Guides",
