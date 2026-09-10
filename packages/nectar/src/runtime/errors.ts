@@ -1,6 +1,8 @@
 import type { Interaction } from "discord.js";
 import { MessageFlags } from "discord-api-types/v10";
+import type { LogFields } from "./logger.js";
 import type { ModuleRegistry } from "./modules.js";
+import { type InteractionMeta, interactionMeta } from "./signals.js";
 import type { ErrorHandler, EventContext, InteractionContext, Logger } from "./types.js";
 
 /** The reply the default boundary sends when an interaction is still unanswered. */
@@ -13,6 +15,7 @@ export const GENERIC_ERROR_REPLY = "Something went wrong while handling that.";
  * boundary always logs.
  *
  * `middleware` is the chain that ran before the handler; development output lists it.
+ * Resolves to the boundary file that handled the error, or `null` for the default boundary.
  */
 export async function handleError(
   error: unknown,
@@ -21,18 +24,40 @@ export async function handleError(
   modules: ModuleRegistry,
   logger: Logger,
   middleware: readonly string[] = [],
-): Promise<void> {
+): Promise<string | null> {
   let current = error;
   for (const file of boundaries) {
     try {
       const boundary = await modules.loadDefault<ErrorHandler>(file, "An error boundary");
       const result = await boundary(current, ctx);
-      if (result !== "unhandled") return;
+      if (result !== "unhandled") return file;
     } catch (thrown) {
       current = thrown;
     }
   }
   await defaultBoundary(current, ctx, logger, middleware);
+  return null;
+}
+
+/** The structured metadata every framework log line about a route carries. */
+export function logFields(
+  ctx: InteractionContext | EventContext,
+  meta?: InteractionMeta,
+): LogFields {
+  const fields: LogFields = { route: ctx.route.id };
+  if (!("interaction" in ctx)) {
+    fields.event = ctx.route.path.split("/")[0];
+    return fields;
+  }
+  const i = meta ?? interactionMeta(ctx.interaction);
+  fields.trace = ctx.trace.id;
+  fields.interaction = i.type;
+  if (i.command !== undefined) fields.command = i.command;
+  if (i.customId !== undefined) fields.customId = i.customId;
+  fields.guild = i.guildId;
+  fields.channel = i.channelId;
+  fields.user = i.userId;
+  return fields;
 }
 
 async function defaultBoundary(
@@ -45,7 +70,7 @@ async function defaultBoundary(
     ctx.env === "development"
       ? developmentReport(ctx, middleware)
       : `Unhandled error in ${ctx.route.id} (${ctx.route.file})`,
-    error,
+    { ...logFields(ctx), error },
   );
 
   if (!("interaction" in ctx)) return;
@@ -56,7 +81,10 @@ async function defaultBoundary(
   try {
     await interaction.reply({ content: GENERIC_ERROR_REPLY, flags: MessageFlags.Ephemeral });
   } catch (replyError) {
-    logger.error(`Could not send the error reply for ${ctx.route.id}`, replyError);
+    logger.error(`Could not send the error reply for ${ctx.route.id}`, {
+      ...logFields(ctx),
+      error: replyError,
+    });
   }
 }
 
@@ -84,52 +112,31 @@ function developmentReport(
 }
 
 function describeInteraction(interaction: Interaction): string {
-  const i = interaction as unknown as InteractionLike;
-  const guard = (name: keyof InteractionLike) => typeof i[name] === "function" && i[name]();
+  const meta = interactionMeta(interaction);
   let what: string;
-  if (guard("isChatInputCommand") || guard("isAutocomplete")) {
-    const options = i.options;
-    const parts = [
-      i.commandName,
-      options?.getSubcommandGroup(false) ?? null,
-      options?.getSubcommand(false) ?? null,
-    ].filter((p): p is string => typeof p === "string");
-    what = `${guard("isAutocomplete") ? "autocomplete for " : ""}/${parts.join(" ")}`;
-  } else if (guard("isContextMenuCommand")) {
-    what = `context menu "${i.commandName}"`;
-  } else if (guard("isButton")) {
-    what = `button "${i.customId}"`;
-  } else if (guard("isAnySelectMenu")) {
-    what = `select "${i.customId}"`;
-  } else if (guard("isModalSubmit")) {
-    what = `modal "${i.customId}"`;
-  } else {
-    what = "unknown interaction";
+  switch (meta.type) {
+    case "chatInput":
+      what = `/${meta.command}`;
+      break;
+    case "autocomplete":
+      what = `autocomplete for /${meta.command}`;
+      break;
+    case "userContextMenu":
+    case "messageContextMenu":
+      what = `context menu "${meta.command}"`;
+      break;
+    case "unknown":
+      what = "unknown interaction";
+      break;
+    default:
+      what = `${meta.type} "${meta.customId}"`;
   }
   const where = [
-    i.guildId ? `guild ${i.guildId}` : "direct message",
-    i.channelId ? `channel ${i.channelId}` : null,
-    i.user?.id ? `user ${i.user.id}` : null,
+    meta.guildId === null ? "direct message" : `guild ${meta.guildId}`,
+    meta.channelId === null ? null : `channel ${meta.channelId}`,
+    meta.userId === null ? null : `user ${meta.userId}`,
   ].filter((p): p is string => p !== null);
   return `${what} (${where.join(", ")})`;
-}
-
-interface InteractionLike {
-  isChatInputCommand?: () => boolean;
-  isAutocomplete?: () => boolean;
-  isContextMenuCommand?: () => boolean;
-  isButton?: () => boolean;
-  isAnySelectMenu?: () => boolean;
-  isModalSubmit?: () => boolean;
-  commandName?: string;
-  customId?: string;
-  guildId?: string | null;
-  channelId?: string | null;
-  user?: { id: string };
-  options?: {
-    getSubcommandGroup(required: false): string | null;
-    getSubcommand(required: false): string | null;
-  };
 }
 
 interface RepliableLike {

@@ -1,4 +1,6 @@
 import type { ClientOptions } from "discord.js";
+import type { LoggerOptions } from "./runtime/logger.js";
+import type { Signal } from "./runtime/signals.js";
 import type { Env } from "./runtime/types.js";
 
 /** `nectar.config.ts`: `export default defineConfig({ ... })`. */
@@ -18,6 +20,13 @@ export interface NectarConfig {
   eager?: boolean;
   /** Overrides `NODE_ENV`. */
   env?: Env;
+  /**
+   * Framework log level and sink. The default sink prints to the console; pass `sink` to hand
+   * records to your own logger. Handlers are free to log however they like.
+   */
+  logger?: LoggerOptions;
+  /** Called with every framework signal: interaction lifecycle, failures, gateway state, shutdown. */
+  observe?: (signal: Signal) => void;
   /** Route directory, relative to the project root. Defaults to `app`. */
   appDir?: string;
   /** Build output, relative to the project root. Defaults to `.nectar`. */
@@ -50,6 +59,7 @@ export class ConfigError extends Error {
 }
 
 const ENVS = new Set<string>(["development", "test", "production"]);
+const LEVELS = new Set<string>(["debug", "info", "warn", "error"]);
 
 /** Checks a loaded config's shape. Discord validates intent and partial values itself at login. */
 export function validateConfig(value: unknown, file: string): NectarConfig {
@@ -77,6 +87,19 @@ export function validateConfig(value: unknown, file: string): NectarConfig {
   }
   if (config.env !== undefined && (typeof config.env !== "string" || !ENVS.has(config.env))) {
     fail('`env` must be "development", "test", or "production".');
+  }
+  if (config.logger !== undefined) {
+    if (!isRecord(config.logger)) fail("`logger` must be an object.");
+    const { level, sink } = config.logger as Record<string, unknown>;
+    if (level !== undefined && (typeof level !== "string" || !LEVELS.has(level))) {
+      fail('`logger.level` must be "debug", "info", "warn", or "error".');
+    }
+    if (sink !== undefined && typeof sink !== "function") {
+      fail("`logger.sink` must be a function that receives log records.");
+    }
+  }
+  if (config.observe !== undefined && typeof config.observe !== "function") {
+    fail("`observe` must be a function that receives signals.");
   }
   for (const key of ["appDir", "outDir"] as const) {
     const dir = config[key];

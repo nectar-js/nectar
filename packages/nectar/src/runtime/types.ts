@@ -1,5 +1,7 @@
 import type { Client, ClientOptions, Interaction } from "discord.js";
 import type { RouteCategory } from "../compiler/routes.js";
+import type { LogFields, LoggerOptions } from "./logger.js";
+import type { Signal } from "./signals.js";
 
 export type Env = "development" | "test" | "production";
 
@@ -11,6 +13,10 @@ export interface RuntimeConfig {
   client?: Partial<ClientOptions>;
   /** Import every handler at startup instead of on first use. Defaults to `true` in production. */
   eager?: boolean;
+  /** Level and sink for framework logs. */
+  logger?: LoggerOptions;
+  /** Receives every framework signal: interactions, failures, gateway state, shutdown. */
+  observe?: (signal: Signal) => void;
 }
 
 export interface RouteInfo {
@@ -87,7 +93,13 @@ export type ErrorHandler = (
   ctx: InteractionContext | EventContext,
 ) => unknown | Promise<unknown>;
 
+/**
+ * Framework logger. `fields` is structured metadata for the sink: route identity, trace, guild,
+ * user, and so on. The thrown value goes under `error`.
+ */
 export interface Logger {
-  error(message: string, error?: unknown): void;
-  warn(message: string): void;
+  debug(message: string, fields?: LogFields): void;
+  info(message: string, fields?: LogFields): void;
+  warn(message: string, fields?: LogFields): void;
+  error(message: string, fields?: LogFields): void;
 }

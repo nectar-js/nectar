@@ -2,6 +2,7 @@ import path from "node:path";
 import type { Client } from "discord.js";
 import type { Manifest, ManifestRoute } from "../manifest/schema.js";
 import type { ModuleRegistry } from "./modules.js";
+import type { SignalEmitter } from "./signals.js";
 import type { Env, Logger, RouteInfo } from "./types.js";
 
 /** Everything dispatch needs, shared by interactions and events. */
@@ -13,6 +14,7 @@ export interface RuntimeState {
   modules: ModuleRegistry;
   env: Env;
   logger: Logger;
+  signals: SignalEmitter;
 }
 
 export function absolute(state: RuntimeState, file: string): string {

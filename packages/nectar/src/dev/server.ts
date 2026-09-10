@@ -17,9 +17,10 @@ import { block, c, credentialHint, fail, indent, info, ok, stamp, warn } from ".
 import type { RouteGraph } from "../compiler/graph.js";
 import { enableModuleReloading, invalidateModuleGraph } from "../compiler/load.js";
 import { type Manifest, toManifest, writeManifest } from "../manifest/index.js";
-import { registrationScopes } from "../registration/index.js";
+import { registrationScopes, scopeKey } from "../registration/index.js";
 import {
   createRuntime,
+  createSignals,
   HandlerLoadError,
   type Logger,
   manifestFiles,
@@ -64,13 +65,23 @@ export function createDevServer(
   const complain = (line: string) => io.err(started ? `${stamp()} ${line}` : line);
 
   const logger: Logger = {
-    error(message, error) {
+    debug(message, fields = {}) {
+      if (!verbose) return;
+      const pairs = Object.entries(fields)
+        .filter(([key, value]) => key !== "error" && value !== undefined && value !== null)
+        .map(([key, value]) => `${key}=${String(value)}`);
+      say(c.dim([message, ...pairs].join(" ")));
+    },
+    info: (message) => say(info(message)),
+    warn: (message) => complain(warn(message)),
+    error(message, fields = {}) {
       const [head = "", ...rest] = message.split("\n");
-      const stack = error === undefined ? [] : describeError(error);
+      const stack = fields.error === undefined ? [] : describeError(fields.error);
       complain(block(fail(c.bold(head)), [...rest.map((l) => l.trimStart()), ...stack]));
     },
-    warn: (message) => complain(warn(message)),
   };
+  // Fresh per boot so a reloaded config's `observe` is subscribed once.
+  let signals = createSignals(logger);
 
   function warnOnce(head: string, details: string[] = []): void {
     if (warned.has(head)) return;
@@ -86,7 +97,8 @@ export function createDevServer(
   }
 
   async function register(graph: RouteGraph): Promise<void> {
-    if (registrationScopes(current.config, current.env).length === 0) {
+    const scopes = registrationScopes(current.config, current.env);
+    if (scopes.length === 0) {
       warnOnce("Commands are not registered anywhere yet.", registrationHint(current));
       return;
     }
@@ -97,8 +109,15 @@ export function createDevServer(
       );
       return;
     }
+    signals.emit({ type: "registration:start", scopes: scopes.map(scopeKey) });
+    const startedAt = Date.now();
     try {
       const result = await registerCommands(current, graph, io);
+      signals.emit({
+        type: "registration:complete",
+        scopes: result.scopes.map((s) => ({ scope: scopeKey(s.scope), applied: s.applied })),
+        duration: Date.now() - startedAt,
+      });
       for (const scope of result.scopes) {
         if (scope.diff !== null || verbose) say(describeScope(scope));
       }
@@ -121,6 +140,7 @@ export function createDevServer(
       config: current.config,
       env: current.env,
       logger,
+      signals,
       ...(io.client === undefined ? {} : { client: io.client(current.config) }),
     });
     watchConnection(next.client);
@@ -141,6 +161,7 @@ export function createDevServer(
 
   /** Full start: compile, write output, print routes, register, run. */
   async function boot(): Promise<void> {
+    signals = createSignals(logger);
     const graph = await compileProject(current, io);
     if (graph === null) {
       complain(warn("Waiting for changes."));

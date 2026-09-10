@@ -54,12 +54,26 @@ export {
   UnsafeSyncError,
 } from "./registration/index.js";
 export type {
+  LogFields,
+  LoggerOptions,
+  LogLevel,
+  LogRecord,
+  LogSink,
+} from "./runtime/logger.js";
+export type {
+  InteractionMeta,
+  Signal,
+  SignalData,
+  SignalType,
+} from "./runtime/signals.js";
+export type {
   ContextExtension,
   Env,
   ErrorHandler,
   EventContext,
   Extended,
   InteractionContext,
+  Logger,
   Middleware,
   MiddlewareExtension,
   Next,

@@ -8,8 +8,9 @@ import type {
   ManifestComponentRoute,
   ManifestRoute,
 } from "../manifest/schema.js";
-import { handleError } from "./errors.js";
+import { handleError, logFields } from "./errors.js";
 import { runChain } from "./middleware.js";
+import { type InteractionMeta, interactionMeta } from "./signals.js";
 import { chains, type RuntimeState, routeInfo } from "./state.js";
 import type { Handler, InteractionContext, Middleware } from "./types.js";
 
@@ -21,6 +22,8 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
 
   return async (interaction) => {
     const receivedAt = Date.now();
+    const meta = interactionMeta(interaction);
+    state.signals.emit({ type: "interaction:start", trace: interaction.id, interaction: meta });
 
     if (interaction.isChatInputCommand()) {
       const group = interaction.options.getSubcommandGroup(false);
@@ -32,7 +35,7 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
       if (route === undefined) {
         return unknown(state, `chat input command /${interaction.commandName} ${key}`.trim());
       }
-      return run(state, route, interaction, {}, receivedAt);
+      return run(state, route, interaction, meta, {}, receivedAt);
     }
 
     if (interaction.isContextMenuCommand()) {
@@ -42,7 +45,7 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
       if (route === undefined) {
         return unknown(state, `context menu command "${interaction.commandName}"`);
       }
-      return run(state, route, interaction, {}, receivedAt);
+      return run(state, route, interaction, meta, {}, receivedAt);
     }
 
     if (interaction.isAutocomplete()) {
@@ -57,7 +60,7 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
       if (route === undefined || !route.options.includes(option)) {
         return unknown(state, `autocomplete for /${interaction.commandName} option "${option}"`);
       }
-      return run(state, route, interaction, {}, receivedAt, option);
+      return run(state, route, interaction, meta, {}, receivedAt, option);
     }
 
     const component: [ComponentKind, string] | null = interaction.isButton()
@@ -73,11 +76,15 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
     const match = tables.matcher.match(kind, customId);
     if (!match.ok) {
       if (match.reason !== "not-nectar") {
-        state.logger.warn(`Ignoring ${kind} with custom ID "${customId}": ${match.reason}.`);
+        state.logger.warn(`Ignoring ${kind} with custom ID "${meta.customId}": ${match.reason}.`, {
+          trace: interaction.id,
+          interaction: kind,
+          customId: meta.customId,
+        });
       }
       return;
     }
-    return run(state, match.route, interaction, match.params, receivedAt);
+    return run(state, match.route, interaction, meta, match.params, receivedAt);
   };
 }
 
@@ -85,6 +92,7 @@ async function run(
   state: RuntimeState,
   route: ManifestRoute,
   interaction: Interaction,
+  meta: InteractionMeta,
   params: Record<string, string | string[]>,
   receivedAt: number,
   autocompleteOption?: string,
@@ -102,7 +110,10 @@ async function run(
     },
   };
   const files = chains(state, route);
+  const tag = { trace: interaction.id, interaction: meta, route: ctx.route };
+  state.signals.emit({ type: "route:match", ...tag });
 
+  let handlerStart = 0;
   try {
     const middleware = await Promise.all(
       files.middleware.map((file) => state.modules.loadDefault<Middleware>(file, "Middleware")),
@@ -115,9 +126,45 @@ async function run(
             autocompleteOption,
             "The autocomplete handler",
           );
-    await runChain(middleware, ctx, handler);
+    await runChain(middleware, ctx, handler, {
+      middleware: (index) =>
+        state.signals.emit({
+          type: "middleware:enter",
+          ...tag,
+          file: files.middleware[index] ?? "",
+        }),
+      handler: () => {
+        handlerStart = Date.now();
+        state.signals.emit({ type: "handler:enter", ...tag });
+      },
+    });
+    const handled = handlerStart !== 0;
+    if (handled) {
+      state.signals.emit({ type: "handler:complete", ...tag, duration: Date.now() - handlerStart });
+    }
+    const duration = Date.now() - receivedAt;
+    state.signals.emit({ type: "interaction:complete", ...tag, duration, handled });
+    state.logger.debug(
+      handled ? `Handled ${ctx.route.id} in ${duration}ms.` : `Middleware stopped ${ctx.route.id}.`,
+      logFields(ctx, meta),
+    );
   } catch (error) {
-    await handleError(error, ctx, files.errors, state.modules, state.logger, files.middleware);
+    const boundary = await handleError(
+      error,
+      ctx,
+      files.errors,
+      state.modules,
+      state.logger,
+      files.middleware,
+    );
+    state.signals.emit({ type: "interaction:fail", ...tag, error, boundary });
+    if (boundary !== null) {
+      state.logger.debug(`${ctx.route.id} failed, handled by ${boundary}.`, {
+        ...logFields(ctx, meta),
+        boundary,
+        error,
+      });
+    }
     if (autocompleteOption !== undefined)
       await closeAutocomplete(interaction as AutocompleteInteraction);
   }

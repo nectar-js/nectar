@@ -4,7 +4,9 @@ import { registerComponentRoutes } from "../components/registry.js";
 import type { Manifest, ManifestComponentRoute } from "../manifest/schema.js";
 import { createInteractionDispatcher } from "./dispatch.js";
 import { bindEvents, type EventBinding } from "./events.js";
+import { createLogger } from "./logger.js";
 import { ModuleRegistry } from "./modules.js";
+import { createSignals, type SignalEmitter } from "./signals.js";
 import type { RuntimeState } from "./state.js";
 import type { Env, Logger, RuntimeConfig } from "./types.js";
 
@@ -15,7 +17,10 @@ export interface RuntimeOptions {
   config: RuntimeConfig;
   /** Defaults from `NODE_ENV`. */
   env?: Env;
+  /** Overrides `config.logger`. */
   logger?: Logger;
+  /** Share an emitter created earlier, so signals from before the runtime existed line up. */
+  signals?: SignalEmitter;
   /** Reuse an existing client instead of building one from `config`. Tests use this. */
   client?: Client;
 }
@@ -32,6 +37,8 @@ export interface Runtime {
   readonly client: Client;
   readonly env: Env;
   readonly modules: ModuleRegistry;
+  /** Framework signals. `config.observe` is subscribed already. */
+  readonly signals: SignalEmitter;
   /** Loads handlers, attaches listeners, and logs in. */
   start(options: StartOptions): Promise<void>;
   /**
@@ -48,7 +55,9 @@ export interface Runtime {
 
 export function createRuntime(options: RuntimeOptions): Runtime {
   const env = options.env ?? envFromProcess();
-  const logger = options.logger ?? console;
+  const logger = options.logger ?? createLogger(options.config.logger);
+  const signals = options.signals ?? createSignals(logger);
+  if (options.config.observe !== undefined) signals.on(options.config.observe);
   const client =
     options.client ??
     new Client({
@@ -64,6 +73,7 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     modules: new ModuleRegistry(),
     env,
     logger,
+    signals,
   };
 
   registerComponentRoutes(componentRoutes(state.manifest));
@@ -79,13 +89,22 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     const task = dispatch(interaction).finally(() => inFlight.delete(task));
     inFlight.add(task);
   };
+  const gateway = {
+    [Events.ShardReady]: (shard: number) =>
+      signals.emit({ type: "gateway:connect", shard, resumed: false }),
+    [Events.ShardResume]: (shard: number) =>
+      signals.emit({ type: "gateway:connect", shard, resumed: true }),
+    [Events.ShardDisconnect]: (event: { code: number }, shard: number) =>
+      signals.emit({ type: "gateway:disconnect", shard, code: event.code }),
+  };
 
   return {
     client,
     env,
     modules: state.modules,
+    signals,
 
-    async start({ token, signals = true, drainTimeout: timeout = 10_000 }) {
+    async start({ token, signals: osSignals = true, drainTimeout: timeout = 10_000 }) {
       drainTimeout = timeout;
       if (options.config.eager ?? env === "production") {
         await state.modules.preload(manifestFiles(state.manifest, state.appDir));
@@ -94,8 +113,11 @@ export function createRuntime(options: RuntimeOptions): Runtime {
       bindings = bindEvents(state);
       started = true;
       client.on(Events.InteractionCreate, onInteraction);
+      client.on(Events.ShardReady, gateway[Events.ShardReady]);
+      client.on(Events.ShardResume, gateway[Events.ShardResume]);
+      client.on(Events.ShardDisconnect, gateway[Events.ShardDisconnect]);
 
-      if (signals) {
+      if (osSignals) {
         onSignal = () => {
           if (stopping !== null) {
             logger.warn("Second signal received, exiting now.");
@@ -113,7 +135,11 @@ export function createRuntime(options: RuntimeOptions): Runtime {
     stop() {
       if (stopping !== null) return stopping;
       stopping = (async () => {
+        signals.emit({ type: "shutdown" });
         client.off(Events.InteractionCreate, onInteraction);
+        client.off(Events.ShardReady, gateway[Events.ShardReady]);
+        client.off(Events.ShardResume, gateway[Events.ShardResume]);
+        client.off(Events.ShardDisconnect, gateway[Events.ShardDisconnect]);
         for (const { name, listener } of bindings) client.off(name, listener);
         bindings = [];
         if (onSignal !== null) {

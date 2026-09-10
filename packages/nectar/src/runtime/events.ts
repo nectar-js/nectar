@@ -50,13 +50,18 @@ async function fanOut(
   args: unknown[],
 ): Promise<void> {
   if (event.mode === "concurrent") {
-    await Promise.all(handlers.map((route) => invoke(state, route, args)));
+    await Promise.all(handlers.map((route) => invoke(state, event, route, args)));
     return;
   }
-  for (const route of handlers) await invoke(state, route, args);
+  for (const route of handlers) await invoke(state, event, route, args);
 }
 
-async function invoke(state: RuntimeState, route: ManifestEventRoute, args: unknown[]) {
+async function invoke(
+  state: RuntimeState,
+  event: ManifestEvent,
+  route: ManifestEventRoute,
+  args: unknown[],
+) {
   const ctx: EventContext = {
     client: state.client,
     route: routeInfo(state, route),
@@ -66,6 +71,19 @@ async function invoke(state: RuntimeState, route: ManifestEventRoute, args: unkn
     const handler = await state.modules.loadDefault<EventHandler>(ctx.route.file, "The handler");
     await handler(...args, ctx);
   } catch (error) {
-    await handleError(error, ctx, chains(state, route).errors, state.modules, state.logger);
+    const boundary = await handleError(
+      error,
+      ctx,
+      chains(state, route).errors,
+      state.modules,
+      state.logger,
+    );
+    state.signals.emit({
+      type: "event:fail",
+      event: event.name,
+      route: ctx.route,
+      error,
+      boundary,
+    });
   }
 }

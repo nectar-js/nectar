@@ -7,6 +7,13 @@ import type {
   Next,
 } from "./types.js";
 
+export interface ChainHooks {
+  /** Called with the index of each middleware right before it runs. */
+  middleware?: (index: number) => void;
+  /** Called right before the handler runs. Skipped when a middleware stopped the chain. */
+  handler?: () => void;
+}
+
 /**
  * Runs middleware outer to inner, then the handler.
  *
@@ -18,12 +25,17 @@ export async function runChain(
   middleware: readonly Middleware[],
   ctx: InteractionContext,
   handler: Handler,
+  hooks: ChainHooks = {},
 ): Promise<void> {
   await step(0);
 
   async function step(index: number, current: InteractionContext = ctx): Promise<unknown> {
     const layer = middleware[index];
-    if (layer === undefined) return handler(current);
+    if (layer === undefined) {
+      hooks.handler?.();
+      return handler(current);
+    }
+    hooks.middleware?.(index);
 
     let called = false;
     const next: Next = <E extends ContextExtension>(extension?: E) => {
