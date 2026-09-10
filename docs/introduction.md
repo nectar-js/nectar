@@ -57,4 +57,6 @@ It asks for a directory, TypeScript or JavaScript, and a package manager. The pr
 
 Nectar has no TypeScript build step. Node strips the types when it imports a file, so your TypeScript can only use syntax Node knows how to erase: no `enum`, no `namespace` with runtime code, no constructor parameter properties. The `erasableSyntaxOnly` compiler option makes the editor flag them.
 
+For the same reason, imports between your own files keep the `.ts` extension, as in `import { db } from "./db.ts"`. TypeScript accepts that with the `allowImportingTsExtensions` option.
+
 JavaScript projects work the same way. Only the generated route types are TypeScript-specific.
