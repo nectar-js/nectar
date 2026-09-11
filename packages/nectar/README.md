@@ -34,7 +34,7 @@ nectar sync     # register commands with Discord
 nectar start    # run the compiled build
 ```
 
-`nectar --help` lists the rest. The documentation is in [`docs/`](https://github.com/nectar-js/nectar/tree/main/docs).
+`nectar --help` lists the rest. The documentation is at [nectar-js.github.io/nectar](https://nectar-js.github.io/nectar/).
 
 ## Requirements
 
