@@ -1,9 +1,13 @@
 import { defineConfig } from "vitepress";
 
+// GitHub Pages serves the site from https://nectar-js.github.io/nectar/.
+const base = "/nectar/";
+
 export default defineConfig({
+  base,
   title: "Nectar",
   description: "A filesystem-based meta-framework for discord.js.",
-  head: [["link", { rel: "icon", type: "image/png", href: "/logo.png" }]],
+  head: [["link", { rel: "icon", type: "image/png", href: `${base}logo.png` }]],
   markdown: {
     theme: { light: "kanagawa-lotus", dark: "kanagawa-dragon" },
   },
