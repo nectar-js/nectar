@@ -151,12 +151,13 @@ samp {
   color: var(--vp-c-text-1);
 }
 
-.VPSidebar .group .VPSidebarItem.level-1.is-active > .item {
+/* As specific as the hover rules above, so hovering the current page keeps it marked. */
+.VPSidebar .group .VPSidebarItem.level-1.is-link.is-active > .item {
   background-color: var(--vp-c-brand-soft);
   box-shadow: inset 2px 0 0 var(--honey);
 }
 
-.VPSidebar .group .VPSidebarItem.level-1.is-active > .item > .link > .text {
+.VPSidebar .group .VPSidebarItem.level-1.is-link.is-active > .item > .link > .text {
   color: var(--vp-c-brand-1);
   font-weight: 600;
 }
