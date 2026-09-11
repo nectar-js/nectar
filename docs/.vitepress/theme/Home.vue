@@ -122,13 +122,13 @@ async function copyInstall() {
           :tabindex="i === selected ? 0 : -1"
           @click="select(i)"
         >
+          <span class="result">{{ file.result }}</span>
           <span class="path">
             <template v-for="(part, j) in parts(file)" :key="j">
               <template v-if="j > 0"><span class="dim">/</span><wbr /></template>
               <span :class="part.kind">{{ part.text }}</span>
             </template>
           </span>
-          <span class="result">{{ file.result }}</span>
         </button>
       </div>
 
@@ -353,7 +353,7 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border-radius: 10px;
   text-align: left;
   box-shadow: inset 2px 0 0 transparent;
@@ -371,10 +371,20 @@ h1 {
   box-shadow: inset 2px 0 0 var(--honey);
 }
 
+.result {
+  font-size: 19px;
+  line-height: 1.3;
+  font-weight: 680;
+  font-variation-settings:
+    "MONO" 0,
+    "CASL" 0.3;
+  color: #f4e9d8;
+}
+
 .path {
   font-family: var(--vp-font-family-mono);
   font-variation-settings: "MONO" 1;
-  font-size: 13px;
+  font-size: 12.5px;
   line-height: 1.5;
 }
 
@@ -383,16 +393,11 @@ h1 {
 }
 
 .segment {
-  color: #f4e9d8;
+  color: #cdbfab;
 }
 
 .param {
   color: var(--honey);
-}
-
-.result {
-  font-size: 14px;
-  color: #bcae9b;
 }
 
 .panels {
