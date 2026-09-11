@@ -126,6 +126,7 @@ function tsconfig(): string {
         types: ["node"],
         strict: true,
         noEmit: true,
+        allowImportingTsExtensions: true,
         skipLibCheck: true,
         verbatimModuleSyntax: true,
       },

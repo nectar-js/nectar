@@ -31,6 +31,6 @@ Copy `.env.example` to `.env` and fill in `DISCORD_TOKEN` and `DISCORD_APPLICATI
 
 Node runs your TypeScript directly by stripping the types, so only erasable syntax works: no enums, namespaces with runtime code, or constructor parameter properties. Turn on `erasableSyntaxOnly` in `tsconfig.json` to catch them.
 
-Local imports need the `.ts` extension, as in `import { db } from "./db.ts"`. TypeScript allows that with `allowImportingTsExtensions`.
+Local imports need the `.ts` extension, as in `import { db } from "./db.ts"`. TypeScript allows that with `allowImportingTsExtensions`, which new projects already set.
 
 JavaScript projects are supported. Generated route types are TypeScript only.

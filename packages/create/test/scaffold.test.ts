@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -6,6 +7,7 @@ import {
   realpathSync,
   rmSync,
   symlinkSync,
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -71,6 +73,36 @@ describe("scaffold", () => {
     expect(result.err).toBe("");
     expect(result.code).toBe(0);
     expect(result.out).toBe("✔ No problems. 1 command, 1 component route, 1 event in app/.");
+  });
+
+  test("a ts project type-checks with a local .ts import", async () => {
+    const dir = tempDir();
+    scaffold(dir, { name: "my-bot", language: "ts", packageManager: "npm" });
+    linkDependencies(dir);
+    mkdirSync(path.join(dir, "node_modules/@types"), { recursive: true });
+    symlinkSync(
+      realpathSync(path.join(repo, "node_modules/@types/node")),
+      path.join(dir, "node_modules/@types/node"),
+      "junction",
+    );
+    // Node runs the files as they are, so local imports keep their .ts extension.
+    writeFileSync(path.join(dir, "app/greeting.ts"), 'export const greeting = "Pong";\n');
+    const ping = path.join(dir, "app/commands/ping/command.ts");
+    const source = readFileSync(ping, "utf8");
+    writeFileSync(
+      ping,
+      `import { greeting } from "../../greeting.ts";\n${source}\nexport const text: string = greeting;\n`,
+    );
+
+    const io = { cwd: dir, env: {}, out: () => {}, err: () => {} };
+    expect(await run(["build"], io)).toBe(0);
+    const tsc = spawnSync(
+      process.execPath,
+      [path.join(repo, "node_modules/typescript/bin/tsc"), "-p", dir],
+      { encoding: "utf8" },
+    );
+    expect(tsc.stdout + tsc.stderr).toBe("");
+    expect(tsc.status).toBe(0);
   });
 
   test("package.json has the scripts, dependencies, and name", () => {
