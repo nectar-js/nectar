@@ -34,6 +34,8 @@ Bug fixes need a test that fails without the fix. Tests live in `packages/nectar
 
 New compiler diagnostics should pass the offending `file` and say what's wrong, why, and what's expected, like the ones in `packages/nectar/src/compiler/routes.ts`. Add the code to `DIAGNOSTIC_CODES` in `packages/nectar/src/compiler/diagnostics.ts` and give it an entry in `docs/reference/diagnostics.md`, which the CLI links to.
 
+When a change renames or removes a reserved file, an export, or a config option, keep a check for the old name that says what replaced it, like `RENAMED` in `packages/nectar/src/events/compile.ts` does for discord.js events. Otherwise the old name is silently ignored after an upgrade.
+
 ## Reporting a bug
 
 Include the file that misbehaves, what you expected Discord to receive, and what it received. Paste the output of `nectar routes` and `nectar manifest --route <id>` too.
