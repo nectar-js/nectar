@@ -127,8 +127,6 @@ export default defineComponent("tickets/[ticketId]/assign", async (ctx) => {
 
 Works like `button.ts`, with a `ModalSubmitInteraction`.
 
-A `modal.ts` can share a directory with a `button.ts`. Both handlers then get `ButtonInteraction | ModalSubmitInteraction`, so narrow it with `ctx.interaction.isButton()` or `isModalSubmit()`.
-
 ## event.ts
 
 ```ts

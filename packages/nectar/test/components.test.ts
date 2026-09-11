@@ -25,17 +25,17 @@ async function compile(files: Record<string, string>) {
 }
 
 describe("component routes", () => {
-  test("buttons, selects, and modals under one path", async () => {
+  test("buttons, selects, and modals", async () => {
     const { routes, codes } = await compile({
       "components/confirm/button.ts": handler,
-      "components/confirm/select.ts": select('"string"'),
-      "components/confirm/modal.ts": handler,
+      "components/pick/select.ts": select('"string"'),
+      "components/reason/modal.ts": handler,
     });
     expect(codes).toEqual([]);
     expect(routes.map((r) => [r.kind, r.selectKind, r.overhead])).toEqual([
       ["button", null, 8],
-      ["modal", null, 8],
       ["select", "string", 8],
+      ["modal", null, 8],
     ]);
   });
 
@@ -161,7 +161,6 @@ describe("matcher", () => {
   async function build() {
     const { routes } = await compile({
       "components/confirm/button.ts": handler,
-      "components/confirm/modal.ts": handler,
       "components/tickets/[ticketId]/close/button.ts": handler,
       "components/wizard/[id]/[...steps]/button.ts": handler,
     });
@@ -196,7 +195,7 @@ describe("matcher", () => {
     const { byId, matcher } = await build();
     const id = customIdFor(byId.confirm as ComponentRoute);
     expect(matcher.match("button", id)).toMatchObject({ ok: true, route: { kind: "button" } });
-    expect(matcher.match("modal", id)).toMatchObject({ ok: true, route: { kind: "modal" } });
+    expect(matcher.match("modal", id)).toEqual({ ok: false, reason: "unknown-route" });
     expect(matcher.match("select", id)).toEqual({ ok: false, reason: "unknown-route" });
   });
 

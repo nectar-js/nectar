@@ -205,10 +205,14 @@ function makeRoute(
   return { id, shortId: shortId(id), category, kind, path: routePath, segments, params, file };
 }
 
+/**
+ * A command and its autocomplete share an ID. A component route has exactly one handler of any
+ * kind, since the handler's types come from the path alone.
+ */
 function detectDuplicates(routes: Route[], diagnostics: Diagnostics): void {
   const seen = new Map<string, Route>();
   for (const route of routes) {
-    const key = `${route.id}#${route.kind}`;
+    const key = route.category === "component" ? route.id : `${route.id}#${route.kind}`;
     const existing = seen.get(key);
     if (existing === undefined) {
       seen.set(key, route);
@@ -216,7 +220,9 @@ function detectDuplicates(routes: Route[], diagnostics: Diagnostics): void {
     }
     diagnostics.error(
       "duplicate-route",
-      `Route ${route.id} is defined twice: ${existing.file} and ${route.file}. Route groups do not make paths distinct.`,
+      existing.kind === route.kind
+        ? `Route ${route.id} is defined twice: ${existing.file} and ${route.file}. Route groups do not make paths distinct.`
+        : `Route ${route.id} has two handlers: ${existing.file} and ${route.file}. A component route takes one button.ts, select.ts, or modal.ts. Move one into its own directory.`,
       { file: route.file, route: route.id },
     );
   }

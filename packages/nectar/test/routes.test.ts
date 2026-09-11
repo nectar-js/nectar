@@ -195,8 +195,17 @@ describe("diagnostics", () => {
     ]);
   });
 
-  test("same path with different component kinds is allowed", () => {
-    expect(codes(["components/x/button.ts", "components/x/modal.ts"])).toEqual([]);
+  test("a component directory holds one handler", () => {
+    const { diagnostics } = build(["components/x/button.ts", "components/x/modal.ts"]);
+    expect(diagnostics).toEqual([
+      {
+        code: "duplicate-route",
+        severity: "error",
+        message: expect.stringContaining("Move one into its own directory."),
+        file: "components/x/modal.ts",
+        route: "component:x",
+      },
+    ]);
   });
 });
 

@@ -63,7 +63,7 @@ declare module "../src/index.js" {
         context: Empty;
       };
       "wizard/[id]/[...steps]": {
-        kind: "button" | "modal";
+        kind: "modal";
         params: { id: string; steps: string[] };
         context: Empty;
       };

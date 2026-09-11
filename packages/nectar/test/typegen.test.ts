@@ -23,17 +23,16 @@ describe("generated types", () => {
     expect(readFileSync(file, "utf8")).toBe(types);
   });
 
-  test("catch-all params, shared paths, and middleware aliases", async () => {
+  test("catch-all params and middleware aliases", async () => {
     const root = makeApp({
       "middleware.ts": "export default async function (ctx, next) { return next(); }\n",
-      "components/w/[id]/[...steps]/button.ts": "export default async function () {}\n",
       "components/w/[id]/[...steps]/modal.ts": "export default async function () {}\n",
       "components/w/middleware.ts":
         "export default async function (ctx, next) { return next(); }\n",
     });
     const types = toTypes(await buildGraph(root), path.join(root, ".nectar"));
     expect(types).toContain(
-      '"w/[id]/[...steps]": { kind: "button" | "modal"; params: { "id": string; "steps": string[] }; context: M0 & M1 };',
+      '"w/[id]/[...steps]": { kind: "modal"; params: { "id": string; "steps": string[] }; context: M0 & M1 };',
     );
     expect(types).toContain('type M0 = MiddlewareExtension<typeof import("../middleware.js")>;');
     expect(types).toContain(

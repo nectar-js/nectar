@@ -3,7 +3,6 @@ import path from "node:path";
 import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
 import type { RouteGraph } from "../compiler/graph.js";
 import type { Route } from "../compiler/routes.js";
-import type { ComponentRoute } from "../components/compile.js";
 import { type NectarPlugin, PluginError, pluginGraph } from "../plugins/index.js";
 
 export const TYPES_FILE = "types.d.ts";
@@ -67,21 +66,15 @@ export function toTypes(
   }
   commands.sort();
 
-  const byPath = new Map<string, { kinds: Set<string>; route: ComponentRoute }>();
-  for (const route of graph.components) {
-    const kind = route.kind === "select" ? `select:${route.selectKind}` : route.kind;
-    const entry = byPath.get(route.path) ?? { kinds: new Set(), route };
-    entry.kinds.add(kind);
-    byPath.set(route.path, entry);
-  }
-  const components = [...byPath]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([routePath, { kinds, route }]) => {
+  // The compiler allows one handler per component path, so each path has one kind.
+  const components = [...graph.components]
+    .sort((a, b) => a.path.localeCompare(b.path))
+    .map((route) => {
       const params = route.params
         .map((name) => `${quote(name)}: ${name === route.catchAll ? "string[]" : "string"}`)
         .join("; ");
-      const kind = [...kinds].sort().map(quote).join(" | ");
-      return `    ${quote(routePath)}: { kind: ${kind}; params: {${params === "" ? "" : ` ${params} `}}; context: ${contextOf(route)} };`;
+      const kind = route.kind === "select" ? `select:${route.selectKind}` : route.kind;
+      return `    ${quote(route.path)}: { kind: ${quote(kind)}; params: {${params === "" ? "" : ` ${params} `}}; context: ${contextOf(route)} };`;
     });
 
   const events = graph.events.map((e) => `    ${quote(e.name)}: true;`);

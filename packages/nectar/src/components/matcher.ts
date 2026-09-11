@@ -24,7 +24,8 @@ export interface ComponentMatcher<Route extends MatchableRoute = MatchableRoute>
  * Resolves incoming custom IDs to routes.
  *
  * Custom IDs carry the route's short ID, so matching is a direct lookup rather than a pattern
- * scan. The interaction kind is part of the key because a button and a modal may share a path.
+ * scan. The interaction kind is part of the key, so a button's ID sent back as a modal
+ * submission finds no route.
  */
 export function createMatcher<Route extends MatchableRoute>(
   routes: readonly Route[],
