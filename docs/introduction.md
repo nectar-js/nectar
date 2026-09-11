@@ -21,7 +21,9 @@ This registers `/ping`. `ctx.interaction` is the discord.js `ChatInputCommandInt
 npm create @nectar-js
 ```
 
-Copy `.env.example` to `.env` and fill in `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID` from the [Developer Portal](https://discord.com/developers/applications). Add your test server's ID to `dev.guilds` in `nectar.config.ts`, then run `npm run dev`.
+It asks for a folder, a language, and a package manager, then for your bot's token, application ID, and test server ID from the [Developer Portal](https://discord.com/developers/applications). Those go in `.env`, and you can skip any of them. It can also install dependencies and create a git repository.
+
+Then run `npm run dev` in the new project.
 
 ## Requirements
 

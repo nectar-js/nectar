@@ -67,13 +67,15 @@ Output is colored in a terminal. Set `NO_COLOR` to turn colors off, or `FORCE_CO
 ## `npm create @nectar-js`
 
 ```bash
-npm create @nectar-js [directory] -- [--ts | --js] [--pm <name>] [--yes]
+npm create @nectar-js [directory] -- [options]
 ```
 
-Creates a new project in `directory`, which has to be empty or not exist yet. It asks for anything you leave out. npm needs the `--` before the options, and pnpm, yarn, and bun don't.
+Creates a new project in `directory`, which has to be empty or not exist yet. It asks for anything you leave out, including the bot token, application ID, and test server ID for `.env`. npm needs the `--` before the options, and pnpm, yarn, and bun don't.
 
 | Option | |
 | --- | --- |
 | `--ts`, `--js` | The language |
 | `--pm <name>` | `npm`, `pnpm`, `yarn`, or `bun`. Defaults to the package manager running the command. |
-| `--yes`, `-y` | Uses the defaults instead of asking: `my-bot`, TypeScript, and the detected package manager |
+| `--install`, `--no-install` | Whether to install dependencies |
+| `--git`, `--no-git` | Whether to create a git repository |
+| `--yes`, `-y` | Uses the defaults for anything not given: `my-bot`, TypeScript, the detected package manager, installing, and git. Skips the Discord details. |

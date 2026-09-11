@@ -1,21 +1,25 @@
 # @nectar-js/create
 
-Scaffolds a new [Nectar](https://github.com/nectar-js/nectar) project.
+Creates a new [Nectar](https://nectar-js.github.io/nectar/) project.
 
 ```bash
 npm create @nectar-js
 ```
 
-Asks for a directory, TypeScript or JavaScript, and a package manager, then prints the steps to get the bot running.
+It asks where to put the project, TypeScript or JavaScript, and which package manager to use. Then it asks for your bot's token, application ID, and test server ID, which go in `.env` and can be skipped. It can also install dependencies and create a git repository.
 
 ```
 npm create @nectar-js [directory] [options]
 
-  --ts, --js        Language. Asked when omitted.
-  --pm <name>       Package manager: npm, pnpm, yarn, or bun. Detected from the one running this.
-  --yes, -y         Take the defaults instead of asking.
-  --help, -h        Show this help.
+  --ts, --js                Language. Asked when omitted.
+  --pm <name>               Package manager: npm, pnpm, yarn, or bun. Detected from the one running this.
+  --install, --no-install   Install dependencies. Asked when omitted.
+  --git, --no-git           Create a git repository. Asked when omitted.
+  --yes, -y                 Use the defaults for anything not given, and skip the Discord details.
+  --help, -h                Show this help.
 ```
+
+With npm, put `--` before the options: `npm create @nectar-js my-bot -- --ts`.
 
 ## License
 
