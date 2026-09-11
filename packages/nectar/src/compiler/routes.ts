@@ -192,7 +192,8 @@ function makeRoute(
     .map(formatSegment)
     .join("/");
 
-  if (routePath === "") {
+  // Events keep their groups in the path, but still need a directory for the event name.
+  if (segments.every((segment) => segment.type === "group")) {
     diagnostics.error(
       "route-without-path",
       `${path.basename(file)} sits only inside route groups. Groups do not contribute to the route, so this route has no path.`,

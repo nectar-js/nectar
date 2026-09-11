@@ -152,7 +152,10 @@ describe("diagnostics", () => {
   });
 
   test("handler only inside groups", () => {
-    expect(codes(["commands/(a)/(b)/command.ts"])).toEqual(["route-without-path"]);
+    expect(codes(["commands/(a)/(b)/command.ts", "events/(a)/event.ts"])).toEqual([
+      "route-without-path",
+      "route-without-path",
+    ]);
   });
 
   test("invalid segment names reference the file", () => {
