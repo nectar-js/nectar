@@ -29,13 +29,34 @@ export function routeInfo(state: RuntimeState, route: ManifestRoute): RouteInfo 
     id: route.id,
     category: route.category,
     path: route.path,
-    file: absolute(state, route.file),
+    file: paths(state, route).file,
   };
 }
 
 export function chains(state: RuntimeState, route: ManifestRoute) {
-  return {
-    middleware: route.middleware.map((f) => absolute(state, f)),
-    errors: route.errors.map((f) => absolute(state, f)),
-  };
+  return paths(state, route);
+}
+
+interface RoutePaths {
+  appDir: string;
+  file: string;
+  middleware: string[];
+  errors: string[];
+}
+
+/** A route's absolute paths, joined on its first interaction instead of every one. */
+const resolved = new WeakMap<ManifestRoute, RoutePaths>();
+
+function paths(state: RuntimeState, route: ManifestRoute): RoutePaths {
+  let found = resolved.get(route);
+  if (found === undefined || found.appDir !== state.appDir) {
+    found = {
+      appDir: state.appDir,
+      file: absolute(state, route.file),
+      middleware: route.middleware.map((f) => absolute(state, f)),
+      errors: route.errors.map((f) => absolute(state, f)),
+    };
+    resolved.set(route, found);
+  }
+  return found;
 }
