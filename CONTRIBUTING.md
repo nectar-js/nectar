@@ -32,7 +32,7 @@ Keep pull requests to one change. Send renames and cleanup separately from fixes
 
 Bug fixes need a test that fails without the fix. Tests live in `packages/nectar/test`, and `makeApp` in `helpers.ts` writes a throwaway app tree for them.
 
-New compiler diagnostics should pass the offending `file` and say what's wrong and what's expected, like the ones in `packages/nectar/src/compiler/routes.ts`.
+New compiler diagnostics should pass the offending `file` and say what's wrong, why, and what's expected, like the ones in `packages/nectar/src/compiler/routes.ts`. Add the code to `DIAGNOSTIC_CODES` in `packages/nectar/src/compiler/diagnostics.ts` and give it an entry in `docs/reference/diagnostics.md`, which the CLI links to.
 
 ## Reporting a bug
 
