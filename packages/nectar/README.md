@@ -36,6 +36,10 @@ nectar start    # run the compiled build
 
 `nectar --help` lists the rest. The documentation is at [nectar-js.github.io/nectar](https://nectar-js.github.io/nectar/).
 
+## Status
+
+Nectar is at 0.x and changes often. Minor versions can break things, so read the [changelog](https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md) before upgrading.
+
 ## Requirements
 
 Node.js 22.18 or newer, ESM, discord.js v14. JavaScript projects are supported; the generated route types are TypeScript-only.

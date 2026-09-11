@@ -34,3 +34,7 @@ Node runs your TypeScript directly by stripping the types, so only erasable synt
 Local imports need the `.ts` extension, as in `import { db } from "./db.ts"`. TypeScript allows that with `allowImportingTsExtensions`, which new projects already set.
 
 JavaScript projects are supported. Generated route types are TypeScript only.
+
+## Status
+
+Nectar is at 0.x and changes often. Minor versions can include breaking changes. The [changelog](https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md) lists them, and [Compatibility](./reference/compatibility) covers what counts as one.
