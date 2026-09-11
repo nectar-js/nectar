@@ -20,11 +20,13 @@ import { enableModuleReloading, invalidateModuleGraph } from "../compiler/load.j
 import { type Manifest, toManifest, writeManifest } from "../manifest/index.js";
 import { registrationScopes, scopeKey } from "../registration/index.js";
 import {
+  createLogger,
   createRuntime,
   createSignals,
   HandlerLoadError,
   type Logger,
   LoginError,
+  type LogSink,
   manifestFiles,
   type Runtime,
 } from "../runtime/index.js";
@@ -66,25 +68,35 @@ export function createDevServer(
   const say = (line: string) => io.out(started ? `${stamp()} ${line}` : line);
   const complain = (line: string) => io.err(started ? `${stamp()} ${line}` : line);
 
-  const logger: Logger = {
-    debug(message, fields = {}) {
-      if (!verbose) return;
+  /** Framework log records in the dev server's format. The default when the config has no sink. */
+  const print: LogSink = ({ level, message, fields }) => {
+    if (level === "debug") {
       const pairs = Object.entries(fields)
         .filter(([key, value]) => key !== "error" && value !== undefined && value !== null)
         .map(([key, value]) => `${key}=${String(value)}`);
       say(c.dim([message, ...pairs].join(" ")));
-    },
-    info: (message) => say(info(message)),
-    warn: (message) => complain(warn(message)),
-    error(message, fields = {}) {
+    } else if (level === "info") {
+      say(info(message));
+    } else if (level === "warn") {
+      complain(warn(message));
+    } else {
       const [head = "", ...rest] = message.split("\n");
       const stack = fields.error === undefined ? [] : describeError(fields.error);
       // block() indents the details itself. Strip only the report's own two spaces, so
       // continuation lines stay aligned with the column above them.
       complain(block(fail(c.bold(head)), [...rest.map((l) => l.replace(/^ {2}/, "")), ...stack]));
-    },
+    }
   };
-  // Fresh per boot so a reloaded config's `observe` is subscribed once.
+  /** The config's `logger`, with `--verbose` lowering the level to debug. */
+  const loggerFor = ({ config }: Project): Logger =>
+    createLogger({
+      level: verbose ? "debug" : (config.logger?.level ?? "info"),
+      sink: config.logger?.sink ?? print,
+    });
+
+  // Both fresh per boot, so a reloaded config's `logger` applies and its `observe` is
+  // subscribed once.
+  let logger = loggerFor(current);
   let signals = createSignals(logger);
 
   function warnOnce(head: string, details: string[] = []): void {
@@ -169,6 +181,7 @@ export function createDevServer(
 
   /** Full start: compile, write output, print routes, register, run. */
   async function boot(): Promise<void> {
+    logger = loggerFor(current);
     signals = createSignals(logger);
     const graph = await compileProject(current, io);
     if (graph === null) {

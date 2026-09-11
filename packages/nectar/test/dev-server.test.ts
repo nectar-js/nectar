@@ -107,6 +107,27 @@ async function setup() {
   return { root, server, out, err, rest, clients, client, invoke, write };
 }
 
+/** A dev server for an existing project, without registration. Collects stderr lines. */
+async function startIn(root: string) {
+  const err: string[] = [];
+  const clients: FakeClient[] = [];
+  const io = {
+    cwd: root,
+    env: { DISCORD_TOKEN: "t" },
+    out: () => {},
+    err: (line: string) => err.push(line),
+    client: () => {
+      const client = fakeClient();
+      clients.push(client);
+      return client as unknown as Client;
+    },
+  };
+  const server = createDevServer(await loadProject(root, io.env), io);
+  await server.start();
+  const emit = (interaction: Interaction) => clients.at(-1)?.emit("interactionCreate", interaction);
+  return { server, err, emit };
+}
+
 // Reloading is enabled once per process, for one root. Every test project lives under tmpdir.
 beforeAll(() => enableModuleReloading(tmpdir()));
 
@@ -231,22 +252,8 @@ describe("dev server", () => {
       "commands/ping/command.ts":
         'export const meta = { description: "d" };\nexport default async function () { throw new Error("boom"); }\n',
     });
-    const err: string[] = [];
-    const clients: FakeClient[] = [];
-    const io = {
-      cwd: root,
-      env: { DISCORD_TOKEN: "t" },
-      out: () => {},
-      err: (line: string) => err.push(line),
-      client: () => {
-        const client = fakeClient();
-        clients.push(client);
-        return client as unknown as Client;
-      },
-    };
-    const server = createDevServer(await loadProject(root, io.env), io);
-    await server.start();
-    clients[0]?.emit("interactionCreate", chatInput("ping"));
+    const { server, err, emit } = await startIn(root);
+    emit(chatInput("ping"));
     await vi.waitFor(() => expect(err.some((l) => l.includes("Unhandled error"))).toBe(true));
 
     const lines = (err.find((l) => l.includes("Unhandled error")) ?? "").split("\n");
@@ -255,6 +262,23 @@ describe("dev server", () => {
     const second = lines[row + 1] ?? "";
     expect(second).toContain(path.join("commands", "middleware.ts"));
     expect(second.indexOf(root)).toBe(first.indexOf(root));
+    await server.stop();
+  });
+
+  test("framework logs go to the config's logger", async () => {
+    const root = makeProject(
+      { "commands/ping/command.ts": command("ping") },
+      '{ intents: [], logger: { sink: (r) => globalThis.__nectar.push(r.level + " " + r.message) } }',
+    );
+    const { server, err, emit } = await startIn(root);
+    err.length = 0;
+    emit(chatInput("missing"));
+    await vi.waitFor(() =>
+      expect(globalThis.__nectar).toEqual([
+        expect.stringMatching(/^warn No route for chat input command \/missing\./),
+      ]),
+    );
+    expect(err).toEqual([]);
     await server.stop();
   });
 

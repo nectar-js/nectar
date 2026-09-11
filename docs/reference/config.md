@@ -74,7 +74,7 @@ Where production registers commands: `"global"`, or an array of guild IDs. Defau
 
 ## `logger`
 
-Framework logs from `nectar start` and `.nectar/start.mjs`. `nectar dev` prints its own output and ignores this option.
+Framework logs. Without a `sink`, `nectar start` prints them to the console and `nectar dev` prints them in its own format. `nectar dev --verbose` lowers the level to `"debug"`.
 
 | Field | |
 | --- | --- |
