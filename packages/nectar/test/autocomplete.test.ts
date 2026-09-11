@@ -91,4 +91,17 @@ describe("autocomplete", () => {
     });
     expect(codes).toEqual(["autocomplete-without-command"]);
   });
+
+  test("a command.ts with errors doesn't also report its autocomplete.ts", async () => {
+    const table = buildRouteTable(
+      makeApp({
+        "commands/search/command.ts": "export default async function () {}\n",
+        "commands/search/autocomplete.ts": ac("query"),
+      }),
+    );
+    const commands = await compileCommands(table);
+    expect(commands.diagnostics.items.map((d) => d.code)).toEqual(["missing-meta"]);
+    const result = await compileAutocomplete(table, commands.commands);
+    expect(result.diagnostics.items).toEqual([]);
+  });
 });

@@ -41,6 +41,8 @@ export async function compileAutocomplete(
     routes.map(async (route): Promise<CompiledAutocomplete | null> => {
       const target = targets.get(route.id);
       if (target === undefined) {
+        // A command.ts that failed to compile has its own diagnostic already.
+        if (table.routes.some((r) => r.id === route.id && r.kind === "command")) return null;
         diagnostics.error(
           "autocomplete-without-command",
           `autocomplete.ts needs a command.ts in the same directory. None was found for "${route.path}".`,
