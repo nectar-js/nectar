@@ -72,7 +72,7 @@ export async function compileEvents(table: RouteTable): Promise<CompiledEvents> 
         if (handler.mode === undefined) continue;
         diagnostics.error(
           "event-mode-conflict",
-          `Handlers of "${name}" disagree on \`meta.mode\`: ${[...modes].map((m) => `"${m}"`).join(" and ")}. All handlers of one event share a mode; set it on one file or make them agree.`,
+          `Handlers of "${name}" set meta.mode to both "concurrent" and "sequential". The mode applies to all of an event's handlers, so set it in one file, or make them match.`,
           { file: handler.route.file, route: handler.route.id },
         );
       }
@@ -99,7 +99,7 @@ async function loadHandler(route: Route, diagnostics: Diagnostics): Promise<Load
   } catch (error) {
     diagnostics.error(
       "module-load-failed",
-      `Could not import this file: ${error instanceof Error ? error.message : String(error)}`,
+      `The compiler imports every route file to read its exports, and this one threw: ${error instanceof Error ? error.message : String(error)}`,
       { file: route.file, route: route.id },
     );
     return null;
@@ -119,7 +119,7 @@ function eventName(route: Route, diagnostics: Diagnostics): string | null {
   if (statics.length > 1) {
     diagnostics.error(
       "event-nested-path",
-      `Event handlers live directly under events/<eventName>/. "${route.path}" adds ${statics.slice(1).map(formatSegment).join("/")} below the event name. Use a route group like (${statics[1]?.name}) to keep several handlers apart.`,
+      `"${route.path}" has ${statics.slice(1).map(formatSegment).join("/")}/ below the event name, and event handlers go directly in events/<eventName>/. To split an event across files, use route groups, like events/${first.name}/(${statics[1]?.name})/event.ts.`,
       { file: route.file, route: route.id },
     );
     return null;
@@ -134,10 +134,10 @@ function eventName(route: Route, diagnostics: Diagnostics): string | null {
       ? `discord.js renamed it to "${renamed}".`
       : closest(name)
         ? `Did you mean "${closest(name)}"?`
-        : "Event names are the lowerCamelCase values of discord.js's `Events` enum.";
+        : "Event directories are named after a value of discord.js's Events enum, like messageCreate.";
   diagnostics.error(
     "unknown-event",
-    `"${name}" is not a discord.js event. ${hint} Rename the directory.`,
+    `"${name}" isn't a discord.js event. ${hint} Rename the directory.`,
     { file: route.file, route: route.id },
   );
   return null;
@@ -154,20 +154,20 @@ function validateEventMeta(
     return null;
   };
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    return fail("`meta` must be an object.");
+    return fail("meta has to be an object, like { order: 1 }.");
   }
   const meta = value as Record<string, unknown>;
   if (meta.once !== undefined && typeof meta.once !== "boolean") {
-    return fail("`meta.once` must be a boolean.");
+    return fail("meta.once has to be true or false.");
   }
   if (
     meta.order !== undefined &&
     (typeof meta.order !== "number" || !Number.isFinite(meta.order))
   ) {
-    return fail("`meta.order` must be a finite number.");
+    return fail(`meta.order is ${String(meta.order)}. Use a finite number.`);
   }
   if (meta.mode !== undefined && meta.mode !== "sequential" && meta.mode !== "concurrent") {
-    return fail('`meta.mode` must be "sequential" or "concurrent".');
+    return fail(`meta.mode is ${JSON.stringify(meta.mode)}. Use "sequential" or "concurrent".`);
   }
   return meta as EventMeta;
 }

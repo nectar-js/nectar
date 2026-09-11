@@ -60,7 +60,7 @@ function apply(graph: RouteGraph, plugin: string, change: PluginChange): void {
   if (type !== "middleware" && type !== "diagnostic") {
     graph.diagnostics.error(
       "plugin-invalid-change",
-      `Plugin "${plugin}" returned a change of type ${JSON.stringify(type)}. Known types: middleware, diagnostic.`,
+      `Plugin "${plugin}" returned a change with type ${JSON.stringify(type)}. A change's type is "middleware" or "diagnostic".`,
     );
     return;
   }
@@ -82,7 +82,7 @@ function apply(graph: RouteGraph, plugin: string, change: PluginChange): void {
   if (routes.length === 0) {
     graph.diagnostics.error(
       "plugin-unknown-route",
-      `Plugin "${plugin}" adds middleware to route "${target}", which does not exist.`,
+      `Plugin "${plugin}" adds middleware to route "${target}", which does not exist. Route IDs look like "command:moderation/ban".`,
     );
     return;
   }

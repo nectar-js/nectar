@@ -57,7 +57,7 @@ describe("autocomplete", () => {
       "commands/search/autocomplete.ts": ac("query", "plain"),
     });
     expect(codes).toEqual(["autocomplete-unknown-option"]);
-    expect(diagnostics[0]?.message).toContain("Expected one of: query.");
+    expect(diagnostics[0]?.message).toContain('Its autocomplete option is "query".');
   });
 
   test("autocomplete option without a handler export", async () => {

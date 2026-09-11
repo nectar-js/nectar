@@ -1,3 +1,5 @@
+import { typeOf } from "../compiler/diagnostics.js";
+
 /**
  * A Standard Schema (https://standardschema.dev) validator, which zod, valibot, and arktype
  * all produce. Only the result's `issues` are looked at: a schema that transforms the value
@@ -33,20 +35,20 @@ export function paramValidatorsOf(
   const declared = (handler as { params?: unknown }).params;
   if (declared === undefined) return {};
   if (typeof declared !== "object" || declared === null || Array.isArray(declared)) {
-    throw new Error(`\`params\` must be an object of validators, got ${typeof declared}.`);
+    throw new Error(`params is ${typeOf(declared)}, not an object of validators.`);
   }
   const validators: ParamValidators = {};
   for (const [name, validator] of Object.entries(declared)) {
     if (!route.params.includes(name)) {
       throw new Error(
-        `\`params\` validates "${name}", which is not a parameter of this route. ${
+        `params validates "${name}", which is not a parameter of this route. ${
           route.params.length === 0 ? "It has none." : `It has: ${route.params.join(", ")}.`
         }`,
       );
     }
     if (!isValidator(validator)) {
       throw new Error(
-        `\`params.${name}\` must be a function or a Standard Schema, got ${typeof validator}.`,
+        `params.${name} is ${typeOf(validator)}. A validator is a function or a Standard Schema.`,
       );
     }
     validators[name] = validator;

@@ -48,6 +48,12 @@ const COMMAND_TYPE = {
   message: ApplicationCommandType.Message,
 } as const;
 
+const TYPE_LABEL: Record<number, string> = {
+  [ApplicationCommandType.ChatInput]: "slash command",
+  [ApplicationCommandType.User]: "user context menu command",
+  [ApplicationCommandType.Message]: "message context menu command",
+};
+
 interface LoadedRoute {
   route: Route;
   parts: string[];
@@ -85,7 +91,7 @@ export async function compileCommands(table: RouteTable): Promise<CompiledComman
     if (!entry.used) {
       diagnostics.warn(
         "unused-route-meta",
-        "This route.ts does not describe a command with subcommands and has no effect.",
+        "This route.ts has no effect because there are no subcommands below it. A plain command's meta goes in its command.ts.",
         { file: entry.boundary.file },
       );
     }
@@ -126,7 +132,7 @@ async function loadRouteMetas(
       if (key === "") {
         diagnostics.error(
           "route-meta-without-path",
-          "route.ts must live inside a command directory. At the commands root it describes nothing.",
+          "This route.ts isn't inside a command's directory, so it doesn't describe a command. Move it into the command's directory, like commands/moderation/route.ts.",
           { file: boundary.file },
         );
         return;
@@ -150,7 +156,7 @@ async function importOrReport(
   } catch (error) {
     diagnostics.error(
       "module-load-failed",
-      `Could not import this file: ${error instanceof Error ? error.message : String(error)}`,
+      `The compiler imports every route file to read its exports, and this one threw: ${error instanceof Error ? error.message : String(error)}`,
       { file },
     );
     return null;
@@ -166,16 +172,16 @@ function compileTopLevel(
   const direct = entries.filter((e) => e.parts.length === 1);
   const nested = entries.filter((e) => e.parts.length > 1);
 
-  if (direct.length > 0 && nested.length > 0) {
-    for (const entry of nested) {
-      diagnostics.error(
-        "mixed-command-and-subcommands",
-        `"${top}" has its own command.ts and also subcommands. Discord does not allow both. Either remove ${relative(direct[0]?.route.file)} or move this handler out of ${top}/.`,
-        { file: entry.route.file, route: entry.route.id },
   // Two command.ts files for one command, like ping/ and (group)/ping/. The route table
   // already reported them as a duplicate route.
   if (direct.length > 1) return null;
 
+  if (direct.length > 0 && nested.length > 0) {
+    for (const entry of nested) {
+      diagnostics.error(
+        "mixed-command-and-subcommands",
+        `"${top}" has a command.ts and also subcommands, like this one. Discord doesn't let a command with subcommands run by itself. Replace ${relative(direct[0]?.route.file)} with a route.ts, or move this file out of ${top}/.`,
+        { file: entry.route.file, route: entry.route.id },
       );
     }
     return null;
@@ -186,7 +192,7 @@ function compileTopLevel(
     for (const entry of tooDeep) {
       diagnostics.error(
         "command-too-deep",
-        `Commands can nest at most three levels (command / group / subcommand). "${entry.route.path}" has ${entry.parts.length}.`,
+        `"${entry.route.path}" is ${entry.parts.length} levels deep. Discord commands go three levels at most: command, subcommand group, and subcommand. Remove a level of directories.`,
         { file: entry.route.file, route: entry.route.id },
       );
     }
@@ -256,7 +262,7 @@ function compileParentCommand(
   if (bySecond.size > 25) {
     diagnostics.error(
       "too-many-subcommands",
-      `"${top}" has ${bySecond.size} subcommands and groups. Discord allows at most 25.`,
+      `"${top}" has ${bySecond.size} subcommands and groups. Discord allows 25 per command. Move some into a subcommand group or another command.`,
       { file: parent.boundary.file },
     );
     ok = false;
@@ -270,7 +276,7 @@ function compileParentCommand(
       for (const entry of grouped) {
         diagnostics.error(
           "mixed-subcommand-and-group",
-          `"${top}/${second}" is both a subcommand (${relative(subs[0]?.route.file)}) and a subcommand group. Discord does not allow both.`,
+          `${relative(subs[0]?.route.file)} makes "${top} ${second}" a subcommand, and this file makes it a subcommand group. Discord doesn't allow both. Move that command.ts into its own directory under ${second}/, or move this file out.`,
           { file: entry.route.file, route: entry.route.id },
         );
       }
@@ -306,7 +312,7 @@ function compileParentCommand(
     if (extra.length > 0) {
       diagnostics.error(
         "top-level-field-on-group",
-        `${extra.map((k) => `meta.${k}`).join(", ")} only applies to top-level commands. Move it to ${relative(parent.boundary.file)}.`,
+        `${fieldList(extra)} can't be set on a subcommand group. Discord applies ${extra.length === 1 ? "it" : "them"} to the whole command, so move ${extra.length === 1 ? "it" : "them"} to ${relative(parent.boundary.file)}.`,
         { file: group.boundary.file },
       );
       ok = false;
@@ -315,7 +321,7 @@ function compileParentCommand(
     if (grouped.length > 25) {
       diagnostics.error(
         "too-many-subcommands",
-        `Group "${groupKey}" has ${grouped.length} subcommands. Discord allows at most 25.`,
+        `The "${groupKey}" group has ${grouped.length} subcommands. Discord allows 25 per group. Move some into another group.`,
         { file: group.boundary.file },
       );
       ok = false;
@@ -366,7 +372,7 @@ function compileSubcommand(
   if (meta.type !== undefined && meta.type !== "chatInput") {
     diagnostics.error(
       "context-menu-nested",
-      `Context menu commands cannot be subcommands. Move ${relative(route.file)} to the top of commands/.`,
+      `This is a context menu command, but it's nested under ${entry.parts[0]}/ as a subcommand. Discord doesn't allow context menu subcommands. Move it to its own directory directly under commands/, like commands/${entry.parts.at(-1)}/command.ts.`,
       { file: route.file, route: route.id },
     );
     return null;
@@ -375,7 +381,7 @@ function compileSubcommand(
   if (extra.length > 0) {
     diagnostics.error(
       "top-level-field-on-subcommand",
-      `${extra.map((k) => `meta.${k}`).join(", ")} only applies to top-level commands. Move it to the route.ts of "${entry.parts[0]}".`,
+      `${fieldList(extra)} can't be set on a subcommand. Discord applies ${extra.length === 1 ? "it" : "them"} to the whole command, so move ${extra.length === 1 ? "it" : "them"} to the route.ts in ${entry.parts[0]}/.`,
       { file: route.file, route: route.id },
     );
     return null;
@@ -409,7 +415,7 @@ function requireRouteMeta(
   const dir = directoryForPath(child.route, key.split("/").length);
   diagnostics.error(
     "missing-route-meta",
-    `"${key}" has subcommands but no route.ts. Discord needs a description for it. Add ${path.join(dir, "route.ts")} exporting \`meta\` with a description.`,
+    `"${key}" has subcommands but no route.ts. Discord needs a description for it, and without a command.ts that goes in route.ts. Add ${relative(path.join(dir, "route.ts"))} with export const meta = { description: "..." }.`,
     { file: child.route.file, route: child.route.id },
   );
   return null;
@@ -440,9 +446,14 @@ function isValidChatInputName(name: string): boolean {
 function reportDirectoryName(route: Route, name: string, diagnostics: Diagnostics, file?: string) {
   diagnostics.error(
     "invalid-name",
-    `"${name}" is not a valid chat input command name. Discord requires lowercase letters, digits, hyphens, and underscores, 1 to 32 characters. Rename the directory or set \`meta.name\`.`,
+    `"${name}" isn't a valid slash command name. Discord only allows lowercase letters, digits, hyphens, and underscores, up to 32 characters. Rename the directory, or set meta.name.`,
     { file: file ?? route.file, route: route.id },
   );
+}
+
+/** `meta.nsfw and meta.contexts` */
+function fieldList(keys: string[]): string {
+  return new Intl.ListFormat("en").format(keys.map((key) => `meta.${key}`));
 }
 
 function detectDuplicateNames(commands: CompiledCommand[], diagnostics: Diagnostics): void {
@@ -456,7 +467,7 @@ function detectDuplicateNames(commands: CompiledCommand[], diagnostics: Diagnost
     }
     diagnostics.error(
       "duplicate-command-name",
-      `Two commands register as "${command.name}": ${relative(existing.files[0])} and ${relative(command.files[0])}. Check \`meta.name\` overrides.`,
+      `${relative(existing.files[0])} and ${relative(command.files[0])} both register a ${TYPE_LABEL[command.type]} named "${command.name}". Discord needs the names to be unique, so change meta.name or the directory of one of them.`,
       { file: command.files[0] as string },
     );
   }

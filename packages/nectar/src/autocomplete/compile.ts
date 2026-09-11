@@ -45,7 +45,7 @@ export async function compileAutocomplete(
         if (table.routes.some((r) => r.id === route.id && r.kind === "command")) return null;
         diagnostics.error(
           "autocomplete-without-command",
-          `autocomplete.ts needs a command.ts in the same directory. None was found for "${route.path}".`,
+          "There's no command.ts next to this autocomplete.ts. Autocomplete answers the options of the command in the same directory, so move it next to that command.ts.",
           { file: route.file, route: route.id },
         );
         return null;
@@ -57,7 +57,7 @@ export async function compileAutocomplete(
       } catch (error) {
         diagnostics.error(
           "module-load-failed",
-          `Could not import this file: ${error instanceof Error ? error.message : String(error)}`,
+          `The compiler imports every route file to read its exports, and this one threw: ${error instanceof Error ? error.message : String(error)}`,
           { file: route.file, route: route.id },
         );
         return null;
@@ -72,7 +72,7 @@ export async function compileAutocomplete(
         if (typeof module[name] !== "function") {
           diagnostics.error(
             "autocomplete-export-not-function",
-            `Export "${name}" must be a function that answers autocomplete for the "${name}" option.`,
+            `Export "${name}" isn't a function. Each export of autocomplete.ts is a function that answers the option with the same name.`,
             { file: route.file, route: route.id },
           );
           ok = false;
@@ -81,7 +81,7 @@ export async function compileAutocomplete(
         if (!target.options.has(name)) {
           diagnostics.error(
             "autocomplete-unknown-option",
-            `Export "${name}" does not match an option with \`autocomplete: true\` in ${relative(target.command.file)}. ${expected(target.options)}`,
+            `Export "${name}" doesn't match an option with autocomplete: true in ${relative(target.command.file)}. ${expected(target.options)} Rename the export, or set autocomplete: true on the option.`,
             { file: route.file, route: route.id },
           );
           ok = false;
@@ -92,7 +92,7 @@ export async function compileAutocomplete(
         if (exported.includes(name)) continue;
         diagnostics.error(
           "autocomplete-missing-handler",
-          `Option "${name}" has \`autocomplete: true\` but ${relative(route.file)} does not export a "${name}" function.`,
+          `Option "${name}" has autocomplete: true, but this file doesn't export a function named "${name}" to answer it.`,
           { file: route.file, route: route.id },
         );
         ok = false;
@@ -104,9 +104,12 @@ export async function compileAutocomplete(
 
   for (const [id, target] of targets) {
     if (target.options.size === 0 || routes.some((r) => r.id === id)) continue;
+    const names = [...target.options].map((o) => `"${o}"`);
     diagnostics.error(
       "autocomplete-missing-file",
-      `${[...target.options].map((o) => `"${o}"`).join(", ")} ${target.options.size === 1 ? "has" : "have"} \`autocomplete: true\` but there is no autocomplete.ts next to this command.`,
+      names.length === 1
+        ? `Option ${names[0]} has autocomplete: true, but there's no autocomplete.ts next to this command. Add one that exports a function named ${names[0]}.`
+        : `Options ${new Intl.ListFormat("en").format(names)} have autocomplete: true, but there's no autocomplete.ts next to this command. Add one that exports a function named after each of them.`,
       { file: target.command.file, route: id },
     );
   }
@@ -136,9 +139,11 @@ interface PayloadNode {
 }
 
 function expected(options: Set<string>): string {
-  return options.size === 0
-    ? "The command declares no autocomplete options."
-    : `Expected one of: ${[...options].sort().join(", ")}.`;
+  const names = [...options].sort().map((o) => `"${o}"`);
+  if (names.length === 0) return "That command has no autocomplete options.";
+  return names.length === 1
+    ? `Its autocomplete option is ${names[0]}.`
+    : `Its autocomplete options are ${new Intl.ListFormat("en").format(names)}.`;
 }
 
 function relative(file: string): string {

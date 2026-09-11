@@ -56,6 +56,13 @@ const HANDLER_KINDS: Record<RouteCategory, ReadonlySet<FileKind>> = {
 
 const BOUNDARY_KINDS: ReadonlySet<FileKind> = new Set(["middleware", "error", "route"]);
 
+/** A directory name for the examples in messages. */
+const EXAMPLE_DIR: Record<RouteCategory, string> = {
+  command: "ping",
+  component: "confirm",
+  event: "messageCreate",
+};
+
 /** Discovers the app directory and builds the route table. */
 export function buildRouteTable(appDir: string): RouteTable {
   return buildRouteTableFromFiles(discover(appDir));
@@ -75,7 +82,7 @@ export function buildRouteTableFromFiles(files: SourceFile[]): RouteTable {
       } else {
         diagnostics.error(
           "file-outside-category",
-          `${path.basename(source.file)} must live under commands/, components/, or events/. Only middleware and error files may sit at the app root.`,
+          `${path.basename(source.file)} is directly in the app directory, where only middleware and error files go. Move it under commands/, components/, or events/.`,
           { file: source.file },
         );
       }
@@ -84,9 +91,10 @@ export function buildRouteTableFromFiles(files: SourceFile[]): RouteTable {
 
     const category = CATEGORY_DIRS[categoryDir];
     if (category === undefined) {
+      const name = path.basename(source.file);
       diagnostics.error(
         "unknown-category",
-        `"${categoryDir}/" is not a route area. Reserved files must live under commands/, components/, or events/.`,
+        `${name} is in ${categoryDir}/, which isn't a route directory. Nectar treats every file named ${name} as a route file, so move it under commands/, components/, or events/, or rename it.`,
         { file: source.file },
       );
       continue;
@@ -106,9 +114,10 @@ export function buildRouteTableFromFiles(files: SourceFile[]): RouteTable {
     }
 
     if (!HANDLER_KINDS[category].has(source.kind)) {
+      const home = Object.entries(CATEGORY_DIRS).find(([, c]) => HANDLER_KINDS[c].has(source.kind));
       diagnostics.error(
         "file-in-wrong-category",
-        `${path.basename(source.file)} does not belong under ${categoryDir}/. Expected one of: ${[...HANDLER_KINDS[category]].map((k) => `${k}.ts`).join(", ")}.`,
+        `${path.basename(source.file)} belongs under ${home?.[0]}/, not ${categoryDir}/.`,
         { file: source.file },
       );
       continue;
@@ -147,10 +156,27 @@ function makeRoute(
   file: string,
   diagnostics: Diagnostics,
 ): Route | null {
+  const name = path.basename(file);
+  const dir = `${category}s`;
   if (segments.length === 0) {
     diagnostics.error(
       "route-without-path",
-      `${path.basename(file)} needs a named directory. Files directly inside ${category}s/ have no route path.`,
+      `${name} is directly in ${dir}/, so it has no route path. Put it in a named directory, like ${dir}/${EXAMPLE_DIR[category]}/${name}.`,
+      { file },
+    );
+    return null;
+  }
+
+  // Events keep their groups in the path, but still need a directory for the event name.
+  if (segments.every((segment) => segment.type === "group")) {
+    const groups = segments.map(formatSegment).join("/");
+    const example =
+      category === "event"
+        ? `${dir}/${EXAMPLE_DIR[category]}/${groups}/${name}`
+        : `${dir}/${groups}/${EXAMPLE_DIR[category]}/${name}`;
+    diagnostics.error(
+      "route-without-path",
+      `${name} is only inside route groups, and groups aren't part of the route path. Put it in a named directory, like ${example}.`,
       { file },
     );
     return null;
@@ -162,7 +188,11 @@ function makeRoute(
       if (category !== "component") {
         diagnostics.error(
           "dynamic-segment-not-allowed",
-          `${formatSegment(segment)} is a dynamic segment, but ${category} routes cannot carry parameters. Only component routes can.`,
+          `${formatSegment(segment)} is a parameter, and only component routes can have parameters. ${
+            category === "command"
+              ? "Discord registers commands under fixed names, so take input with meta.options instead."
+              : "The directory has to be named after a discord.js event, like events/messageCreate/."
+          }`,
           { file },
         );
         return null;
@@ -170,7 +200,7 @@ function makeRoute(
       if (params.includes(segment.name)) {
         diagnostics.error(
           "duplicate-param",
-          `Parameter "${segment.name}" appears twice in the same route.`,
+          `The parameter "${segment.name}" appears twice in this route. Each parameter becomes a key of ctx.params, so the names have to differ. Rename one of the directories.`,
           { file },
         );
         return null;
@@ -178,7 +208,7 @@ function makeRoute(
       if (segment.type === "catchAll" && index !== segments.length - 1) {
         diagnostics.error(
           "catch-all-not-last",
-          `${formatSegment(segment)} must be the last segment of the route.`,
+          `${formatSegment(segment)} has more directories after it. A catch-all takes all the remaining values, so it has to be the last segment. Use [${segment.name}] if it only needs one value.`,
           { file },
         );
         return null;
@@ -191,16 +221,6 @@ function makeRoute(
     .filter((segment) => segment.type !== "group" || category === "event")
     .map(formatSegment)
     .join("/");
-
-  // Events keep their groups in the path, but still need a directory for the event name.
-  if (segments.every((segment) => segment.type === "group")) {
-    diagnostics.error(
-      "route-without-path",
-      `${path.basename(file)} sits only inside route groups. Groups do not contribute to the route, so this route has no path.`,
-      { file },
-    );
-    return null;
-  }
 
   const id = `${category}:${routePath}`;
   return { id, shortId: shortId(id), category, kind, path: routePath, segments, params, file };
@@ -219,12 +239,19 @@ function detectDuplicates(routes: Route[], diagnostics: Diagnostics): void {
       seen.set(key, route);
       continue;
     }
+    const other = relative(existing.file);
     diagnostics.error(
       "duplicate-route",
-      existing.kind === route.kind
-        ? `Route ${route.id} is defined twice: ${existing.file} and ${route.file}. Route groups do not make paths distinct.`
-        : `Route ${route.id} has two handlers: ${existing.file} and ${route.file}. A component route takes one button.ts, select.ts, or modal.ts. Move one into its own directory.`,
+      existing.kind !== route.kind
+        ? `${other} handles the same route, ${route.id}. customId() and the generated types identify a component by its path alone, so each path takes one button.ts, select.ts, or modal.ts. Move one of them into its own directory.`
+        : path.dirname(existing.file) === path.dirname(route.file)
+          ? `${other} is in the same directory and handles the same route, ${route.id}. Keep one of them.`
+          : `${other} is the same route, ${route.id}. Route groups aren't part of the path, so they don't tell the two apart. Rename one of the directories.`,
       { file: route.file, route: route.id },
     );
   }
+}
+
+function relative(file: string): string {
+  return path.relative(process.cwd(), file).split(path.sep).join("/");
 }

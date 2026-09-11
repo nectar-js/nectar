@@ -32,6 +32,6 @@ describe("parseSegment", () => {
   ])("rejects %j", (input) => {
     const result = parseSegment(input);
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toContain(input === "" ? "not a valid" : input);
+    if (!result.ok) expect(result.reason).toContain(input === "" ? "can't be part" : input);
   });
 });

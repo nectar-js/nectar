@@ -204,7 +204,7 @@ describe("diagnostics", () => {
       {
         code: "duplicate-route",
         severity: "error",
-        message: expect.stringContaining("Move one into its own directory."),
+        message: expect.stringContaining("Move one of them into its own directory."),
         file: "components/x/modal.ts",
         route: "component:x",
       },

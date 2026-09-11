@@ -86,7 +86,7 @@ describe("route transforms", () => {
       },
     ]);
     expect(graph.diagnostics.items.map((d) => d.message)).toEqual([
-      'Plugin "audit" adds middleware to route "command:ping (autocomplete)", which does not exist.',
+      'Plugin "audit" adds middleware to route "command:ping (autocomplete)", which does not exist. Route IDs look like "command:moderation/ban".',
     ]);
     const search = toManifest(graph, root).routes.filter((r) => r.id === "command:search");
     expect(search.map((r) => [r.kind, r.plugins])).toEqual([

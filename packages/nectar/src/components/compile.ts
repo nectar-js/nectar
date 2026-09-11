@@ -116,7 +116,7 @@ async function compileRoute(
   if (catchAll !== null) {
     diagnostics.warn(
       "catch-all-route",
-      `${formatSegment(last as NonNullable<typeof last>)} accepts any number of values. Every value counts against Discord's ${MAX_CUSTOM_ID_LENGTH} character custom ID limit, and generation throws when it is exceeded.`,
+      `${formatSegment(last as NonNullable<typeof last>)} takes any number of values. They all count toward Discord's ${MAX_CUSTOM_ID_LENGTH} character limit on custom IDs, and customId() throws when an ID goes over.`,
       { file: route.file, route: route.id },
     );
   }
@@ -127,7 +127,7 @@ async function compileRoute(
   } catch (error) {
     diagnostics.error(
       "module-load-failed",
-      `Could not import this file: ${error instanceof Error ? error.message : String(error)}`,
+      `The compiler imports every route file to read its exports, and this one threw: ${error instanceof Error ? error.message : String(error)}`,
       { file: route.file, route: route.id },
     );
     return null;
@@ -139,7 +139,7 @@ async function compileRoute(
   } catch (error) {
     diagnostics.error(
       "invalid-param-validator",
-      `${error instanceof Error ? error.message : String(error)} Pass validators as defineComponent's third argument: { params: { name: (value) => ... } }.`,
+      `${error instanceof Error ? error.message : String(error)} Validators go in defineComponent's third argument, like { params: { id: (value) => ... } }.`,
       { file: route.file, route: route.id },
     );
     return null;
@@ -167,7 +167,7 @@ export function checkDeclaredRoute(
   if (declared === undefined || declared === expected) return true;
   diagnostics.error(
     "route-mismatch",
-    `This file is the route "${expected}" but its handler declares "${String(declared)}". Update the string or move the file.`,
+    `This file's route is "${expected}", but its handler says "${String(declared)}". The string types the handler, so it has to match where the file is. Change it to "${expected}", or move the file.`,
     { file: route.file, route: route.id },
   );
   return false;
@@ -182,7 +182,7 @@ function validateSelectKind(
   if (kind === undefined) {
     diagnostics.error(
       "missing-select-kind",
-      'select.ts must export `kind`: "string", "user", "role", "channel", or "mentionable".',
+      'This select.ts doesn\'t export kind, which says what the select menu picks from: "string", "user", "role", "channel", or "mentionable". Add one, like export const kind = "string".',
       { file: route.file, route: route.id },
     );
     return null;
@@ -190,7 +190,7 @@ function validateSelectKind(
   if (typeof kind !== "string" || !SELECT_KINDS.has(kind)) {
     diagnostics.error(
       "invalid-select-kind",
-      `\`kind\` is ${describe(kind)}. Expected "string", "user", "role", "channel", or "mentionable".`,
+      `kind is ${describe(kind)}. Use "string", "user", "role", "channel", or "mentionable".`,
       { file: route.file, route: route.id },
     );
     return null;
@@ -208,7 +208,7 @@ function detectShortIdCollisions(routes: ComponentRoute[], diagnostics: Diagnost
     }
     diagnostics.error(
       "short-id-collision",
-      `${route.id} and ${existing.id} hash to the same short ID "${route.shortId}", so their custom IDs would be indistinguishable. Rename one of the directories.`,
+      `${route.id} and ${existing.id} hash to the same short ID, "${route.shortId}", so Nectar can't tell their custom IDs apart. Rename a directory in one of them.`,
       { file: route.file, route: route.id },
     );
   }
@@ -216,7 +216,8 @@ function detectShortIdCollisions(routes: ComponentRoute[], diagnostics: Diagnost
 
 /**
  * Two routes of the same kind whose paths differ only in parameter names, like
- * `tickets/[id]/close` and `tickets/[ticketId]/close`, would both claim the same custom IDs.
+ * `tickets/[id]/close` and `tickets/[ticketId]/close`. Their hashes differ, but they take the
+ * same values in the same places, so they are one route split in two.
  */
 function detectDuplicatePatterns(routes: ComponentRoute[], diagnostics: Diagnostics): void {
   const seen = new Map<string, ComponentRoute>();
@@ -234,7 +235,7 @@ function detectDuplicatePatterns(routes: ComponentRoute[], diagnostics: Diagnost
     if (existing.id === route.id) continue;
     diagnostics.error(
       "duplicate-component-pattern",
-      `${route.id} has the same shape as ${existing.id} (${relative(existing.file)}). Parameter names do not make routes distinct.`,
+      `${route.id} is the same path as ${existing.id} in ${relative(existing.file)}, with a different parameter name. Parameter names don't make routes distinct. Merge the two and keep one name.`,
       { file: route.file, route: route.id },
     );
   }

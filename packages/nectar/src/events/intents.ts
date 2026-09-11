@@ -115,10 +115,10 @@ export function checkIntents(
     diagnostics.push({
       code: "missing-intent",
       severity: "warning",
-      message: `"${event.name}" never fires without the ${names} intent. Add it to \`intents\` in ${configFile}.${
+      message: `"${event.name}" never fires without the ${names} intent. Add it to intents in ${configFile}.${
         privileged.length === 0
           ? ""
-          : ` ${privileged.map((i) => `"${i}"`).join(" and ")} is privileged: enable it under Bot in the Discord developer portal as well.`
+          : ` ${privileged.map((i) => `"${i}"`).join(" and ")} is privileged, so also turn it on under Bot in the Discord Developer Portal.`
       }`,
       file: first.route.file,
       route: first.route.id,

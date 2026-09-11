@@ -81,7 +81,7 @@ describe("events", () => {
     expect(codes).toEqual(["unknown-event", "unknown-event", "unknown-event"]);
     expect(diagnostics.map((d) => d.message)).toEqual([
       expect.stringContaining('Did you mean "guildMemberAdd"?'),
-      expect.stringContaining("`Events` enum"),
+      expect.stringContaining("Events enum"),
       expect.stringContaining('renamed it to "clientReady"'),
     ]);
   });

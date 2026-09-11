@@ -239,6 +239,6 @@ describe("param validators", () => {
     expect(codes).toEqual(["invalid-param-validator", "invalid-param-validator"]);
     expect(diagnostics[0]?.message).toContain('"id", which is not a parameter');
     expect(diagnostics[0]?.message).toContain("It has none.");
-    expect(diagnostics[1]?.message).toContain("`params.id` must be a function");
+    expect(diagnostics[1]?.message).toContain("params.id is a string.");
   });
 });

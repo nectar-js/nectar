@@ -10,6 +10,14 @@ export interface Diagnostic {
   route?: string;
 }
 
+/** A value's type as a message puts it: `missing`, `a number`, `an array`. */
+export function typeOf(value: unknown): string {
+  if (value === undefined) return "missing";
+  if (value === null) return "null";
+  if (Array.isArray(value)) return "an array";
+  return typeof value === "object" ? "an object" : `a ${typeof value}`;
+}
+
 interface DiagnosticLocation {
   file?: string;
   route?: string;

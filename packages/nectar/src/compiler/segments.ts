@@ -20,14 +20,14 @@ const PARAM_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
 export function parseSegment(dirName: string): SegmentParseResult {
   if (dirName.startsWith("[") || dirName.endsWith("]")) {
     if (!dirName.startsWith("[") || !dirName.endsWith("]")) {
-      return fail(`"${dirName}" has an unmatched bracket. Dynamic segments look like [name].`);
+      return fail(`"${dirName}" has an unmatched bracket. Parameters look like [name].`);
     }
     const inner = dirName.slice(1, -1);
     const isCatchAll = inner.startsWith("...");
     const name = isCatchAll ? inner.slice(3) : inner;
     if (!PARAM_NAME.test(name)) {
       return fail(
-        `"${dirName}" is not a valid parameter name. Use letters, digits, and underscores, and do not start with a digit.`,
+        `"${dirName}" has an invalid parameter name. Parameters become keys of ctx.params, so use letters, digits, and underscores, and don't start with a digit.`,
       );
     }
     return ok({ type: isCatchAll ? "catchAll" : "dynamic", name });
@@ -40,7 +40,7 @@ export function parseSegment(dirName: string): SegmentParseResult {
     const name = dirName.slice(1, -1);
     if (!STATIC_NAME.test(name)) {
       return fail(
-        `"${dirName}" is not a valid group name. Use letters, digits, hyphens, and underscores.`,
+        `"${dirName}" isn't a valid group name. Use letters, digits, hyphens, and underscores.`,
       );
     }
     return ok({ type: "group", name });
@@ -48,7 +48,7 @@ export function parseSegment(dirName: string): SegmentParseResult {
 
   if (!STATIC_NAME.test(dirName)) {
     return fail(
-      `"${dirName}" is not a valid segment name. Use letters, digits, hyphens, and underscores, and start with a letter or digit.`,
+      `"${dirName}" can't be part of a route path. Use letters, digits, hyphens, and underscores, and start with a letter or digit.`,
     );
   }
   return ok({ type: "static", name: dirName });

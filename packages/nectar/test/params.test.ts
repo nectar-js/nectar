@@ -33,9 +33,11 @@ describe("paramValidatorsOf", () => {
       'validates "nope", which is not a parameter of this route. It has: ticketId, action.',
     );
     expect(() => paramValidatorsOf(bad({ ticketId: /x/ }), route)).toThrow(
-      "`params.ticketId` must be a function or a Standard Schema, got object.",
+      "params.ticketId is an object. A validator is a function or a Standard Schema.",
     );
-    expect(() => paramValidatorsOf(bad([]), route)).toThrow("must be an object");
+    expect(() => paramValidatorsOf(bad([]), route)).toThrow(
+      "params is an array, not an object of validators.",
+    );
     expect(() => paramValidatorsOf(bad({ x: () => true }), { params: [] })).toThrow("It has none.");
   });
 });

@@ -67,7 +67,7 @@ describe("declared routes", () => {
       ["route-mismatch", "component:tickets/[id]"],
       ["route-mismatch", "event:clientReady"],
     ]);
-    expect(graph.diagnostics.items[0]?.message).toContain('declares "pong"');
+    expect(graph.diagnostics.items[0]?.message).toContain('says "pong"');
   });
 });
 
