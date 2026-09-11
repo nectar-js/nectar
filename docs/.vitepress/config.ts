@@ -10,12 +10,19 @@ export default defineConfig({
   themeConfig: {
     logo: "/logo.png",
     nav: [
-      { text: "Concepts", link: "/concepts/app-directory" },
-      { text: "Guides", link: "/guides/components" },
-      { text: "Reference", link: "/reference/files" },
+      { text: "Get started", link: "/introduction", activeMatch: "^/(introduction|migrating)" },
+      { text: "Concepts", link: "/concepts/app-directory", activeMatch: "^/concepts/" },
+      { text: "Guides", link: "/guides/components", activeMatch: "^/guides/" },
+      { text: "Reference", link: "/reference/files", activeMatch: "^/reference/" },
     ],
     sidebar: [
-      { text: "Introduction", link: "/introduction" },
+      {
+        text: "Get started",
+        items: [
+          { text: "Introduction", link: "/introduction" },
+          { text: "Migrating from discord.js", link: "/migrating" },
+        ],
+      },
       {
         text: "Concepts",
         items: [
