@@ -22,6 +22,7 @@ export const DIAGNOSTIC_CODES = [
   "catch-all-not-last",
   "duplicate-route",
   "module-load-failed",
+  "missing-handler",
   "route-mismatch",
   "missing-meta",
   "invalid-meta",

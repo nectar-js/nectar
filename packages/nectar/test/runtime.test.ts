@@ -349,8 +349,13 @@ describe("error boundaries", () => {
 
   test("a handler that is not a function is reported through the boundaries", async () => {
     const { state, logger } = await setup({
-      "commands/bad/command.ts": 'export const meta = { description: "d" };\nexport default 42;\n',
+      "commands/bad/command.ts": cmd('{ description: "d" }', ""),
+      "commands/bad/changed.ts": "export default 42;\n",
     });
+    // The compiler rejects this, so point the manifest at it, as a file edited after the build.
+    const route = state.manifest.routes.find((r) => r.id === "command:bad");
+    if (route === undefined) throw new Error("no command:bad");
+    route.file = "commands/bad/changed.ts";
     await createInteractionDispatcher(state)(chatInput("bad"));
     expect(logger.error.mock.calls[0]?.[1]?.error).toMatchObject({
       name: "HandlerLoadError",

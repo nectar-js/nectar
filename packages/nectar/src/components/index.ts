@@ -3,7 +3,7 @@ export {
   type ComponentKind,
   type ComponentParams,
   type ComponentRoute,
-  checkDeclaredRoute,
+  checkHandler,
   compileComponents,
   customIdFor,
   type EncodableRoute,

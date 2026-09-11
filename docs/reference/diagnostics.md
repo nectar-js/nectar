@@ -48,6 +48,18 @@ For components, it also covers two handlers in one directory, like a `button.ts`
 
 The compiler imports every route file to read exports like `meta`, and this one threw. The message has the error. Syntax Node can't strip, like an `enum`, fails here, and so does top-level code that needs something the build doesn't have, like a database connection. Move that kind of code into the handler.
 
+### missing-handler
+
+A `command.ts`, `button.ts`, `select.ts`, `modal.ts`, or `event.ts` has no default export, or its default export isn't a function. Nectar calls the default export when the route runs:
+
+```ts
+export default defineCommand("ping", async (ctx) => {
+  await ctx.interaction.reply("Pong.");
+});
+```
+
+`autocomplete.ts` has no default export. It exports a function for each option instead.
+
 ### route-mismatch
 
 The route string passed to `defineCommand`, `defineComponent`, or `defineEvent` doesn't match where the file is. The string types `ctx`, so it has to match. Change the string, or move the file.

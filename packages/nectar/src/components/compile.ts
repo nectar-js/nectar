@@ -1,5 +1,5 @@
 import path from "node:path";
-import { Diagnostics } from "../compiler/diagnostics.js";
+import { Diagnostics, typeOf } from "../compiler/diagnostics.js";
 import { loadModule } from "../compiler/load.js";
 import type { Route, RouteTable } from "../compiler/routes.js";
 import { formatSegment } from "../compiler/segments.js";
@@ -133,7 +133,7 @@ async function compileRoute(
     return null;
   }
 
-  if (!checkDeclaredRoute(module, route, diagnostics)) return null;
+  if (!checkHandler(module, route, diagnostics)) return null;
   try {
     paramValidatorsOf(module.default, route);
   } catch (error) {
@@ -154,15 +154,31 @@ async function compileRoute(
   return { ...route, category: "component", kind, selectKind, catchAll, overhead };
 }
 
-/** A handler made with `defineComponent(path, ...)` must name the route its file sits in. */
-export function checkDeclaredRoute(
+/**
+ * The default export is the handler Nectar calls, and one made with `defineComponent(path, ...)`
+ * or the like must name the route its file sits in.
+ */
+export function checkHandler(
   module: Record<string, unknown>,
   route: Route,
   diagnostics: Diagnostics,
   expected = route.path,
 ): boolean {
   const handler = module.default;
-  if (typeof handler !== "function") return true;
+  if (typeof handler !== "function") {
+    const define =
+      route.kind === "command"
+        ? "defineCommand"
+        : route.kind === "event"
+          ? "defineEvent"
+          : "defineComponent";
+    diagnostics.error(
+      "missing-handler",
+      `This ${path.basename(route.file)} ${handler === undefined ? "has no default export" : `exports ${typeOf(handler)} as its default`}. Nectar calls the default export when the route runs, so export the handler, like export default ${define}("${expected}", handler).`,
+      { file: route.file, route: route.id },
+    );
+    return false;
+  }
   const declared = (handler as { route?: unknown }).route;
   if (declared === undefined || declared === expected) return true;
   diagnostics.error(

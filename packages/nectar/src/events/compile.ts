@@ -3,7 +3,7 @@ import { Diagnostics } from "../compiler/diagnostics.js";
 import { loadModule } from "../compiler/load.js";
 import type { Route, RouteTable } from "../compiler/routes.js";
 import { formatSegment } from "../compiler/segments.js";
-import { checkDeclaredRoute } from "../components/compile.js";
+import { checkHandler } from "../components/compile.js";
 
 /** `export const meta` in an `event.ts`. Every field is optional. */
 export interface EventMeta {
@@ -105,7 +105,7 @@ async function loadHandler(route: Route, diagnostics: Diagnostics): Promise<Load
     return null;
   }
 
-  if (!checkDeclaredRoute(module, route, diagnostics, name)) return null;
+  if (!checkHandler(module, route, diagnostics, name)) return null;
   const meta = validateEventMeta(module.meta, route, diagnostics);
   if (meta === null) return null;
   return { route, name, once: meta.once ?? false, order: meta.order ?? 0, mode: meta.mode };

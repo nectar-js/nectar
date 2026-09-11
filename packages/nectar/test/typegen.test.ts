@@ -69,6 +69,21 @@ describe("declared routes", () => {
     ]);
     expect(graph.diagnostics.items[0]?.message).toContain('says "pong"');
   });
+
+  test("a route file without a function as its default export is rejected", async () => {
+    const root = makeApp({
+      "commands/ping/command.ts": 'export const meta = { description: "d" };\n',
+      "components/tickets/[id]/button.ts": "export default 1;\n",
+      "events/clientReady/event.ts": "export const once = true;\n",
+    });
+    const graph = await buildGraph(root);
+    expect(graph.diagnostics.items.map((d) => [d.code, d.route])).toEqual([
+      ["missing-handler", "command:ping"],
+      ["missing-handler", "component:tickets/[id]"],
+      ["missing-handler", "event:clientReady"],
+    ]);
+    expect(graph.diagnostics.items[1]?.message).toContain("exports a number as its default");
+  });
 });
 
 describe("customId registry", () => {
