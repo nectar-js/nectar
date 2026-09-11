@@ -1,6 +1,6 @@
 {
   "name": "@nectar-js/nectar",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "A filesystem-based meta-framework for discord.js.",
   "license": "MIT",
   "type": "module",
