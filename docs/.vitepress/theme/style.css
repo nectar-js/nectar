@@ -11,6 +11,7 @@
 
   --vp-font-family-base: "Recursive Variable", ui-sans-serif, system-ui, sans-serif;
   --vp-font-family-mono: "Recursive Variable", ui-monospace, monospace;
+  --vp-sidebar-width: 288px;
 
   --vp-c-bg: #fffefa;
   --vp-c-bg-alt: #faf6ee;
@@ -106,4 +107,56 @@ samp {
   font-variation-settings:
     "MONO" 0,
     "CASL" 0.3;
+}
+
+/*
+ * Sidebar: space between groups instead of rules, and the current page marked like the
+ * selected file on the home page. Anchored under .VPSidebar to outrank VitePress's scoped styles.
+ */
+.VPSidebar .nav .group + .group {
+  border-top: 0;
+  padding-top: 20px;
+}
+
+.VPSidebar .group .VPSidebarItem.level-0 {
+  padding-bottom: 12px;
+}
+
+.VPSidebar .VPSidebarItem.level-0 > .item {
+  margin-bottom: 2px;
+}
+
+.VPSidebar .VPSidebarItem.level-0 > .item > .text {
+  font-size: 13.5px;
+  font-weight: 720;
+  font-variation-settings:
+    "MONO" 0,
+    "CASL" 0.3;
+}
+
+.VPSidebar .group .VPSidebarItem.level-1 > .item {
+  margin: 0 -12px;
+  padding: 0 12px;
+  border-radius: 8px;
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s;
+}
+
+.VPSidebar .group .VPSidebarItem.level-1.is-link > .item:hover {
+  background-color: var(--vp-c-default-soft);
+}
+
+.VPSidebar .group .VPSidebarItem.level-1.is-link > .item > .link:hover > .text {
+  color: var(--vp-c-text-1);
+}
+
+.VPSidebar .group .VPSidebarItem.level-1.is-active > .item {
+  background-color: var(--vp-c-brand-soft);
+  box-shadow: inset 2px 0 0 var(--honey);
+}
+
+.VPSidebar .group .VPSidebarItem.level-1.is-active > .item > .link > .text {
+  color: var(--vp-c-brand-1);
+  font-weight: 600;
 }
