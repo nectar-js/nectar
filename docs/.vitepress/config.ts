@@ -1,4 +1,5 @@
 import { defineConfig } from "vitepress";
+import { version } from "../../packages/nectar/package.json";
 
 // GitHub Pages serves the site from https://nectar-js.github.io/nectar/.
 const base = "/nectar/";
@@ -18,6 +19,10 @@ export default defineConfig({
       { text: "Concepts", link: "/concepts/app-directory", activeMatch: "^/concepts/" },
       { text: "Guides", link: "/guides/components", activeMatch: "^/guides/" },
       { text: "Reference", link: "/reference/files", activeMatch: "^/reference/" },
+      {
+        text: `v${version}`,
+        link: "https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md",
+      },
     ],
     sidebar: [
       {
