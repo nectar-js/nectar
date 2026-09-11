@@ -89,6 +89,7 @@ code,
 kbd,
 pre,
 samp {
+  font-family: var(--vp-font-family-mono);
   font-variation-settings:
     "MONO" 1,
     "CASL" 0;
