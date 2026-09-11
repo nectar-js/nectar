@@ -18,12 +18,13 @@ const rejecting = (error: unknown) =>
   });
 
 describe("registration remote", () => {
-  test("reads global and guild scopes from the right routes", async () => {
+  test("reads global and guild scopes from the right routes, with localizations", async () => {
     const rest = fakeRest();
     await fetchCommands(rest, "app", "global");
     await fetchCommands(rest, "app", { guild: "g1" });
-    expect(rest.get).toHaveBeenNthCalledWith(1, "/applications/app/commands");
-    expect(rest.get).toHaveBeenNthCalledWith(2, "/applications/app/guilds/g1/commands");
+    const query = { query: new URLSearchParams({ with_localizations: "true" }) };
+    expect(rest.get).toHaveBeenNthCalledWith(1, "/applications/app/commands", query);
+    expect(rest.get).toHaveBeenNthCalledWith(2, "/applications/app/guilds/g1/commands", query);
   });
 
   test("bulk overwrites a scope", async () => {

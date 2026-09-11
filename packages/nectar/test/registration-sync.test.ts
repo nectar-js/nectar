@@ -132,6 +132,45 @@ describe("syncCommands", () => {
     expect(store.get(GLOBAL)).toEqual([]);
   });
 
+  test("keeps an Activity's Entry Point command, which Discord won't let an overwrite drop", async () => {
+    const launch = {
+      id: "9",
+      application_id: "app",
+      version: "3",
+      type: 4,
+      handler: 2,
+      name: "launch",
+      name_localizations: { fr: "lancer" },
+      description: "",
+      default_member_permissions: null,
+    } as unknown as APIApplicationCommand;
+    const { rest } = fakeDiscord({ [GLOBAL]: [launch] });
+    const base = { rest, applicationId: "app", scopes: ["global" as const] };
+
+    const empty = await syncCommands({ ...base, commands: [], dryRun: true });
+    expect(empty.unsafe).toEqual([]);
+    expect(empty.scopes[0]?.diff?.removed).toEqual([]);
+
+    const result = await syncCommands({ ...base, commands: [ping] });
+    expect(result.scopes[0]?.diff?.added).toEqual(["ping"]);
+    expect(rest.get).toHaveBeenLastCalledWith(GLOBAL, {
+      query: new URLSearchParams({ with_localizations: "true" }),
+    });
+    expect(rest.put).toHaveBeenCalledWith(GLOBAL, {
+      body: [
+        ping,
+        {
+          type: 4,
+          handler: 2,
+          name: "launch",
+          name_localizations: { fr: "lancer" },
+          description: "",
+          default_member_permissions: null,
+        },
+      ],
+    });
+  });
+
   test("refuses when the application ID or scope set changed since the last sync", async () => {
     const { rest } = fakeDiscord();
     const cacheDir = temp();

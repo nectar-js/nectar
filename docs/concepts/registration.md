@@ -29,7 +29,7 @@ NODE_ENV=production nectar sync
 
 ## Syncing
 
-For each target, `nectar sync` fetches the registered commands, compares them with the compiled payloads, and overwrites the target if anything differs. The overwrite replaces every command in that target, including commands registered by other tools.
+For each target, `nectar sync` fetches the registered commands, compares them with the compiled payloads, and overwrites the target if anything differs. The overwrite replaces every slash command and context menu command in that target, including ones registered by other tools. Other command types, like the Entry Point command Discord creates when you enable Activities, are kept as they are.
 
 `--dry-run` shows the changes without applying them:
 

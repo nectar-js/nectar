@@ -7,7 +7,7 @@ import { RegistrationError } from "./errors.js";
 
 /** The two calls registration needs. discord.js's `REST` satisfies this. */
 export interface CommandRest {
-  get(route: `/${string}`): Promise<unknown>;
+  get(route: `/${string}`, options?: { query: URLSearchParams }): Promise<unknown>;
   put(route: `/${string}`, options: { body: unknown }): Promise<unknown>;
 }
 
@@ -24,12 +24,15 @@ function scopeRoute(applicationId: string, scope: Scope): `/${string}` {
     : Routes.applicationGuildCommands(applicationId, scope.guild);
 }
 
+/** With full localization maps, which Discord leaves out unless asked. */
 export async function fetchCommands(
   rest: CommandRest,
   applicationId: string,
   scope: Scope,
 ): Promise<APIApplicationCommand[]> {
-  return (await rest.get(scopeRoute(applicationId, scope))) as APIApplicationCommand[];
+  return (await rest.get(scopeRoute(applicationId, scope), {
+    query: new URLSearchParams({ with_localizations: "true" }),
+  })) as APIApplicationCommand[];
 }
 
 /** Bulk overwrite: Discord replaces the scope's whole command set with `commands`. */

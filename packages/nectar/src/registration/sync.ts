@@ -1,7 +1,11 @@
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import type { RESTPostAPIApplicationCommandsJSONBody } from "discord-api-types/v10";
+import {
+  type APIApplicationCommand,
+  ApplicationCommandType,
+  type RESTPostAPIApplicationCommandsJSONBody,
+} from "discord-api-types/v10";
 import { stableStringify } from "../manifest/emit.js";
 import { type CommandDiff, diffCommands } from "./diff.js";
 import { commandKey, normalizeCommand } from "./normalize.js";
@@ -9,6 +13,17 @@ import { type CommandRest, fetchCommands, putCommands, type Scope, scopeKey } fr
 
 export const REGISTRATION_CACHE_FILE = "registration.json";
 const CACHE_VERSION = 1;
+
+/**
+ * The command types an app declares. Other commands in a scope, like the Entry Point command
+ * Discord creates for Activities, go back unchanged in every overwrite: Discord rejects one
+ * that drops them, with error 50240.
+ */
+const DECLARED_TYPES: ReadonlySet<number> = new Set([
+  ApplicationCommandType.ChatInput,
+  ApplicationCommandType.User,
+  ApplicationCommandType.Message,
+]);
 
 /** What the last successful sync sent, so an unchanged app skips the remote read. */
 interface RegistrationCache {
@@ -88,6 +103,8 @@ export async function syncCommands(options: SyncOptions): Promise<SyncResult> {
   }
 
   const results: ScopeSync[] = [];
+  /** Remote commands of other types, by scope key, to send back in the overwrite. */
+  const kept = new Map<string, RESTPostAPIApplicationCommandsJSONBody[]>();
   for (const scope of scopes) {
     const key = scopeKey(scope);
     const cached =
@@ -97,9 +114,11 @@ export async function syncCommands(options: SyncOptions): Promise<SyncResult> {
       continue;
     }
     const remote = await fetchCommands(rest, applicationId, scope);
-    const diff = diffCommands(commands, remote);
-    if (commands.length === 0 && remote.length > 0) {
-      unsafe.push(`${key} has ${remote.length} command(s) registered and the app declares none.`);
+    const declared = remote.filter((c) => DECLARED_TYPES.has(c.type));
+    kept.set(key, remote.filter((c) => !DECLARED_TYPES.has(c.type)).map(resubmit));
+    const diff = diffCommands(commands, declared);
+    if (commands.length === 0 && declared.length > 0) {
+      unsafe.push(`${key} has ${declared.length} command(s) registered and the app declares none.`);
     }
     results.push({ scope, diff, applied: false });
   }
@@ -110,7 +129,8 @@ export async function syncCommands(options: SyncOptions): Promise<SyncResult> {
   const next: RegistrationCache = { version: CACHE_VERSION, applicationId, scopes: {} };
   for (const result of results) {
     if (result.diff?.hasChanges) {
-      await putCommands(rest, applicationId, result.scope, commands);
+      const body = [...commands, ...(kept.get(scopeKey(result.scope)) ?? [])];
+      await putCommands(rest, applicationId, result.scope, body);
       result.applied = true;
     }
     next.scopes[scopeKey(result.scope)] = hash;
@@ -118,6 +138,21 @@ export async function syncCommands(options: SyncOptions): Promise<SyncResult> {
     if (cacheDir !== undefined) writeCache(cacheDir, next);
   }
   return { scopes: results, unsafe };
+}
+
+/** A fetched command as an overwrite takes it, without the fields Discord fills in itself. */
+function resubmit(command: APIApplicationCommand): RESTPostAPIApplicationCommandsJSONBody {
+  const {
+    id: _id,
+    application_id: _application,
+    guild_id: _guild,
+    version: _version,
+    name_localized: _name,
+    description_localized: _description,
+    ...body
+  } = command;
+  // Its type is one Nectar doesn't declare, so the body is passed through as Discord gave it.
+  return body as RESTPostAPIApplicationCommandsJSONBody;
 }
 
 /** Order-insensitive, like the diff: reordering commands is not a change. */
