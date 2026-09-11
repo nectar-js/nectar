@@ -126,7 +126,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "name": "guildMemberAdd",
     },
   ],
-  "nectar": "0.0.0",
+  "nectar": "<version>",
   "routes": [
     {
       "category": "command",

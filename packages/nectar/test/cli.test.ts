@@ -399,7 +399,7 @@ describe("nectar info", () => {
   test("shows versions and the effective config", async () => {
     const result = await nectar(["info"], basic, { env: { DISCORD_TOKEN: "t" } });
     expect(result.code).toBe(0);
-    expect(result.out).toMatch(/^nectar +0\.0\.0$/m);
+    expect(result.out).toMatch(new RegExp(`^nectar +${version.replaceAll(".", "\\.")}$`, "m"));
     expect(result.out).toMatch(/^node +v\d+/m);
     expect(result.out).toMatch(/^discord\.js +14\./m);
     expect(result.out).toMatch(/^DISCORD_TOKEN +set$/m);

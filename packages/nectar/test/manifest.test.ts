@@ -11,6 +11,7 @@ import {
   toManifest,
   writeManifest,
 } from "../src/manifest/index.js";
+import { version } from "../src/version.js";
 
 const appDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -34,7 +35,9 @@ describe("manifest", () => {
     expect(graph.diagnostics.items).toEqual([]);
     const manifest = toManifest(graph, outDir);
     expect(manifest.appDir).toBe("../app");
-    expect(manifest).toMatchSnapshot();
+    // The version changes every release; the snapshot covers the rest.
+    expect(manifest.nectar).toBe(version);
+    expect({ ...manifest, nectar: "<version>" }).toMatchSnapshot();
   });
 
   test("emission is byte-identical across runs and independent of key order", async () => {
