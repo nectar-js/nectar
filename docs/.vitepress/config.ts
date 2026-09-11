@@ -10,7 +10,7 @@ export default defineConfig({
   themeConfig: {
     logo: "/logo.png",
     nav: [
-      { text: "Get started", link: "/introduction", activeMatch: "^/(introduction|migrating)" },
+      { text: "Get started", link: "/introduction", activeMatch: "^/(introduction|migrating/)" },
       { text: "Concepts", link: "/concepts/app-directory", activeMatch: "^/concepts/" },
       { text: "Guides", link: "/guides/components", activeMatch: "^/guides/" },
       { text: "Reference", link: "/reference/files", activeMatch: "^/reference/" },
@@ -20,7 +20,8 @@ export default defineConfig({
         text: "Get started",
         items: [
           { text: "Introduction", link: "/introduction" },
-          { text: "Migrating from discord.js", link: "/migrating" },
+          { text: "Migrating from discord.js", link: "/migrating/discord-js" },
+          { text: "Migrating from Sapphire", link: "/migrating/sapphire" },
         ],
       },
       {

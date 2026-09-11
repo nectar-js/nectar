@@ -58,7 +58,7 @@ export default defineCommand("ping", async (ctx) => {
 ```
 
 - `setName` goes away, since the directory is the name.
-- The description and options move to `meta`. `.addUserOption((o) => o.setName("target").setDescription("Who").setRequired(true))` becomes `{ type: "user", name: "target", description: "Who", required: true }`. [Reserved files](./reference/files#command-ts) lists every field.
+- The description and options move to `meta`. `.addUserOption((o) => o.setName("target").setDescription("Who").setRequired(true))` becomes `{ type: "user", name: "target", description: "Who", required: true }`. [Reserved files](../reference/files#command-ts) lists every field.
 - `interaction` is `ctx.interaction`.
 - Each `.addSubcommand()` becomes a subdirectory with its own `command.ts`, and the parent directory gets a `route.ts` with the description.
 - Category folders like `utility/` can stay as route groups: `app/commands/(utility)/ping/command.ts` still registers `/ping`.
@@ -120,7 +120,7 @@ Messages sent before the switch still carry the old IDs, and Nectar ignores them
 
 ## Registering commands
 
-Delete `deploy-commands.js`. `nectar dev` registers your commands in `dev.guilds` while you work, and `nectar sync` registers them for production. See [Command registration](./concepts/registration).
+Delete `deploy-commands.js`. `nectar dev` registers your commands in `dev.guilds` while you work, and `nectar sync` registers them for production. See [Command registration](../concepts/registration).
 
 ## Scripts
 
@@ -144,7 +144,7 @@ Delete `deploy-commands.js`. `nectar dev` registers your commands in `dev.guilds
 
 ## From another framework
 
-Frameworks such as Sapphire map onto Nectar like this:
+[Migrating from Sapphire](./sapphire) covers Sapphire in detail. Other frameworks map onto Nectar in a similar way:
 
 | Framework | Nectar |
 | --- | --- |
