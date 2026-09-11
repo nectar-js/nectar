@@ -1,7 +1,108 @@
-/* The logo's amber instead of VitePress indigo. */
+@import "@fontsource-variable/recursive/full.css";
+
+/*
+ * Honey from the logo on near-white paper, or on warm brown in dark mode.
+ * Recursive sets both prose and code: its MONO axis makes the same family monospace.
+ */
 :root {
-  --vp-c-brand-1: var(--vp-c-yellow-1);
-  --vp-c-brand-2: var(--vp-c-yellow-2);
-  --vp-c-brand-3: var(--vp-c-yellow-3);
-  --vp-c-brand-soft: var(--vp-c-yellow-soft);
+  --honey: #f5a524;
+  --honey-deep: #9c5700;
+  --propolis: #1b140e;
+
+  --vp-font-family-base: "Recursive Variable", ui-sans-serif, system-ui, sans-serif;
+  --vp-font-family-mono: "Recursive Variable", ui-monospace, monospace;
+
+  --vp-c-bg: #fffefa;
+  --vp-c-bg-alt: #faf6ee;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #f6f0e4;
+
+  --vp-c-text-1: #2b2016;
+  --vp-c-text-2: #6a5a4a;
+  --vp-c-text-3: #928170;
+
+  --vp-c-border: #e2d6c3;
+  --vp-c-divider: #ede4d4;
+  --vp-c-gutter: #ede4d4;
+
+  --vp-c-default-1: #d9ccb8;
+  --vp-c-default-2: #e5dac8;
+  --vp-c-default-3: #eee5d6;
+  --vp-c-default-soft: rgba(146, 129, 112, 0.14);
+
+  --vp-c-brand-1: var(--honey-deep);
+  --vp-c-brand-2: #b36700;
+  --vp-c-brand-3: var(--honey);
+  --vp-c-brand-soft: rgba(245, 165, 36, 0.16);
+
+  --vp-button-brand-bg: var(--honey);
+  --vp-button-brand-text: var(--propolis);
+  --vp-button-brand-border: transparent;
+  --vp-button-brand-hover-bg: #ffb838;
+  --vp-button-brand-hover-text: var(--propolis);
+  --vp-button-brand-hover-border: transparent;
+  --vp-button-brand-active-bg: #e59612;
+  --vp-button-brand-active-text: var(--propolis);
+  --vp-button-brand-active-border: transparent;
+
+  --vp-code-block-bg: #f8f2e7;
+  --vp-code-bg: rgba(245, 165, 36, 0.13);
+  --vp-code-color: #7a4500;
+}
+
+.dark {
+  --vp-c-bg: var(--propolis);
+  --vp-c-bg-alt: #16100b;
+  --vp-c-bg-elv: #241b13;
+  --vp-c-bg-soft: #241b13;
+
+  --vp-c-text-1: #f4e9d8;
+  --vp-c-text-2: #bcae9b;
+  --vp-c-text-3: #857766;
+
+  --vp-c-border: #3b2e21;
+  --vp-c-divider: #2b2117;
+  --vp-c-gutter: #120d09;
+
+  --vp-c-default-1: #4a3b2c;
+  --vp-c-default-2: #3d3024;
+  --vp-c-default-3: #32271d;
+  --vp-c-default-soft: rgba(188, 174, 155, 0.14);
+
+  --vp-c-brand-1: #ffb938;
+  --vp-c-brand-2: var(--honey);
+  --vp-c-brand-3: var(--honey);
+  --vp-c-brand-soft: rgba(245, 165, 36, 0.16);
+
+  --vp-code-block-bg: #140f0a;
+  --vp-code-bg: rgba(245, 165, 36, 0.1);
+  --vp-code-color: #ffc861;
+}
+
+body {
+  font-variation-settings:
+    "MONO" 0,
+    "CASL" 0;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-variation-settings:
+    "MONO" 1,
+    "CASL" 0;
+}
+
+.NotFound .title {
+  letter-spacing: normal;
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  font-weight: 720;
+  font-variation-settings:
+    "MONO" 0,
+    "CASL" 0.3;
 }
