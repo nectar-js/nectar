@@ -75,6 +75,30 @@ export class ConfigError extends Error {
 const ENVS = new Set<string>(["development", "test", "production"]);
 const LEVELS = new Set<string>(["debug", "info", "warn", "error"]);
 
+/** Every option, so a misspelled or removed one fails instead of being ignored. */
+const OPTIONS: Record<keyof NectarConfig, true> = {
+  token: true,
+  applicationId: true,
+  intents: true,
+  partials: true,
+  client: true,
+  eager: true,
+  env: true,
+  logger: true,
+  observe: true,
+  plugins: true,
+  appDir: true,
+  outDir: true,
+  dev: true,
+  commands: true,
+  environments: true,
+};
+const DEV_OPTIONS: Record<keyof NonNullable<NectarConfig["dev"]>, true> = { guilds: true };
+const COMMANDS_OPTIONS: Record<keyof NonNullable<NectarConfig["commands"]>, true> = {
+  target: true,
+};
+const LOGGER_OPTIONS: Record<keyof LoggerOptions, true> = { level: true, sink: true };
+
 /** Checks a loaded config's shape. Discord validates intent and partial values itself at login. */
 export function validateConfig(value: unknown, file: string): NectarConfig {
   const fail = (detail: string): never => {
@@ -82,6 +106,14 @@ export function validateConfig(value: unknown, file: string): NectarConfig {
   };
   if (!isRecord(value)) fail("the default export must be an object. Use defineConfig({ ... }).");
   const config = value as Record<string, unknown>;
+  checkKeys(config, OPTIONS, "", fail);
+  for (const [key, options] of [
+    ["dev", DEV_OPTIONS],
+    ["commands", COMMANDS_OPTIONS],
+    ["logger", LOGGER_OPTIONS],
+  ] as const) {
+    if (isRecord(config[key])) checkKeys(config[key], options, `${key}.`, fail);
+  }
 
   for (const key of ["token", "applicationId"] as const) {
     if (config[key] !== undefined && typeof config[key] !== "string") {
@@ -220,6 +252,29 @@ function validatePlugins(value: unknown, fail: (detail: string) => never): void 
       commands.set(commandName, name);
     }
   });
+}
+
+/** Fails on the first key `options` doesn't have, naming a likely intended one when there is one. */
+function checkKeys(
+  value: Record<string, unknown>,
+  options: Record<string, true>,
+  prefix: string,
+  fail: (detail: string) => never,
+): void {
+  for (const key of Object.keys(value)) {
+    if (Object.hasOwn(options, key)) continue;
+    const near = Object.keys(options).find(
+      (option) =>
+        option.toLowerCase() === key.toLowerCase() || option === `${key}s` || `${option}s` === key,
+    );
+    fail(
+      `\`${prefix}${key}\` isn't a config option.${
+        near === undefined
+          ? " The options are listed at https://nectar-js.github.io/nectar/reference/config."
+          : ` Did you mean \`${prefix}${near}\`?`
+      }`,
+    );
+  }
 }
 
 function isGuildList(value: unknown): value is string[] {

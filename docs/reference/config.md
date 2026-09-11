@@ -14,7 +14,7 @@ export default defineConfig({
 });
 ```
 
-Nectar validates the config on load and names the key that's wrong.
+Nectar validates the config on load and names the key that's wrong. A key that isn't one of the options below is an error too, so a misspelled option doesn't get ignored.
 
 ## `token`
 

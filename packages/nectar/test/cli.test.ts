@@ -73,6 +73,21 @@ describe("nectar", () => {
     expect(token.err).toContain("`token` must be a string");
   });
 
+  test("unknown config options fail, with the likely one named", async () => {
+    const check = async (config: string) => (await nectar(["check"], makeProject({}, config))).err;
+    expect(await check("{ intent: [] }")).toContain(
+      "`intent` isn't a config option. Did you mean `intents`?",
+    );
+    expect(await check("{ intents: [], dev: { guild: ['1'] } }")).toContain(
+      "Did you mean `dev.guilds`?",
+    );
+    expect(
+      await check("{ intents: [], environments: { production: { eagerly: true } } }"),
+    ).toContain(
+      "`environments.production`: `eagerly` isn't a config option. The options are listed at",
+    );
+  });
+
   test("environments override the config for the environment that runs", async () => {
     const root = makeProject(
       { "commands/ping/command.ts": ping },
