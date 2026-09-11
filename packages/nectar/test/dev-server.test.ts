@@ -223,6 +223,41 @@ describe("dev server", () => {
     await server.stop();
   });
 
+  test("an unhandled error lists every middleware file in one column", async () => {
+    const next = "export default async function (ctx, next) { return next(); }\n";
+    const root = makeProject({
+      "middleware.ts": next,
+      "commands/middleware.ts": next,
+      "commands/ping/command.ts":
+        'export const meta = { description: "d" };\nexport default async function () { throw new Error("boom"); }\n',
+    });
+    const err: string[] = [];
+    const clients: FakeClient[] = [];
+    const io = {
+      cwd: root,
+      env: { DISCORD_TOKEN: "t" },
+      out: () => {},
+      err: (line: string) => err.push(line),
+      client: () => {
+        const client = fakeClient();
+        clients.push(client);
+        return client as unknown as Client;
+      },
+    };
+    const server = createDevServer(await loadProject(root, io.env), io);
+    await server.start();
+    clients[0]?.emit("interactionCreate", chatInput("ping"));
+    await vi.waitFor(() => expect(err.some((l) => l.includes("Unhandled error"))).toBe(true));
+
+    const lines = (err.find((l) => l.includes("Unhandled error")) ?? "").split("\n");
+    const row = lines.findIndex((l) => l.trimStart().startsWith("middleware"));
+    const first = lines[row] ?? "";
+    const second = lines[row + 1] ?? "";
+    expect(second).toContain(path.join("commands", "middleware.ts"));
+    expect(second.indexOf(root)).toBe(first.indexOf(root));
+    await server.stop();
+  });
+
   test("without dev guilds or an application ID, registration is skipped with one warning", async () => {
     const root = makeProject({ "commands/ping/command.ts": command("ping") });
     const err: string[] = [];

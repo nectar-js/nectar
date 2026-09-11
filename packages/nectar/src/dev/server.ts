@@ -79,7 +79,9 @@ export function createDevServer(
     error(message, fields = {}) {
       const [head = "", ...rest] = message.split("\n");
       const stack = fields.error === undefined ? [] : describeError(fields.error);
-      complain(block(fail(c.bold(head)), [...rest.map((l) => l.trimStart()), ...stack]));
+      // block() indents the details itself. Strip only the report's own two spaces, so
+      // continuation lines stay aligned with the column above them.
+      complain(block(fail(c.bold(head)), [...rest.map((l) => l.replace(/^ {2}/, "")), ...stack]));
     },
   };
   // Fresh per boot so a reloaded config's `observe` is subscribed once.
