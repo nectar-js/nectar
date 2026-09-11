@@ -78,11 +78,19 @@ function apply(graph: RouteGraph, plugin: string, change: PluginChange): void {
   const routes = graph.routes.filter(
     (r) => r.id === change.route && (change.kind === undefined || r.kind === change.kind),
   );
+  const target = change.kind === undefined ? change.route : `${change.route} (${change.kind})`;
   if (routes.length === 0) {
-    const target = change.kind === undefined ? change.route : `${change.route} (${change.kind})`;
     graph.diagnostics.error(
       "plugin-unknown-route",
       `Plugin "${plugin}" adds middleware to route "${target}", which does not exist.`,
+    );
+    return;
+  }
+  if (routes.some((r) => r.category === "event")) {
+    graph.diagnostics.error(
+      "plugin-invalid-change",
+      `Plugin "${plugin}" adds middleware to route "${target}", but event handlers don't run middleware.`,
+      { route: change.route },
     );
     return;
   }

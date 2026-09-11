@@ -179,6 +179,25 @@ describe("route transforms", () => {
     expect(graph.diagnostics.items[5]?.message).toContain("kaboom");
     expect(toManifest(graph, root).routes.every((r) => r.plugins.length === 0)).toBe(true);
   });
+
+  test("middleware for an event route is rejected", async () => {
+    const root = makeApp({
+      ...app,
+      "events/clientReady/event.ts": "export default async () => {};\n",
+    });
+    const graph = await buildGraph(root);
+    await applyPlugins(graph, [
+      {
+        name: "events",
+        transform: () => [
+          { type: "middleware", route: "event:clientReady", file: middlewareIn(root) },
+        ],
+      },
+    ]);
+    expect(graph.diagnostics.items.map((d) => d.code)).toEqual(["plugin-invalid-change"]);
+    expect(graph.diagnostics.items[0]?.message).toContain("event handlers don't run middleware");
+    expect(toManifest(graph, root).routes.every((r) => r.middleware.length <= 1)).toBe(true);
+  });
 });
 
 describe("generated types", () => {

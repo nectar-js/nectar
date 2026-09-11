@@ -48,12 +48,19 @@ describe("middleware chains", () => {
       "commands/ping/command.ts": cmd,
       "components/middleware.ts": handler,
       "components/confirm/button.ts": handler,
-      "events/middleware.ts": handler,
-      "events/clientReady/event.ts": handler,
     });
     expect(chains["command:ping"]?.middleware).toEqual([]);
     expect(chains["button:confirm"]?.middleware).toEqual(["components/middleware.ts"]);
-    expect(chains["event:clientReady"]?.middleware).toEqual(["events/middleware.ts"]);
+  });
+
+  test("event routes get none, since event handlers don't run middleware", () => {
+    const chains = chainsFor({
+      "middleware.ts": handler,
+      "events/middleware.ts": handler,
+      "events/error.ts": handler,
+      "events/clientReady/event.ts": handler,
+    });
+    expect(chains["event:clientReady"]).toEqual({ middleware: [], errors: ["events/error.ts"] });
   });
 
   test("a static directory does not match a dynamic one with the same name", () => {
@@ -103,8 +110,10 @@ describe("graph", () => {
       "unknown-event",
     ]);
     expect(graph.chains.size).toBe(5);
-    for (const chains of graph.chains.values()) {
-      expect(chains.middleware).toEqual([path.join(root, "middleware.ts")]);
+    for (const route of graph.routes) {
+      expect(graph.chains.get(route.file)?.middleware).toEqual(
+        route.category === "event" ? [] : [path.join(root, "middleware.ts")],
+      );
     }
   });
 });

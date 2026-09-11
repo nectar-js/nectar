@@ -48,7 +48,7 @@ transform: (graph) =>
     })),
 ```
 
-A `middleware` change adds the default export of `file`, an absolute path, to a route's middleware. With `position: "outer"`, the default, it runs before the app's middleware. With `"inner"`, it runs right before the handler. A command and its autocomplete share a route ID, so set `kind` to target one of them.
+A `middleware` change adds the default export of `file`, an absolute path, to a route's middleware. With `position: "outer"`, the default, it runs before the app's middleware. With `"inner"`, it runs right before the handler. A command and its autocomplete share a route ID, so set `kind` to target one of them. Event routes can't take middleware.
 
 A `diagnostic` change reports a problem:
 

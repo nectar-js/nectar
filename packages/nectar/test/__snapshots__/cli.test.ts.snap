@@ -3,7 +3,7 @@
 exports[`nectar routes > examples/basic tree 1`] = `
 "app
 ├── error.ts               error boundary for 12 routes
-├── middleware.ts          middleware for 12 routes
+├── middleware.ts          middleware for 9 routes
 ├── commands
 │   ├── moderation
 │   │   ├── middleware.ts  middleware for 2 routes

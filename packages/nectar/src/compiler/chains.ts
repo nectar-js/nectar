@@ -23,10 +23,15 @@ export function resolveChains(route: Route, boundaries: readonly Boundary[]): Ro
   const byDepth = (a: Boundary, b: Boundary) => depth(a) - depth(b);
 
   return {
-    middleware: applicable
-      .filter((b) => b.kind === "middleware")
-      .sort(byDepth)
-      .map((b) => b.file),
+    // Event handlers take discord.js's arguments, not an interaction context, so the runtime
+    // runs no middleware for them.
+    middleware:
+      route.category === "event"
+        ? []
+        : applicable
+            .filter((b) => b.kind === "middleware")
+            .sort(byDepth)
+            .map((b) => b.file),
     errors: applicable
       .filter((b) => b.kind === "error")
       .sort(byDepth)

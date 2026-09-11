@@ -275,9 +275,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "file": "events/clientReady/event.ts",
       "id": "event:clientReady",
       "kind": "event",
-      "middleware": [
-        "middleware.ts",
-      ],
+      "middleware": [],
       "once": false,
       "order": 0,
       "path": "clientReady",
@@ -292,9 +290,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "file": "events/guildMemberAdd/(audit)/event.ts",
       "id": "event:guildMemberAdd/(audit)",
       "kind": "event",
-      "middleware": [
-        "middleware.ts",
-      ],
+      "middleware": [],
       "once": false,
       "order": 1,
       "path": "guildMemberAdd/(audit)",
@@ -309,9 +305,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "file": "events/guildMemberAdd/(welcome)/event.ts",
       "id": "event:guildMemberAdd/(welcome)",
       "kind": "event",
-      "middleware": [
-        "middleware.ts",
-      ],
+      "middleware": [],
       "once": false,
       "order": 0,
       "path": "guildMemberAdd/(welcome)",
