@@ -54,6 +54,13 @@ const TYPE_LABEL: Record<number, string> = {
   [ApplicationCommandType.Message]: "message context menu command",
 };
 
+/** How many commands of each type Discord takes, globally and in each server. */
+const COMMAND_LIMITS: Record<number, number> = {
+  [ApplicationCommandType.ChatInput]: 100,
+  [ApplicationCommandType.User]: 15,
+  [ApplicationCommandType.Message]: 15,
+};
+
 interface LoadedRoute {
   route: Route;
   parts: string[];
@@ -98,8 +105,31 @@ export async function compileCommands(table: RouteTable): Promise<CompiledComman
   }
 
   detectDuplicateNames(commands, diagnostics);
+  checkLimits(commands, diagnostics);
   commands.sort((a, b) => a.type - b.type || a.name.localeCompare(b.name));
   return { commands, diagnostics };
+}
+
+function checkLimits(commands: CompiledCommand[], diagnostics: Diagnostics): void {
+  for (const [type, limit] of Object.entries(COMMAND_LIMITS)) {
+    const ofType = commands.filter((c) => c.type === Number(type));
+    const first = ofType[0];
+    if (first === undefined || ofType.length <= limit) continue;
+    const slash = Number(type) === ApplicationCommandType.ChatInput;
+    diagnostics.error(
+      "too-many-commands",
+      `The app has ${ofType.length} ${TYPE_LABEL[Number(type)]}s, and Discord allows ${limit}, globally and in each server. ${slash ? "Subcommands don't count toward it, so group related commands under one." : "Remove some."}`,
+      { file: commandsDir(first) },
+    );
+  }
+}
+
+/** The `commands/` directory, found by walking up from one of the command's handlers. */
+function commandsDir(command: CompiledCommand): string {
+  const route = Object.values(command.handlers)[0] as Route;
+  let dir = path.dirname(route.file);
+  for (let i = 0; i < route.segments.length; i++) dir = path.dirname(dir);
+  return dir;
 }
 
 async function loadRoutes(routes: Route[], diagnostics: Diagnostics): Promise<LoadedRoute[]> {

@@ -151,6 +151,10 @@ Like [top-level-field-on-group](#top-level-field-on-group), for a subcommand's `
 
 Two commands of the same type register the same name, usually because of `meta.name`. Discord needs names to be unique within a type, so a slash command and a user context menu command can share one.
 
+### too-many-commands
+
+The app has more commands of one type than Discord allows: 100 slash commands, 15 user context menu commands, and 15 message context menu commands. The limits apply globally and in each server. Subcommands don't count, so related slash commands can go under one command, like `/settings roles add`.
+
 ## Autocomplete
 
 ### autocomplete-without-command

@@ -1,3 +1,4 @@
+import path from "node:path";
 import { describe, expect, test } from "vitest";
 import { compileCommands } from "../src/commands/index.js";
 import { buildRouteTable } from "../src/compiler/index.js";
@@ -324,6 +325,22 @@ describe("diagnostics", () => {
       files[`commands/big/s${i}/command.ts`] = cmd(`{ description: "${i}" }`);
     const { codes } = await compile(files);
     expect(codes).toEqual(["too-many-subcommands"]);
+  });
+
+  test("more commands of a type than Discord takes", async () => {
+    const files: Record<string, string> = {
+      "commands/(staff)/c0/command.ts": cmd('{ description: "0" }'),
+    };
+    for (let i = 1; i <= 100; i++)
+      files[`commands/c${i}/command.ts`] = cmd(`{ description: "${i}" }`);
+    for (let i = 0; i < 16; i++) files[`commands/u${i}/command.ts`] = cmd('{ type: "user" }');
+    const { diagnostics } = await compile(files);
+    expect(diagnostics.map((d) => [d.code, path.basename(d.file ?? "")])).toEqual([
+      ["too-many-commands", "commands"],
+      ["too-many-commands", "commands"],
+    ]);
+    expect(diagnostics[0]?.message).toContain("101 slash commands, and Discord allows 100");
+    expect(diagnostics[1]?.message).toContain("16 user context menu commands");
   });
 
   test.each([

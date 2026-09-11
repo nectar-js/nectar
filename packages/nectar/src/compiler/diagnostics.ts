@@ -40,6 +40,7 @@ export const DIAGNOSTIC_CODES = [
   "top-level-field-on-group",
   "top-level-field-on-subcommand",
   "duplicate-command-name",
+  "too-many-commands",
   "autocomplete-without-command",
   "autocomplete-export-not-function",
   "autocomplete-unknown-option",
