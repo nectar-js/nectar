@@ -4,6 +4,9 @@ export default defineConfig({
   title: "Nectar",
   description: "A filesystem-based meta-framework for discord.js.",
   head: [["link", { rel: "icon", type: "image/png", href: "/logo.png" }]],
+  markdown: {
+    theme: { light: "kanagawa-lotus", dark: "kanagawa-dragon" },
+  },
   themeConfig: {
     logo: "/logo.png",
     nav: [
@@ -50,5 +53,11 @@ export default defineConfig({
     ],
     socialLinks: [{ icon: "github", link: "https://github.com/nectar-js/nectar" }],
     search: { provider: "local" },
+    notFound: {
+      title: "Page not found",
+      quote: "It may have moved. Try the search at the top of the page.",
+      linkText: "Go to the home page",
+      linkLabel: "Go to the home page",
+    },
   },
 });
