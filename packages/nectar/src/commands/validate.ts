@@ -1,4 +1,4 @@
-import { type Diagnostics, typeOf } from "../compiler/diagnostics.js";
+import { type DiagnosticCode, type Diagnostics, typeOf } from "../compiler/diagnostics.js";
 import type { CommandMeta, CommandOption, CommandRouteMeta, OptionChoice } from "./meta.js";
 
 export const COMMAND_NAME = /^[-_\p{L}\p{N}\p{sc=Deva}\p{sc=Thai}]{1,32}$/u;
@@ -137,7 +137,7 @@ export function topLevelKeysUsed(meta: object): string[] {
   );
 }
 
-function fail(ctx: Ctx, code: string, message: string): false {
+function fail(ctx: Ctx, code: DiagnosticCode, message: string): false {
   ctx.diagnostics.error(code, message, { file: ctx.file });
   return false;
 }

@@ -66,12 +66,13 @@ function apply(graph: RouteGraph, plugin: string, change: PluginChange): void {
   }
   if (change.type === "diagnostic") {
     const { severity, code, message, file, route } = change;
-    const where = {
+    graph.diagnostics.items.push({
+      code,
+      severity: severity === "error" ? "error" : "warning",
+      message,
       ...(file === undefined ? {} : { file }),
       ...(route === undefined ? {} : { route }),
-    };
-    if (severity === "error") graph.diagnostics.error(code, message, where);
-    else graph.diagnostics.warn(code, message, where);
+    });
     return;
   }
 

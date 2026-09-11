@@ -1,11 +1,11 @@
 import path from "node:path";
-import type { Diagnostic } from "../compiler/diagnostics.js";
+import { type Diagnostic, docsUrl } from "../compiler/diagnostics.js";
 import { buildGraph, type RouteGraph } from "../compiler/graph.js";
 import { checkIntents } from "../events/index.js";
 import { applyPlugins } from "../plugins/index.js";
 import type { CliIo } from "./io.js";
 import type { Project } from "./project.js";
-import { c, fail, indent, warn } from "./ui.js";
+import { c, fail, indent, link, warn } from "./ui.js";
 
 /**
  * Compiles the app, runs plugin transforms, and prints every diagnostic. Returns `null` when
@@ -29,15 +29,20 @@ export async function compileProject(project: Project, io: CliIo): Promise<Route
 }
 
 /**
- * One diagnostic as a headline and an indented message:
+ * One diagnostic as a headline, an indented message, and the code's reference entry:
  *
- *     ✖ error  invalid-name  app/commands/Bad Name/command.ts
- *       Command names must be lowercase ...
+ *     ✖ error  invalid-name  app/commands/Ping/command.ts
+ *       "Ping" isn't a valid slash command name. ...
+ *       https://nectar-js.github.io/nectar/reference/diagnostics#invalid-name
  */
 export function formatDiagnostic(diagnostic: Diagnostic, root: string): string {
   const mark = diagnostic.severity === "error" ? fail(c.red("error")) : warn(c.yellow("warning"));
   const where = diagnostic.file === undefined ? "" : `  ${relative(root, diagnostic.file)}`;
-  return [`${mark}  ${c.dim(diagnostic.code)}${where}`, ...indent([diagnostic.message])].join("\n");
+  const docs = docsUrl(diagnostic.code);
+  return [
+    `${mark}  ${c.dim(diagnostic.code)}${where}`,
+    ...indent([diagnostic.message, ...(docs === undefined ? [] : [link(docs)])]),
+  ].join("\n");
 }
 
 export function relative(root: string, file: string): string {

@@ -138,14 +138,17 @@ describe("nectar check", () => {
     expect(result.out).toBe("✔ No problems. 3 commands, 4 component routes, 2 events in app/.");
   });
 
-  test("reports diagnostics with file and code, writes nothing", async () => {
+  test("reports diagnostics with file, code, and docs link, writes nothing", async () => {
     const root = makeProject({
       "commands/ping/command.ts": ping,
       "commands/Bad Name/command.ts": ping,
     });
     const result = await nectar(["check"], root);
     expect(result.code).toBe(1);
-    expect(result.err).toMatch(/^✖ error {2}[a-z-]+ {2}app\/commands\/Bad Name/m);
+    expect(result.err).toMatch(/^✖ error {2}invalid-segment {2}app\/commands\/Bad Name/m);
+    expect(result.err).toContain(
+      "\n  https://nectar-js.github.io/nectar/reference/diagnostics#invalid-segment\n",
+    );
     expect(result.err).toContain("1 error.");
     expect(existsSync(path.join(root, ".nectar"))).toBe(false);
   });

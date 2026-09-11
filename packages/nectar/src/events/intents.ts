@@ -1,5 +1,5 @@
 import { type BitFieldResolvable, GatewayIntentBits, IntentsBitField } from "discord.js";
-import type { Diagnostic } from "../compiler/diagnostics.js";
+import type { Diagnostic, DiagnosticCode } from "../compiler/diagnostics.js";
 import type { CompiledEvent } from "./compile.js";
 
 type Intent = keyof typeof GatewayIntentBits;
@@ -113,7 +113,7 @@ export function checkIntents(
     const names = needed.map((i) => `"${i}"`).join(" or ");
     const privileged = needed.filter((i) => PRIVILEGED.has(i));
     diagnostics.push({
-      code: "missing-intent",
+      code: "missing-intent" satisfies DiagnosticCode,
       severity: "warning",
       message: `"${event.name}" never fires without the ${names} intent. Add it to intents in ${configFile}.${
         privileged.length === 0
