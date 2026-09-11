@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, symlinkSync } from "node:fs";
+import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from "node:fs";
 import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import path from "node:path";
@@ -23,6 +23,7 @@ afterEach(() => {
  */
 async function fakeDiscord(shards: number) {
   const identified: [number, number][] = [];
+  const tokens: string[] = [];
   let url = "";
   const server = createServer((req, res) => {
     res.setHeader("content-type", "application/json");
@@ -39,10 +40,14 @@ async function fakeDiscord(shards: number) {
     const send = (payload: object) => socket.send(JSON.stringify({ s: null, t: null, ...payload }));
     send({ op: 10, d: { heartbeat_interval: 45_000 } });
     socket.on("message", (raw) => {
-      const { op, d } = JSON.parse(String(raw)) as { op: number; d: { shard: [number, number] } };
+      const { op, d } = JSON.parse(String(raw)) as {
+        op: number;
+        d: { shard: [number, number]; token: string };
+      };
       if (op === 1) send({ op: 11 });
       if (op !== 2) return;
       identified.push(d.shard);
+      tokens.push(d.token);
       send({
         op: 0,
         s: 1,
@@ -67,7 +72,17 @@ async function fakeDiscord(shards: number) {
     gateway.close();
     server.close();
   });
-  return { api: `http://127.0.0.1:${port}/api`, identified };
+  return { api: `http://127.0.0.1:${port}/api`, identified, tokens };
+}
+
+/** A built project whose `@nectar-js/nectar` resolves to this package. */
+async function builtProject(files: Record<string, string>, config: string) {
+  const root = makeProject(files, config);
+  mkdirSync(path.join(root, "node_modules/@nectar-js"), { recursive: true });
+  symlinkSync(nectarPackage, path.join(root, "node_modules/@nectar-js/nectar"), "junction");
+  const io = { cwd: root, env: {}, out: () => {}, err: () => {} };
+  expect(await run(["build"], io)).toBe(0);
+  return root;
 }
 
 test("a ShardingManager runs the build once per shard", { timeout: 60_000 }, async () => {
@@ -81,14 +96,10 @@ test("a ShardingManager runs the build once per shard", { timeout: 60_000 }, asy
         JSON.stringify(app.client.options.shards) + "\\n",
       ),
   }`;
-  const root = makeProject(
+  const root = await builtProject(
     { "commands/ping/command.ts": ping },
     `{ intents: [], client: { rest: { api: "${discord.api}" } }, plugins: [${plugin}] }`,
   );
-  mkdirSync(path.join(root, "node_modules/@nectar-js"), { recursive: true });
-  symlinkSync(nectarPackage, path.join(root, "node_modules/@nectar-js/nectar"), "junction");
-  const io = { cwd: root, env: {}, out: () => {}, err: () => {} };
-  expect(await run(["build"], io)).toBe(0);
 
   const manager = new ShardingManager(path.join(root, ".nectar/start.mjs"), {
     totalShards: 2,
@@ -124,4 +135,35 @@ test("a ShardingManager runs the build once per shard", { timeout: 60_000 }, asy
   });
   expect(await Promise.all(exits)).toEqual([0, 0]);
   expect(output.join("")).not.toContain("Error");
+});
+
+test("shards of a manager without a token read it from .env", { timeout: 60_000 }, async () => {
+  const discord = await fakeDiscord(1);
+  const root = await builtProject(
+    { "commands/ping/command.ts": ping },
+    `{ intents: [], client: { rest: { api: "${discord.api}" } } }`,
+  );
+  writeFileSync(path.join(root, ".env"), "DISCORD_TOKEN=from-env-file\n");
+
+  // With no token option and no DISCORD_TOKEN in its own env, the manager hands its shards
+  // DISCORD_TOKEN="null", and writes the same into this process's env.
+  const previous = process.env.DISCORD_TOKEN;
+  delete process.env.DISCORD_TOKEN;
+  cleanup.push(() => {
+    if (previous === undefined) delete process.env.DISCORD_TOKEN;
+    else process.env.DISCORD_TOKEN = previous;
+  });
+  const manager = new ShardingManager(path.join(root, ".nectar/start.mjs"), {
+    totalShards: 1,
+    respawn: false,
+    silent: true,
+  });
+  await manager.spawn({ delay: 0, timeout: 30_000 });
+  expect(discord.tokens).toEqual(["from-env-file"]);
+
+  const child = manager.shards.get(0)?.process;
+  if (child == null) throw new Error("shard 0 has no process");
+  const exited = new Promise((resolve) => child.once("exit", resolve));
+  child.disconnect();
+  await exited;
 });

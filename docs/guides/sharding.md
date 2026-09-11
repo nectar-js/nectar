@@ -6,10 +6,7 @@
 // shards.mjs
 import { ShardingManager } from "discord.js";
 
-const manager = new ShardingManager(".nectar/start.mjs", {
-  token: process.env.DISCORD_TOKEN,
-});
-
+const manager = new ShardingManager(".nectar/start.mjs");
 await manager.spawn();
 ```
 
@@ -18,7 +15,7 @@ npx nectar build
 NODE_ENV=production node --env-file=.env shards.mjs
 ```
 
-Always pass `token`. The manager sets `DISCORD_TOKEN` for every shard process from it, and uses it to fetch the recommended shard count.
+The manager uses `DISCORD_TOKEN` to fetch the recommended shard count and passes it to each shard. If you set `totalShards` and the manager has no token, each shard reads it from `.env` or the config instead.
 
 Each shard process loads the config and manifest on its own, and its login line names its shard:
 
