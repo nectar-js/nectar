@@ -45,6 +45,15 @@ export default defineCommand("moderation/ban", async (ctx) => {
 ```
 
 </template>
+<template #guard>
+
+```ts
+import { requirePermissions } from "@nectar-js/nectar";
+
+export default requirePermissions("BanMembers");
+```
+
+</template>
 <template #close>
 
 ```ts

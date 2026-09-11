@@ -28,6 +28,13 @@ const files: ExampleFile[] = [
     result: "Subcommand /moderation ban",
   },
   {
+    id: "guard",
+    area: "app/commands/",
+    route: "moderation",
+    file: "/middleware.ts",
+    result: "Middleware for /moderation",
+  },
+  {
     id: "close",
     area: "app/components/",
     route: "tickets/[ticketId]/close",
@@ -171,6 +178,26 @@ async function copyInstall() {
               <div class="input">
                 <span class="typed">/moderation ban</span>
                 <span class="option"><span class="key">target</span> @spammer</span>
+              </div>
+            </template>
+
+            <template v-else-if="file.id === 'guard'">
+              <p class="used">you used <span class="command">/moderation ban</span></p>
+              <div class="message">
+                <img class="avatar" :src="withBase('/logo.png')" alt="" />
+                <div>
+                  <p class="author">Nectar <span class="app">APP</span></p>
+                  <p>You do not have permission to do that.</p>
+                  <p class="ephemeral">
+                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                      <path
+                        fill="currentColor"
+                        d="M12 5C5.6 5 2 12 2 12s3.6 7 10 7 10-7 10-7-3.6-7-10-7Zm0 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8Zm0-2a2 2 0 1 0 0-4 2 2 0 0 0 0 4Z"
+                      />
+                    </svg>
+                    Only you can see this • <span class="dismiss">Dismiss message</span>
+                  </p>
+                </div>
               </div>
             </template>
 
@@ -539,6 +566,19 @@ h1 {
   color: #fff;
   font-size: 14px;
   font-weight: 600;
+}
+
+.ephemeral {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  color: #949ba4;
+  font-size: 12.5px;
+}
+
+.dismiss {
+  color: #00a8fc;
 }
 
 .custom-id {
