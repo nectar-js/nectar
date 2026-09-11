@@ -14,7 +14,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, test } from "vitest";
 import { run } from "../../nectar/src/cli/index.js";
-import { detectPackageManager, nextSteps, scaffold, templateFiles } from "../src/scaffold.js";
+import {
+  detectPackageManager,
+  idProblem,
+  nextSteps,
+  projectProblem,
+  scaffold,
+  templateFiles,
+} from "../src/scaffold.js";
 
 const repo = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../..");
 
@@ -64,7 +71,7 @@ describe("scaffold", () => {
   test.each(["ts", "js"] as const)("a %s project passes nectar check", async (language) => {
     const dir = tempDir();
     const files = scaffold(dir, { name: "my-bot", language, packageManager: "npm" });
-    expect(files).toHaveLength(language === "ts" ? 9 : 8);
+    expect(files).toHaveLength(language === "ts" ? 10 : 9);
     expect(files.some((f) => f.startsWith("app/components/counter/[count]/button."))).toBe(true);
     expect(readFileSync(path.join(dir, ".gitignore"), "utf8")).toContain(".nectar/");
 
@@ -121,25 +128,47 @@ describe("scaffold", () => {
     ).toBeUndefined();
   });
 
-  test("refuses a non-empty directory", () => {
+  test("refuses a non-empty directory and an invalid package name", () => {
     const dir = tempDir();
     scaffold(dir, { name: "my-bot", language: "js", packageManager: "npm" });
     expect(() => scaffold(dir, { name: "my-bot", language: "js", packageManager: "npm" })).toThrow(
-      "not empty",
+      "already has files",
     );
     expect(existsSync(path.join(dir, "nectar.config.js"))).toBe(true);
+    expect(projectProblem(path.join(path.dirname(dir), "My Bot"))).toContain("valid package name");
   });
 
-  test("package manager detection and next steps", () => {
+  test("writes the Discord details to .env, which the config reads", () => {
+    const dir = tempDir();
+    const credentials = { token: "t", applicationId: "123456789012345678", guildId: "" };
+    scaffold(dir, { name: "my-bot", language: "ts", packageManager: "npm", credentials });
+    expect(readFileSync(path.join(dir, ".env"), "utf8")).toBe(
+      "DISCORD_TOKEN=t\nDISCORD_APPLICATION_ID=123456789012345678\nDEV_GUILD_ID=\n",
+    );
+    expect(readFileSync(path.join(dir, "nectar.config.ts"), "utf8")).toContain(
+      "process.env.DEV_GUILD_ID",
+    );
+    expect(idProblem("123456789012345678")).toBeUndefined();
+    expect(idProblem("")).toBeUndefined();
+    expect(idProblem("abc")).toContain("17 to 20 digits");
+  });
+
+  test("next steps list only what's left", () => {
     expect(detectPackageManager("pnpm/10.0.0 npm/? node/v22")).toBe("pnpm");
     expect(detectPackageManager("npm/10.0.0 node/v22")).toBe("npm");
     expect(detectPackageManager(undefined)).toBe("npm");
-    const steps = nextSteps("my-bot", { name: "my-bot", language: "ts", packageManager: "pnpm" });
-    expect(steps).toContain("cd my-bot");
-    expect(steps).toContain("pnpm install");
-    expect(steps).toContain("pnpm dev");
-    expect(nextSteps("x", { name: "x", language: "ts", packageManager: "npm" })).toContain(
-      "npm run dev",
-    );
+    const pnpm = { name: "my-bot", language: "ts", packageManager: "pnpm" } as const;
+    expect(nextSteps("my-bot", pnpm, false).split("\n")).toEqual([
+      "cd my-bot",
+      "pnpm install",
+      "Fill in DISCORD_TOKEN, DISCORD_APPLICATION_ID, DEV_GUILD_ID in .env",
+      "pnpm dev",
+    ]);
+    const ready = {
+      ...pnpm,
+      packageManager: "npm",
+      credentials: { token: "t", applicationId: "1", guildId: "2" },
+    } as const;
+    expect(nextSteps("my-bot", ready, true).split("\n")).toEqual(["cd my-bot", "npm run dev"]);
   });
 });

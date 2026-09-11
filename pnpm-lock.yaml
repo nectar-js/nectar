@@ -54,7 +54,11 @@ importers:
         specifier: ^14.27.0
         version: 14.27.0
 
-  packages/create: {}
+  packages/create:
+    dependencies:
+      '@clack/prompts':
+        specifier: ^1.8.0
+        version: 1.8.0
 
   packages/nectar:
     dependencies:
