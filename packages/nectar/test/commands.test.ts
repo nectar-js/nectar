@@ -303,6 +303,19 @@ describe("diagnostics", () => {
     expect(codes).toEqual(["duplicate-command-name"]);
   });
 
+  test("one command in two route groups is left to the route table's duplicate-route", async () => {
+    const table = buildRouteTable(
+      makeApp({
+        "commands/ping/command.ts": cmd('{ description: "A" }'),
+        "commands/(other)/ping/command.ts": cmd('{ description: "B" }'),
+      }),
+    );
+    expect(table.diagnostics.items.map((d) => d.code)).toEqual(["duplicate-route"]);
+    const result = await compileCommands(table);
+    expect(result.commands).toEqual([]);
+    expect(result.diagnostics.items).toEqual([]);
+  });
+
   test("more than 25 subcommands", async () => {
     const files: Record<string, string> = {
       "commands/big/route.ts": routeMeta('{ description: "Big" }'),

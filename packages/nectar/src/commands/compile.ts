@@ -172,6 +172,10 @@ function compileTopLevel(
         "mixed-command-and-subcommands",
         `"${top}" has its own command.ts and also subcommands. Discord does not allow both. Either remove ${relative(direct[0]?.route.file)} or move this handler out of ${top}/.`,
         { file: entry.route.file, route: entry.route.id },
+  // Two command.ts files for one command, like ping/ and (group)/ping/. The route table
+  // already reported them as a duplicate route.
+  if (direct.length > 1) return null;
+
       );
     }
     return null;
