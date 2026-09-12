@@ -45,6 +45,18 @@ importers:
         specifier: ^14.27.0
         version: 14.27.0
 
+  examples/i18n:
+    dependencies:
+      '@nectar-js/i18n':
+        specifier: workspace:*
+        version: link:../../packages/i18n
+      '@nectar-js/nectar':
+        specifier: workspace:*
+        version: link:../../packages/nectar
+      discord.js:
+        specifier: ^14.27.0
+        version: 14.27.0
+
   examples/javascript:
     dependencies:
       '@nectar-js/nectar':
@@ -77,6 +89,19 @@ importers:
       '@clack/prompts':
         specifier: ^1.8.0
         version: 1.8.0
+
+  packages/i18n:
+    dependencies:
+      discord-api-types:
+        specifier: ^0.38.55
+        version: 0.38.55
+    devDependencies:
+      '@nectar-js/nectar':
+        specifier: workspace:*
+        version: link:../nectar
+      discord.js:
+        specifier: ^14.27.0
+        version: 14.27.0
 
   packages/nectar:
     dependencies:
