@@ -8,9 +8,10 @@ You need Node.js 22.18 or newer and pnpm.
 pnpm install
 pnpm build
 pnpm --filter basic run build
+pnpm --filter javascript run build
 ```
 
-The last command compiles `examples/basic`, which the tests assert against. Rerun it after changing the example's routes. `pnpm --filter basic run routes` prints its route tree.
+The last two commands compile `examples/basic` and `examples/javascript`, which the tests assert against. Rerun them after changing an example's routes. `pnpm --filter basic run routes` prints its route tree.
 
 ## Before you open a pull request
 
@@ -18,6 +19,7 @@ The last command compiles `examples/basic`, which the tests assert against. Reru
 pnpm lint
 pnpm build
 pnpm --filter basic run build
+pnpm --filter javascript run build
 pnpm test
 pnpm typecheck
 ```

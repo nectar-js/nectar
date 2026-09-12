@@ -32,8 +32,9 @@ jobs:
 
       - run: pnpm build
 
-      # Writes the example's .nectar/, which its tests and type check read.
+      # Writes the examples' .nectar/, which their tests and type checks read.
       - run: pnpm --filter basic run build
+      - run: pnpm --filter javascript run build
 
       - run: pnpm test
 
