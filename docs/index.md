@@ -78,4 +78,15 @@ export default defineEvent("guildMemberAdd", async (member) => {
 ```
 
 </template>
+<template #translation>
+
+```ts
+import { t } from "@nectar-js/i18n";
+
+await interaction.reply(
+  t("welcome", { user: "@newcomer" }),
+);
+```
+
+</template>
 </Home>
