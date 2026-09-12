@@ -148,10 +148,6 @@ onUnmounted(() => clearTimeout(copyTimer));
       </div>
     </section>
 
-    <div class="showcase-heading">
-      <h2>From file to Discord.</h2>
-      <p>Choose a file to see its handler and result.</p>
-    </div>
     <section class="explorer" aria-label="An example app">
       <div class="files" role="tablist" aria-orientation="horizontal" @keydown="onKeydown">
         <button
@@ -409,17 +405,8 @@ a:focus-visible, button:focus-visible, .panel:focus-visible {
   justify-content: space-between;
 }
 
-.showcase-heading h2 {
-  font-size: 18px;
-  font-weight: 650;
-}
-
-.showcase-heading p {
-  font-size: 13px;
-  color: var(--vp-c-text-2);
-}
-
 .explorer {
+  margin-top: 22px;
   border: 1px solid var(--vp-c-border);
   border-radius: 12px;
   overflow: hidden;
