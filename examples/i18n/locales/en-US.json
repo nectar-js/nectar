@@ -1,0 +1,22 @@
+{
+  "ping": {
+    "description": "Check that the bot is alive",
+    "pong": "Pong. Round trip took {ms}ms."
+  },
+  "ban": {
+    "description": "Ban a member",
+    "target": {
+      "name": "member",
+      "description": "Who to ban"
+    },
+    "confirm": "Ban {user}?",
+    "button": "Ban",
+    "done": "Banned {user}.",
+    "history": {
+      "0": "{user} has never been banned here.",
+      "one": "{user} has been banned {count} time before.",
+      "other": "{user} has been banned {count} times before."
+    }
+  },
+  "welcome": "Welcome to {guild}, {user}."
+}

@@ -1,0 +1,22 @@
+{
+  "ping": {
+    "description": "Vérifier que le bot répond",
+    "pong": "Pong. Aller-retour en {ms} ms."
+  },
+  "ban": {
+    "description": "Bannir un membre",
+    "target": {
+      "name": "membre",
+      "description": "Qui bannir"
+    },
+    "confirm": "Bannir {user} ?",
+    "button": "Bannir",
+    "done": "{user} a été banni.",
+    "history": {
+      "0": "{user} n'a jamais été banni ici.",
+      "one": "{user} a déjà été banni {count} fois.",
+      "other": "{user} a déjà été banni {count} fois."
+    }
+  },
+  "welcome": "Bienvenue sur {guild}, {user}."
+}

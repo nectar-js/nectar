@@ -1,0 +1,22 @@
+{
+  "ping": {
+    "description": "Verificar se o bot está a responder",
+    "pong": "Pong. Ida e volta em {ms} ms."
+  },
+  "ban": {
+    "description": "Banir um membro",
+    "target": {
+      "name": "membro",
+      "description": "Quem banir"
+    },
+    "confirm": "Banir {user}?",
+    "button": "Banir",
+    "done": "{user} foi banido.",
+    "history": {
+      "0": "{user} nunca foi banido aqui.",
+      "one": "{user} já foi banido {count} vez.",
+      "other": "{user} já foi banido {count} vezes."
+    }
+  },
+  "welcome": "Bem-vindo a {guild}, {user}."
+}

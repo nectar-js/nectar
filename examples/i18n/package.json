@@ -1,0 +1,16 @@
+{
+  "name": "i18n-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "nectar": "node ../../packages/nectar/dist/cli.js",
+    "build": "pnpm nectar build",
+    "locales": "pnpm nectar i18n",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nectar-js/i18n": "workspace:*",
+    "@nectar-js/nectar": "workspace:*",
+    "discord.js": "^14.27.0"
+  }
+}
