@@ -30,16 +30,14 @@ Choices take `nameLocalizations` too. Subcommand groups and parent commands set 
 
 ## Replies
 
-Every interaction carries `locale`, the language of the user who sent it, and `guildLocale`, the server's setting. Nectar doesn't translate replies. Put a translation function on the context from a middleware, and handlers use it without knowing the locale:
+Every interaction carries `locale`, the language of the user who sent it, and `guildLocale`, the server's setting. Nectar doesn't translate replies. Return a translation function from a middleware, and handlers read it with `use()` without knowing the locale:
 
 ```ts
 // app/middleware.ts
 import { defineMiddleware } from "@nectar-js/nectar";
 import { translator } from "./i18n.ts";
 
-export default defineMiddleware(async (ctx, next) => {
-  return next({ t: translator(ctx.interaction.locale) });
-});
+export default defineMiddleware(async (interaction) => translator(interaction.locale));
 ```
 
 ```ts
@@ -60,15 +58,19 @@ export function translator(locale: string) {
 
 ```ts
 // app/commands/ban/command.ts
-export default defineCommand("ban", async (ctx) => {
-  await ctx.interaction.reply(ctx.t("banned", ctx.options.target.tag));
+import { defineCommand, use } from "@nectar-js/nectar";
+import i18n from "../../middleware.ts";
+
+export default defineCommand("ban", async (interaction, { target }) => {
+  const t = use(i18n);
+  await interaction.reply(t("banned", target.tag));
 });
 ```
 
-`ctx.t` is typed on every handler below the middleware. See [Middleware](./middleware#adding-to-the-context).
+`t` is typed from what the middleware returns. See [Middleware](./middleware#passing-values-to-handlers).
 
 For a server-wide message, like a welcome post, use `guildLocale`. It's `null` outside a server. Event handlers have no interaction, so read `guild.preferredLocale` there.
 
 ## Policy messages
 
-`guildOnly`, `requirePermissions`, `requireRoles`, and `cooldown` reply in English by default. Pass `message` to change it. For a per-user language, wrap them in your own middleware and pick the message from `ctx.interaction.locale` before calling the helper.
+`guildOnly`, `requirePermissions`, `requireRoles`, and `cooldown` reply in English by default. Pass `message` to change it. For a per-user language, wrap them in your own middleware and pick the message from `interaction.locale` before calling the helper.

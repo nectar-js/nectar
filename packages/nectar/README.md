@@ -27,8 +27,8 @@ import { type CommandMeta, defineCommand } from "@nectar-js/nectar";
 
 export const meta: CommandMeta = { description: "Check if the bot is alive" };
 
-export default defineCommand("ping", async (ctx) => {
-  await ctx.interaction.reply("Pong.");
+export default defineCommand("ping", async (interaction) => {
+  await interaction.reply("Pong.");
 });
 ```
 

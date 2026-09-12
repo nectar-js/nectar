@@ -52,15 +52,15 @@ import { type CommandMeta, defineCommand } from "@nectar-js/nectar";
 
 export const meta: CommandMeta = { description: "Replies with Pong!" };
 
-export default defineCommand("ping", async (ctx) => {
-  await ctx.interaction.reply("Pong!");
+export default defineCommand("ping", async (interaction) => {
+  await interaction.reply("Pong!");
 });
 ```
 
 - `setName` goes away, since the directory is the name.
 - The description and options move to `meta`. `.addUserOption((o) => o.setName("target").setDescription("Who").setRequired(true))` becomes `{ type: "user", name: "target", description: "Who", required: true }`. [Reserved files](../reference/files#command-ts) lists every field.
-- `interaction` is `ctx.interaction`.
-- `interaction.options.getUser("target", true)` is `ctx.options.target`, typed from `meta`. The resolver is still there if you want it.
+- `interaction` is the handler's first argument, unchanged.
+- `interaction.options.getUser("target", true)` is `target` in the handler's second argument, typed from `meta`. The resolver is still there if you want it.
 - Each `.addSubcommand()` becomes a subdirectory with its own `command.ts`, and the parent directory gets a `route.ts` with the description.
 - Category folders like `utility/` can stay as route groups: `app/commands/(utility)/ping/command.ts` still registers `/ping`.
 
@@ -111,8 +111,7 @@ if (interaction.isButton() && interaction.customId.startsWith("close-")) {
 new ButtonBuilder().setCustomId(customId("tickets/[ticketId]/close", { ticketId: ticket.id }));
 
 // app/components/tickets/[ticketId]/close/button.ts
-export default defineComponent("tickets/[ticketId]/close", async (ctx) => {
-  const ticketId = ctx.params.ticketId;
+export default defineComponent("tickets/[ticketId]/close", async (interaction, { ticketId }) => {
   // ...
 });
 ```
@@ -141,7 +140,7 @@ Delete `deploy-commands.js`. `nectar dev` registers your commands in `dev.guilds
 | The `client.commands` collection | Not needed |
 | Cooldowns and permission checks in `interactionCreate` | A `middleware.ts` |
 | A `try`/`catch` around `execute` | An `error.ts` |
-| Services attached to `client` | Plain imports, or a plugin's `ctx.services` |
+| Services attached to `client` | Plain imports, or a plugin's `services()` |
 
 ## From another framework
 

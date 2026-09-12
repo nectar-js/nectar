@@ -1,72 +1,68 @@
 # Middleware
 
-## Adding to the context
+## Passing values to handlers
 
-Pass an object to `next` and every handler below gets its fields, with types:
+A middleware returns a value, and every handler below reads it with `use()`:
 
 ```ts
 // app/commands/moderation/middleware.ts
-import { defineMiddleware } from "@nectar-js/nectar";
+import { defineMiddleware, stop } from "@nectar-js/nectar";
 import { MessageFlags } from "discord.js";
 
-export default defineMiddleware(async (ctx, next) => {
-  if (!ctx.interaction.inCachedGuild()) {
-    if (ctx.interaction.isRepliable()) {
-      await ctx.interaction.reply({ content: "Use this in a server.", flags: MessageFlags.Ephemeral });
+export default defineMiddleware(async (interaction) => {
+  if (!interaction.inCachedGuild()) {
+    if (interaction.isRepliable()) {
+      await interaction.reply({ content: "Use this in a server.", flags: MessageFlags.Ephemeral });
     }
-    return;
+    return stop;
   }
-  return next({ member: ctx.interaction.member });
+  return { member: interaction.member };
 });
 ```
 
 ```ts
 // app/commands/moderation/ban/command.ts
-export default defineCommand("moderation/ban", async (ctx) => {
-  await ctx.interaction.reply(`${ctx.member.displayName} is banning someone.`);
+import { defineCommand, use } from "@nectar-js/nectar";
+import guard from "../middleware.ts";
+
+export default defineCommand("moderation/ban", async (interaction) => {
+  const { member } = use(guard);
+  await interaction.reply(`${member.displayName} is banning someone.`);
 });
 ```
 
-`ctx.member` is a `GuildMember` in every command under `moderation/`. The types come from `.nectar/types.d.ts`, which `nectar dev` and `nectar build` regenerate.
+`use(guard)` is `{ member: GuildMember }` because that is what the middleware returns. TypeScript takes `stop` out of the union, so nothing else is needed. A handler imports the middleware it reads from, which also documents where the value comes from.
 
-TypeScript infers the added fields from the value you return, so return the result of `next`. To run code after the handler, keep the result and return it at the end:
+A middleware can read the ones above it the same way:
 
 ```ts
-// app/components/middleware.ts
-export default defineMiddleware(async (ctx, next) => {
-  const clickedAt = Date.now();
-  const result = await next({ clickedAt });
-  console.log(`${ctx.route.id} took ${Date.now() - clickedAt}ms`);
-  return result;
+// app/commands/moderation/ban/middleware.ts
+import { defineMiddleware, stop, use } from "@nectar-js/nectar";
+import guard from "../middleware.ts";
+
+export default defineMiddleware(async () => {
+  if (!use(guard).member.permissions.has("BanMembers")) return stop;
 });
 ```
 
-Or pass the type explicitly:
-
-```ts
-export default defineMiddleware<{ locale: string }>(async (ctx, next) => {
-  await next({ locale: ctx.interaction.locale });
-});
-```
-
-A middleware's own `ctx` isn't typed with fields added by middleware above it. The values are there at runtime, and handlers see all of them typed.
+There is no hook after the handler. For timings, subscribe to the `handler:complete` signal in `observe`.
 
 ## The interaction type
 
-In middleware, `ctx.interaction` is any interaction the route can receive. Use the discord.js type guards, like `inCachedGuild()`, `isChatInputCommand()`, or `isAutocomplete()`, before using interaction-specific methods.
+In middleware, `interaction` is any interaction the route can receive. Use the discord.js type guards, like `inCachedGuild()`, `isChatInputCommand()`, or `isAutocomplete()`, before using interaction-specific methods.
 
 A middleware that stops an autocomplete interaction should still answer it:
 
 ```ts
-if (ctx.interaction.isAutocomplete()) {
-  await ctx.interaction.respond([]);
-  return;
+if (interaction.isAutocomplete()) {
+  await interaction.respond([]);
+  return stop;
 }
 ```
 
 ## Policy helpers
 
-Nectar exports three middleware for common checks. Export one as a directory's `middleware.ts`:
+Nectar exports four middleware for common checks. Export one as a directory's `middleware.ts`:
 
 ```ts
 // app/commands/moderation/middleware.ts
@@ -85,3 +81,17 @@ export default requirePermissions(["BanMembers", "KickMembers"]);
 Otherwise they reply with an ephemeral message and stop the chain. Set `message` in the options to change the reply.
 
 `cooldown` counts per route, so a `middleware.ts` with `cooldown(30)` over ten commands gives each command its own timer. `scope: "guild"` shares the timer between everyone in a server, and `scope: "global"` between everyone. `message` can be a function of the seconds left. Autocomplete is never held back. Timers live in memory, so they reset when the bot restarts and aren't shared between shards.
+
+## What else a handler can reach
+
+Besides `use()`, these imports work anywhere inside a running route, including middleware and error boundaries:
+
+| Import | |
+| --- | --- |
+| `client()` | The discord.js client |
+| `env()` | `"development"`, `"test"`, or `"production"` |
+| `services()` | What plugin `start` hooks provided |
+| `route()` | `id`, `category`, `path`, and `file` of the route |
+| `trace()` | `id`, `receivedAt`, and `elapsed()`, the milliseconds since Discord created the interaction |
+
+They throw at the top level of a module, where no route is running.

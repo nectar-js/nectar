@@ -14,8 +14,8 @@ import { createTicket } from "../../tickets.ts";
 
 export const meta: CommandMeta = { description: "Open a ticket" };
 
-export default defineCommand("ticket", async (ctx) => {
-  const ticket = await createTicket(ctx.interaction.user.id);
+export default defineCommand("ticket", async (interaction) => {
+  const ticket = await createTicket(interaction.user.id);
 
   const close = new ButtonBuilder()
     .setCustomId(customId("tickets/[ticketId]/close", { ticketId: ticket.id }))
@@ -26,7 +26,7 @@ export default defineCommand("ticket", async (ctx) => {
     .setCustomId(customId("tickets/[ticketId]/assign", { ticketId: ticket.id }))
     .setPlaceholder("Assign to");
 
-  await ctx.interaction.reply({
+  await interaction.reply({
     content: `Ticket ${ticket.id} opened.`,
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(close),
@@ -38,22 +38,22 @@ export default defineCommand("ticket", async (ctx) => {
 
 ## Buttons
 
-The close button opens a modal. Passing `ctx.params` to `customId` hands the ticket's ID on to the modal:
+The close button opens a modal. Passing `params` to `customId` hands the ticket's ID on to the modal:
 
 ```ts
 // app/components/tickets/[ticketId]/close/button.ts
 import { customId, defineComponent } from "@nectar-js/nectar";
 import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from "discord.js";
 
-export default defineComponent("tickets/[ticketId]/close", async (ctx) => {
+export default defineComponent("tickets/[ticketId]/close", async (interaction, params) => {
   const reason = new TextInputBuilder()
     .setCustomId("reason")
     .setLabel("Reason")
     .setStyle(TextInputStyle.Paragraph);
 
-  await ctx.interaction.showModal(
+  await interaction.showModal(
     new ModalBuilder()
-      .setCustomId(customId("tickets/[ticketId]/reason", ctx.params))
+      .setCustomId(customId("tickets/[ticketId]/reason", params))
       .setTitle("Close ticket")
       .addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(reason)),
   );
@@ -69,10 +69,10 @@ The text input keeps a plain custom ID. Nectar only routes the modal itself.
 import { defineComponent } from "@nectar-js/nectar";
 import { closeTicket } from "../../../../tickets.ts";
 
-export default defineComponent("tickets/[ticketId]/reason", async (ctx) => {
-  const reason = ctx.interaction.fields.getTextInputValue("reason");
-  await closeTicket(ctx.params.ticketId, reason);
-  await ctx.interaction.reply(`Ticket ${ctx.params.ticketId} closed: ${reason}`);
+export default defineComponent("tickets/[ticketId]/reason", async (interaction, params) => {
+  const reason = interaction.fields.getTextInputValue("reason");
+  await closeTicket(params.ticketId, reason);
+  await interaction.reply(`Ticket ${params.ticketId} closed: ${reason}`);
 });
 ```
 
@@ -85,11 +85,11 @@ import { assignTicket } from "../../../../tickets.ts";
 
 export const kind = "user";
 
-export default defineComponent("tickets/[ticketId]/assign", async (ctx) => {
-  const user = ctx.interaction.users.first();
+export default defineComponent("tickets/[ticketId]/assign", async (interaction, params) => {
+  const user = interaction.users.first();
   if (user === undefined) return;
-  await assignTicket(ctx.params.ticketId, user.id);
-  await ctx.interaction.reply(`Assigned to ${user}.`);
+  await assignTicket(params.ticketId, user.id);
+  await interaction.reply(`Assigned to ${user}.`);
 });
 ```
 
@@ -111,7 +111,7 @@ customId("polls/[pollId]/[option]", { pollId: poll.id, option: "yes" });
 customId("menu/[...path]", { path: ["settings", "roles"] });
 ```
 
-The handler gets `ctx.params.path` as `["settings", "roles"]`. Every value counts toward Discord's 100-character limit, so the compiler warns about each catch-all route.
+The handler gets `params.path` as `["settings", "roles"]`. Every value counts toward Discord's 100-character limit, so the compiler warns about each catch-all route.
 
 ## No parameters
 
@@ -124,7 +124,7 @@ Containers, sections, text displays, and the other discord.js 14.19+ layout comp
 ```ts
 import { ContainerBuilder, MessageFlags, SectionBuilder } from "discord.js";
 
-await ctx.interaction.reply({
+await interaction.reply({
   flags: MessageFlags.IsComponentsV2,
   components: [
     new ContainerBuilder().addSectionComponents(
@@ -145,10 +145,10 @@ A user can change the values in a custom ID. Validate their format with `params`
 ```ts
 export default defineComponent(
   "tickets/[ticketId]/close",
-  async (ctx) => {
-    const ticket = await getTicket(ctx.params.ticketId);
-    if (ticket.ownerId !== ctx.interaction.user.id) {
-      await ctx.interaction.reply({ content: "Not your ticket.", flags: MessageFlags.Ephemeral });
+  async (interaction, params) => {
+    const ticket = await getTicket(params.ticketId);
+    if (ticket.ownerId !== interaction.user.id) {
+      await interaction.reply({ content: "Not your ticket.", flags: MessageFlags.Ephemeral });
       return;
     }
     // ...

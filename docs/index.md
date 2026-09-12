@@ -19,8 +19,8 @@ export const meta: CommandMeta = {
   description: "Check that the bot is alive",
 };
 
-export default defineCommand("ping", async (ctx) => {
-  await ctx.interaction.reply("Pong.");
+export default defineCommand("ping", async (interaction) => {
+  await interaction.reply("Pong.");
 });
 ```
 
@@ -37,9 +37,9 @@ export const meta: CommandMeta = {
   ],
 };
 
-export default defineCommand("moderation/ban", async (ctx) => {
-  await ctx.interaction.guild?.members.ban(ctx.options.target);
-  await ctx.interaction.reply(`Banned ${ctx.options.target.username}.`);
+export default defineCommand("moderation/ban", async (interaction, { target }) => {
+  await interaction.guild?.members.ban(target);
+  await interaction.reply(`Banned ${target.username}.`);
 });
 ```
 
@@ -58,9 +58,9 @@ export default requirePermissions("BanMembers");
 ```ts
 import { defineComponent } from "@nectar-js/nectar";
 
-export default defineComponent("tickets/[ticketId]/close", async (ctx) => {
-  await ctx.interaction.update({
-    content: `Ticket ${ctx.params.ticketId} closed.`,
+export default defineComponent("tickets/[ticketId]/close", async (interaction, params) => {
+  await interaction.update({
+    content: `Ticket ${params.ticketId} closed.`,
     components: [],
   });
 });

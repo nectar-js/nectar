@@ -12,15 +12,15 @@ const close = new ButtonBuilder()
   .setStyle(ButtonStyle.Danger);
 ```
 
-The handler reads the parameter from `ctx.params`:
+The handler gets the parameters as its second argument:
 
 ```ts
 // app/components/tickets/[ticketId]/close/button.ts
 import { defineComponent } from "@nectar-js/nectar";
 
-export default defineComponent("tickets/[ticketId]/close", async (ctx) => {
-  await closeTicket(ctx.params.ticketId);
-  await ctx.interaction.update({ content: "Ticket closed.", components: [] });
+export default defineComponent("tickets/[ticketId]/close", async (interaction, params) => {
+  await closeTicket(params.ticketId);
+  await interaction.update({ content: "Ticket closed.", components: [] });
 });
 ```
 

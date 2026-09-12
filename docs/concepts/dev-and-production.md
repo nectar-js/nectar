@@ -43,7 +43,7 @@ Reloading has limits:
 
 - Module-level state resets when the module reloads.
 - Timers, intervals, and connections opened at module level keep running.
-- Listeners added to `ctx.client` stay attached.
+- Listeners added to `client()` stay attached.
 - Old versions of modules stay in memory until `nectar dev` restarts.
 
 ## Production

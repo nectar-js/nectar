@@ -34,7 +34,7 @@ Warnings don't. An event that needs an intent missing from `intents` gets a warn
 `nectar build` writes to `.nectar/`:
 
 - `manifest.json` lists every route with its file, middleware, error boundaries, command payload, and custom ID format.
-- `types.d.ts` types route paths, component parameters, and middleware additions to `ctx`. Add it to `include` in `tsconfig.json`.
+- `types.d.ts` types route paths, command options, and component parameters. Add it to `include` in `tsconfig.json`.
 - `start.mjs` starts the bot from the build.
 
 Nectar doesn't transpile your code. Node imports handlers from `app/` at runtime, so deploy `app/` along with `.nectar/`.

@@ -33,7 +33,7 @@ Nectar only reads files with these names and ignores everything else.
 | Name | Meaning |
 | --- | --- |
 | `ban` | Static segment |
-| `[ticketId]` | Parameter, available as `ctx.params.ticketId` |
+| `[ticketId]` | Parameter, available as `params.ticketId` in the handler |
 | `[...path]` | Catch-all parameter, an array of strings. Must be the last segment. |
 | `(staff)` | Route group, left out of the route |
 
@@ -76,7 +76,7 @@ Groups don't change the route. `commands/(staff)/ban/command.ts` registers `/ban
 
 ## Route IDs
 
-Every route has an ID: `command:moderation/ban`, `component:tickets/[ticketId]/close`, `event:guildMemberAdd/(welcome)`. Groups are left out, except for events. Logs use these IDs, and a handler can read its own from `ctx.route.id`.
+Every route has an ID: `command:moderation/ban`, `component:tickets/[ticketId]/close`, `event:guildMemberAdd/(welcome)`. Groups are left out, except for events. Logs use these IDs, and a handler can read its own from `route().id`.
 
 ## Route strings
 
@@ -84,9 +84,9 @@ Handlers take their path as the first argument:
 
 ```ts
 // app/commands/moderation/ban/command.ts
-export default defineCommand("moderation/ban", async (ctx) => {
+export default defineCommand("moderation/ban", async (interaction, options) => {
   // ...
 });
 ```
 
-The generated types use it to type `ctx`, and the compiler fails if it doesn't match the file's location. Event handlers take the event name, as in `defineEvent("guildMemberAdd", ...)`.
+The generated types use it to type the handler's arguments, and the compiler fails if it doesn't match the file's location. Event handlers take the event name, as in `defineEvent("guildMemberAdd", ...)`.

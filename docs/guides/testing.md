@@ -67,11 +67,10 @@ Commands and components resolve to:
 | Field | |
 | --- | --- |
 | `responses` | Each response method the route called, as `{ method, options }` |
-| `context` | The `ctx` the handler received, with middleware additions, or `null` if the handler didn't run |
 | `outcome` | The final signal: `interaction:complete`, `interaction:fail`, or `interaction:reject` |
 | `signals` | Every signal from the interaction |
 
-When middleware stops the chain, `outcome.handled` is `false` and `context` is `null`. When the route throws, `outcome.type` is `interaction:fail`, and `outcome.boundary` names the `error.ts` that handled it.
+When middleware stops the chain, `outcome.handled` is `false`. When the route throws, `outcome.type` is `interaction:fail`, and `outcome.boundary` names the `error.ts` that handled it.
 
 `app.event` resolves to `{ failures }`, with one `event:fail` signal for each handler that threw.
 
@@ -81,9 +80,9 @@ When middleware stops the chain, `outcome.handled` is `false` and `context` is `
 
 | Option | |
 | --- | --- |
-| `client` | What handlers get as `ctx.client`. Defaults to a discord.js `Client` that never logs in. |
+| `client` | What `client()` returns in handlers. Defaults to a discord.js `Client` that never logs in. |
 | `env` | Defaults to `"test"`. |
 | `logger` | Receives warnings and default boundary output. Defaults to the console. |
-| `services` | What handlers get as `ctx.services`. Plugin `start` hooks don't run in tests. |
+| `services` | What `services()` returns in handlers. Plugin `start` hooks don't run in tests. |
 
 `customId` works in tests once the test app exists.

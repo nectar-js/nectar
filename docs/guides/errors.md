@@ -12,18 +12,18 @@ import { defineError } from "@nectar-js/nectar";
 import { MessageFlags } from "discord.js";
 import { TicketNotFound } from "../../tickets.ts";
 
-export default defineError(async (error, ctx) => {
+export default defineError(async (error, interaction) => {
   if (!(error instanceof TicketNotFound)) return "unhandled";
-  if (!("interaction" in ctx) || !ctx.interaction.isRepliable()) return;
+  if (interaction === null || !interaction.isRepliable()) return;
 
   const message = {
     content: "That ticket no longer exists.",
     flags: MessageFlags.Ephemeral,
   } as const;
-  if (ctx.interaction.replied || ctx.interaction.deferred) {
-    await ctx.interaction.followUp(message);
+  if (interaction.replied || interaction.deferred) {
+    await interaction.followUp(message);
   } else {
-    await ctx.interaction.reply(message);
+    await interaction.reply(message);
   }
 });
 ```
@@ -38,11 +38,11 @@ To send every unhandled error to a tracker, report it in `app/error.ts` and pass
 
 ```ts
 // app/error.ts
-import { defineError } from "@nectar-js/nectar";
+import { defineError, route } from "@nectar-js/nectar";
 import { report } from "./lib/report.ts";
 
-export default defineError(async (error, ctx) => {
-  report(error, ctx.route.id);
+export default defineError(async (error) => {
+  report(error, route().id);
   return "unhandled";
 });
 ```
@@ -51,7 +51,7 @@ To also see errors that a boundary handled, use `observe` in the config. `intera
 
 ## Event handlers
 
-Error boundaries cover event handlers the same way. Their `ctx` has `client`, `route`, `env`, and `services`, and no `interaction`. Errors from event handlers never reach the client's `error` event.
+Error boundaries cover event handlers the same way, with `interaction` set to `null`. `route()` and `client()` still work. Errors from event handlers never reach the client's `error` event.
 
 ## Autocomplete
 

@@ -20,7 +20,7 @@ A handler is under the wrong directory, like a `button.ts` under `commands/`. `c
 
 ### invalid-segment
 
-A directory name can't be read as part of a route path. Static names use letters, digits, hyphens, and underscores, and start with a letter or digit. Parameters look like `[ticketId]` and catch-alls like `[...path]`. Their names become keys of `ctx.params`, so they can't start with a digit or contain hyphens. Groups look like `(staff)`. See [Directory names](../concepts/app-directory#directory-names).
+A directory name can't be read as part of a route path. Static names use letters, digits, hyphens, and underscores, and start with a letter or digit. Parameters look like `[ticketId]` and catch-alls like `[...path]`. Their names become keys of the handler's params, so they can't start with a digit or contain hyphens. Groups look like `(staff)`. See [Directory names](../concepts/app-directory#directory-names).
 
 ### route-without-path
 
@@ -32,7 +32,7 @@ A command or event path has a parameter like `[id]`. Only component routes can h
 
 ### duplicate-param
 
-A component route uses one parameter name twice, like `components/[id]/items/[id]/button.ts`. Each parameter becomes a key of `ctx.params`, so rename one of them.
+A component route uses one parameter name twice, like `components/[id]/items/[id]/button.ts`. Each parameter becomes a key of the handler's params, so rename one of them.
 
 ### catch-all-not-last
 
@@ -53,8 +53,8 @@ The compiler imports every route file to read exports like `meta`, and this one 
 A `command.ts`, `button.ts`, `select.ts`, `modal.ts`, or `event.ts` has no default export, or its default export isn't a function. Nectar calls the default export when the route runs:
 
 ```ts
-export default defineCommand("ping", async (ctx) => {
-  await ctx.interaction.reply("Pong.");
+export default defineCommand("ping", async (interaction) => {
+  await interaction.reply("Pong.");
 });
 ```
 
@@ -62,7 +62,7 @@ export default defineCommand("ping", async (ctx) => {
 
 ### route-mismatch
 
-The route string passed to `defineCommand`, `defineComponent`, or `defineEvent` doesn't match where the file is. The string types `ctx`, so it has to match. Change the string, or move the file.
+The route string passed to `defineCommand`, `defineComponent`, or `defineEvent` doesn't match where the file is. The string types the handler's arguments, so it has to match. Change the string, or move the file.
 
 ## Commands
 

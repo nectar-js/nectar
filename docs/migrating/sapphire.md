@@ -67,12 +67,12 @@ import { type CommandMeta, defineCommand } from "@nectar-js/nectar";
 
 export const meta: CommandMeta = { description: "Ping bot to see if it is alive" };
 
-export default defineCommand("ping", async (ctx) => {
-  await ctx.interaction.reply("Pong!");
+export default defineCommand("ping", async (interaction) => {
+  await interaction.reply("Pong!");
 });
 ```
 
-The builder calls in `registerApplicationCommands` become `meta`: `setDescription` is `description`, and each `add...Option` is an entry in `options`. `this.container.client` is `ctx.client`.
+The builder calls in `registerApplicationCommands` become `meta`: `setDescription` is `description`, and each `add...Option` is an entry in `options`. `this.container.client` is `client()`, imported from `@nectar-js/nectar`.
 
 A context menu command registered with `registerContextMenuCommand` becomes a top-level `command.ts` with `meta.type` set to `"user"` or `"message"`, and its `contextMenuRun` becomes the default export.
 
@@ -140,8 +140,8 @@ export class CloseTicketHandler extends InteractionHandler {
 // after: app/components/tickets/[ticketId]/close/button.ts
 import { defineComponent } from "@nectar-js/nectar";
 
-export default defineComponent("tickets/[ticketId]/close", async (ctx) => {
-  await ctx.interaction.update({ content: `Ticket ${ctx.params.ticketId} closed.`, components: [] });
+export default defineComponent("tickets/[ticketId]/close", async (interaction, params) => {
+  await interaction.update({ content: `Ticket ${params.ticketId} closed.`, components: [] });
 });
 ```
 
@@ -170,17 +170,18 @@ export class OwnerOnlyPrecondition extends Precondition {
 
 ```ts
 // after: app/commands/(owner)/middleware.ts
-import { defineMiddleware } from "@nectar-js/nectar";
+import { defineMiddleware, stop } from "@nectar-js/nectar";
 import { MessageFlags } from "discord.js";
 
-export default defineMiddleware(async (ctx, next) => {
-  if (owners.includes(ctx.interaction.user.id)) return next();
-  if (ctx.interaction.isRepliable()) {
-    await ctx.interaction.reply({
+export default defineMiddleware(async (interaction) => {
+  if (owners.includes(interaction.user.id)) return;
+  if (interaction.isRepliable()) {
+    await interaction.reply({
       content: "Only the bot owner can use this command!",
       flags: MessageFlags.Ephemeral,
     });
   }
+  return stop;
 });
 ```
 
@@ -192,12 +193,12 @@ Sapphire's built-in command options map to helpers:
 | --- | --- |
 | `requiredUserPermissions` | `requirePermissions()` |
 | `runIn: CommandOptionsRunTypeEnum.GuildAny` | `guildOnly()` |
-| `requiredClientPermissions` | A middleware that checks `ctx.interaction.appPermissions` |
-| `cooldownDelay` | A middleware of your own |
+| `requiredClientPermissions` | A middleware that checks `interaction.appPermissions` |
+| `cooldownDelay` | `cooldown()` |
 
 ## The container
 
-Anything you put on `container` becomes an ordinary module that handlers import. The compiler imports your handler files when it builds, so connect to databases and other services on first use, not at import time. For something that has to start and stop with the bot, a plugin's `start` hook can return it as a service on `ctx.services`. See [Plugins](../reference/plugins).
+Anything you put on `container` becomes an ordinary module that handlers import. The compiler imports your handler files when it builds, so connect to databases and other services on first use, not at import time. For something that has to start and stop with the bot, a plugin's `start` hook can return it as a service, read with `services()`. See [Plugins](../reference/plugins).
 
 ## Registration
 

@@ -88,7 +88,7 @@ Names are lowercase and can't match a built-in command. Options are `"string"` o
 
 Runs in every process that starts the bot, before handlers are imported and before login. `app` has `client`, `env`, `logger`, `signals`, and `manifest`. The client isn't connected yet.
 
-The object `start` returns becomes `ctx.services` in handlers and middleware. Declare its type with module augmentation:
+The object `start` returns is what `services()` gives handlers and middleware. Declare its type with module augmentation:
 
 ```ts
 declare module "@nectar-js/nectar" {

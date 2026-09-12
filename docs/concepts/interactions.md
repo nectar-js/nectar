@@ -10,11 +10,10 @@ Slash commands match by name, subcommand group, and subcommand. `/moderation ban
 
 ```ts
 // app/commands/user/profile/autocomplete.ts
-import type { InteractionContext } from "@nectar-js/nectar";
 import type { AutocompleteInteraction } from "discord.js";
 
-export async function section(ctx: InteractionContext<AutocompleteInteraction>) {
-  await ctx.interaction.respond([{ name: "Overview", value: "overview" }]);
+export async function section(interaction: AutocompleteInteraction) {
+  await interaction.respond([{ name: "Overview", value: "overview" }]);
 }
 ```
 
@@ -28,31 +27,39 @@ Buttons, select menus, and modal submits match by custom ID. See [Custom IDs](./
 // app/events/guildMemberAdd/event.ts
 import { defineEvent } from "@nectar-js/nectar";
 
-export default defineEvent("guildMemberAdd", async (member, ctx) => {
+export default defineEvent("guildMemberAdd", async (member) => {
   await member.guild.systemChannel?.send(`Welcome, ${member}!`);
 });
 ```
 
-Event handlers get the discord.js listener arguments followed by `ctx`.
+Event handlers get the discord.js listener arguments and nothing else.
 
 Handlers for the same event run one at a time, sorted by `meta.order` and then by route ID. `meta.mode: "concurrent"` runs them in parallel. `meta.once: true` runs a handler on the first event only.
 
-## Context
+## Handler arguments
 
-Command, autocomplete, and component handlers receive `ctx`:
+Handlers get the discord.js object first and the route's data second:
 
-| Field | |
+| Handler | Arguments |
 | --- | --- |
-| `interaction` | The discord.js interaction |
-| `client` | The discord.js client |
-| `params` | Component parameters from the custom ID |
-| `options` | Command options by name, resolved through discord.js. `null` for options the user left out. Empty for components and autocomplete. |
-| `route` | `id`, `category`, `path`, and `file` of the route |
-| `env` | `"development"`, `"test"`, or `"production"` |
-| `trace` | `id`, `receivedAt`, and `elapsed()`, the milliseconds since Discord created the interaction |
-| `services` | Services provided by plugins |
+| `command.ts` | `(interaction, options)`. Options by name, resolved through discord.js, `null` when the user left one out. Context menu commands get an empty object. |
+| `button.ts`, `select.ts`, `modal.ts` | `(interaction, params)`. Parameters from the custom ID. |
+| `autocomplete.ts` | `(interaction)` |
+| `event.ts` | The discord.js listener arguments |
+| `error.ts` | `(error, interaction)`. `interaction` is `null` when an event handler threw. |
 
-Middleware can add more fields. Event handlers get `client`, `route`, `env`, and `services`.
+Everything else is an import from `@nectar-js/nectar` that works inside a running route:
+
+| Import | |
+| --- | --- |
+| `client()` | The discord.js client |
+| `route()` | `id`, `category`, `path`, and `file` of the route |
+| `env()` | `"development"`, `"test"`, or `"production"` |
+| `trace()` | `id`, `receivedAt`, and `elapsed()`, the milliseconds since Discord created the interaction |
+| `services()` | Services provided by plugins |
+| `use(middleware)` | What a middleware above the route returned. See [Middleware and errors](./middleware-and-errors). |
+
+They read the current route from async context, so they also work in helpers a handler calls. At the top level of a module, where no route is running, they throw.
 
 ## Responses
 
@@ -61,9 +68,9 @@ Discord gives a handler three seconds to respond. If a command can take longer, 
 ```ts
 export const meta: CommandMeta = { description: "Crunch the numbers", defer: true };
 
-export default defineCommand("report", async (ctx) => {
+export default defineCommand("report", async (interaction) => {
   const report = await buildReport();
-  await ctx.interaction.editReply(report);
+  await interaction.editReply(report);
 });
 ```
 

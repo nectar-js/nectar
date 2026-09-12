@@ -8,12 +8,12 @@ import { type CommandMeta, defineCommand } from "@nectar-js/nectar";
 
 export const meta: CommandMeta = { description: "Check that the bot is alive" };
 
-export default defineCommand("ping", async (ctx) => {
-  await ctx.interaction.reply("Pong.");
+export default defineCommand("ping", async (interaction) => {
+  await interaction.reply("Pong.");
 });
 ```
 
-This registers `/ping`. `ctx.interaction` is the discord.js `ChatInputCommandInteraction`.
+This registers `/ping`. `interaction` is the discord.js `ChatInputCommandInteraction`.
 
 ## Create a project
 

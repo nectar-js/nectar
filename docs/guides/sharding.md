@@ -23,7 +23,7 @@ Each shard process loads the config and manifest on its own, and its login line 
 ✔ Logged in as my-bot#1234 (production, shard 0 of 2).
 ```
 
-`ctx.client.shard` is discord.js's `ShardClientUtil`, so `broadcastEval` and `fetchClientValues` work as usual.
+`client().shard` is discord.js's `ShardClientUtil`, so `broadcastEval` and `fetchClientValues` work as usual.
 
 ## What runs where
 

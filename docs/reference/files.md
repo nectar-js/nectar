@@ -16,15 +16,14 @@ export const meta: CommandMeta = {
   ],
 };
 
-export default defineCommand("moderation/ban", async (ctx) => {
-  const reason = ctx.options.reason ?? "No reason given";
-  await ctx.interaction.reply(`Banned ${ctx.options.target.tag}: ${reason}`);
+export default defineCommand("moderation/ban", async (interaction, { target, reason }) => {
+  await interaction.reply(`Banned ${target.tag}: ${reason ?? "No reason given"}`);
 });
 ```
 
-`ctx.interaction` is a `ChatInputCommandInteraction`, `UserContextMenuCommandInteraction`, or `MessageContextMenuCommandInteraction`, depending on `meta.type`.
+The handler gets the interaction and the options. `interaction` is a `ChatInputCommandInteraction`, `UserContextMenuCommandInteraction`, or `MessageContextMenuCommandInteraction`, depending on `meta.type`.
 
-`ctx.options` has every option in `meta.options` by name, resolved the way discord.js's `getUser`, `getString`, and the rest resolve them. Required options have their value. The others are `null` when the user left them out. With generated types, `ctx.options.target` is a `User` and `ctx.options.reason` is `string | null`. Context menu commands have no options; read `targetUser` or `targetMessage` from the interaction.
+The second argument has every option in `meta.options` by name, resolved the way discord.js's `getUser`, `getString`, and the rest resolve them. Required options have their value. The others are `null` when the user left them out. With generated types, `target` is a `User` and `reason` is `string | null`. Context menu commands have no options; read `targetUser` or `targetMessage` from the interaction.
 
 `meta` is required:
 
@@ -82,14 +81,13 @@ Autocomplete for the `command.ts` in the same directory. Export one function for
 
 ```ts
 // app/commands/user/profile/autocomplete.ts
-import type { InteractionContext } from "@nectar-js/nectar";
 import type { AutocompleteInteraction } from "discord.js";
 
 const sections = ["overview", "activity", "badges"];
 
-export async function section(ctx: InteractionContext<AutocompleteInteraction>) {
-  const typed = ctx.interaction.options.getFocused();
-  await ctx.interaction.respond(
+export async function section(interaction: AutocompleteInteraction) {
+  const typed = interaction.options.getFocused();
+  await interaction.respond(
     sections.filter((s) => s.startsWith(typed)).map((s) => ({ name: s, value: s })),
   );
 }
@@ -103,12 +101,12 @@ The compiler fails if an option has no function or a function has no option. Aut
 // app/components/tickets/[ticketId]/close/button.ts
 import { defineComponent } from "@nectar-js/nectar";
 
-export default defineComponent("tickets/[ticketId]/close", async (ctx) => {
-  await ctx.interaction.update({ content: `Closed ${ctx.params.ticketId}.`, components: [] });
+export default defineComponent("tickets/[ticketId]/close", async (interaction, params) => {
+  await interaction.update({ content: `Closed ${params.ticketId}.`, components: [] });
 });
 ```
 
-`ctx.interaction` is a `ButtonInteraction`, and `ctx.params` holds the route's parameters. The third argument of `defineComponent` takes parameter validators. See [Custom IDs](../concepts/custom-ids#validation).
+`interaction` is a `ButtonInteraction`, and `params` holds the route's parameters. The third argument of `defineComponent` takes parameter validators. See [Custom IDs](../concepts/custom-ids#validation).
 
 ## select.ts
 
@@ -118,13 +116,13 @@ import { defineComponent } from "@nectar-js/nectar";
 
 export const kind = "user";
 
-export default defineComponent("tickets/[ticketId]/assign", async (ctx) => {
-  const user = ctx.interaction.users.first();
-  await ctx.interaction.update({ content: `Assigned to ${user?.tag}.` });
+export default defineComponent("tickets/[ticketId]/assign", async (interaction) => {
+  const user = interaction.users.first();
+  await interaction.update({ content: `Assigned to ${user?.tag}.` });
 });
 ```
 
-`kind` is required: `"string"`, `"user"`, `"role"`, `"channel"`, or `"mentionable"`. `ctx.interaction` is the matching discord.js select menu interaction.
+`kind` is required: `"string"`, `"user"`, `"role"`, `"channel"`, or `"mentionable"`. `interaction` is the matching discord.js select menu interaction.
 
 ## modal.ts
 
@@ -143,7 +141,7 @@ export default defineEvent("guildMemberAdd", async (member) => {
 });
 ```
 
-It goes in `events/<name>/`, or in a route group inside it like `events/<name>/(welcome)/`. The handler gets the discord.js listener arguments followed by `ctx`, which has `client`, `route`, `env`, and `services`.
+It goes in `events/<name>/`, or in a route group inside it like `events/<name>/(welcome)/`. The handler gets the discord.js listener arguments. `client()`, `route()`, `env()`, and `services()` work inside it.
 
 `meta` is optional:
 
@@ -157,25 +155,26 @@ It goes in `events/<name>/`, or in a route group inside it like `events/<name>/(
 
 ```ts
 // app/middleware.ts
-import { defineMiddleware } from "@nectar-js/nectar";
+import { defineMiddleware, stop } from "@nectar-js/nectar";
 
-export default defineMiddleware(async (ctx, next) => {
-  return next({ startedAt: Date.now() });
+export default defineMiddleware(async (interaction) => {
+  if (!interaction.inCachedGuild()) return stop;
+  return { member: interaction.member };
 });
 ```
 
-Runs before every command, autocomplete, and component handler in its directory and below, starting from `app/`. It can go in any directory. See [Middleware and errors](../concepts/middleware-and-errors).
+Runs before every command, autocomplete, and component handler in its directory and below, starting from `app/`. It can go in any directory. Handlers read what it returned with `use()`, and `stop` ends the chain. See [Middleware and errors](../concepts/middleware-and-errors).
 
 ## error.ts
 
 ```ts
 // app/error.ts
-import { defineError } from "@nectar-js/nectar";
+import { defineError, route } from "@nectar-js/nectar";
 
-export default defineError(async (error, ctx) => {
-  console.error(ctx.route.id, error);
+export default defineError(async (error) => {
+  console.error(route().id, error);
   return "unhandled";
 });
 ```
 
-Handles errors from handlers and middleware in its directory and below, nearest first. Return `"unhandled"` or throw to pass the error to the next one. For event handlers, `ctx` has no `interaction`.
+Handles errors from handlers and middleware in its directory and below, nearest first. Return `"unhandled"` or throw to pass the error to the next one. `interaction` is `null` when an event handler threw.
