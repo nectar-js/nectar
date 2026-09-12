@@ -28,6 +28,9 @@ jobs:
       - run: pnpm build
 
       - run: pnpm --filter basic run build
+      - run: pnpm --filter javascript run build
+      - run: pnpm --filter tickets run build
+      - run: pnpm --filter i18n-example run build
 
       - run: pnpm test
 
