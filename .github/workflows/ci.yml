@@ -35,6 +35,7 @@ jobs:
       # Writes the examples' .nectar/, which their tests and type checks read.
       - run: pnpm --filter basic run build
       - run: pnpm --filter javascript run build
+      - run: pnpm --filter tickets run build
 
       - run: pnpm test
 

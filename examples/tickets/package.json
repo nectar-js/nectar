@@ -1,0 +1,15 @@
+{
+  "name": "tickets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "nectar": "node ../../packages/nectar/dist/cli.js",
+    "build": "pnpm nectar build",
+    "routes": "pnpm nectar routes",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nectar-js/nectar": "workspace:*",
+    "discord.js": "^14.27.0"
+  }
+}

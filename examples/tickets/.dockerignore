@@ -1,0 +1,4 @@
+node_modules
+.nectar
+.env
+tickets.db

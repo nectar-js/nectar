@@ -9,9 +9,10 @@ pnpm install
 pnpm build
 pnpm --filter basic run build
 pnpm --filter javascript run build
+pnpm --filter tickets run build
 ```
 
-The last two commands compile `examples/basic` and `examples/javascript`, which the tests assert against. Rerun them after changing an example's routes. `pnpm --filter basic run routes` prints its route tree.
+The last three commands compile the example apps, which the tests assert against. Rerun them after changing an example's routes. `pnpm --filter basic run routes` prints its route tree.
 
 ## Before you open a pull request
 
@@ -20,6 +21,7 @@ pnpm lint
 pnpm build
 pnpm --filter basic run build
 pnpm --filter javascript run build
+pnpm --filter tickets run build
 pnpm test
 pnpm typecheck
 ```

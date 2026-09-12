@@ -63,6 +63,15 @@ importers:
         specifier: ^14.27.0
         version: 14.27.0
 
+  examples/tickets:
+    dependencies:
+      '@nectar-js/nectar':
+        specifier: workspace:*
+        version: link:../../packages/nectar
+      discord.js:
+        specifier: ^14.27.0
+        version: 14.27.0
+
   packages/create:
     dependencies:
       '@clack/prompts':
