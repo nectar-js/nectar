@@ -1,5 +1,13 @@
 # @nectar-js/nectar
 
+## 0.3.0
+
+### Minor Changes
+
+- 6f012d8: New `cooldown(seconds, options?)` middleware, next to `guildOnly` and the other policy helpers. It holds a user back from running a route again for `seconds` and tells them how long is left. `scope: "guild"` or `"global"` shares the timer more widely, and `message` can be a function of the seconds left. Timers are in memory and per process.
+- 754e8cf: `meta.defer` on a `command.ts` defers the reply right before the handler runs, so a slow handler doesn't miss Discord's three second window. `true` defers a normal reply and `"ephemeral"` an ephemeral one. A middleware that already replied or deferred wins. When a handler throws after a defer, the default error boundary now fills the deferred reply instead of leaving the spinner. Command routes in the manifest gain a `defer` field.
+- 764e14b: Command handlers get `ctx.options`: every option from `meta.options` by name, resolved through discord.js. Required options carry their value and the rest are `null` when left out, so `ctx.interaction.options.getUser("target", true)` becomes `ctx.options.target`. The generated route types describe each option as `{ type, required }` instead of a bare type name. Run `nectar build` after upgrading so `.nectar/types.d.ts` matches.
+
 ## 0.2.0
 
 ### Minor Changes
