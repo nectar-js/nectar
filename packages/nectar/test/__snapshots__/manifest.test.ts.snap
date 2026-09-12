@@ -78,6 +78,26 @@ exports[`manifest > examples/basic manifest 1`] = `
     },
     {
       "handlers": {
+        "": "command:ticket",
+      },
+      "name": "ticket",
+      "payload": {
+        "description": "Open a support ticket",
+        "name": "ticket",
+        "options": [
+          {
+            "description": "What it's about",
+            "name": "subject",
+            "required": true,
+            "type": 3,
+          },
+        ],
+        "type": 1,
+      },
+      "type": 1,
+    },
+    {
+      "handlers": {
         "profile": "command:user/profile",
       },
       "name": "user",
@@ -191,6 +211,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "catchAll": null,
       "category": "component",
       "errors": [
+        "components/tickets/error.ts",
         "error.ts",
       ],
       "file": "components/tickets/[ticketId]/close/button.ts",
@@ -261,6 +282,21 @@ exports[`manifest > examples/basic manifest 1`] = `
       "errors": [
         "error.ts",
       ],
+      "file": "commands/ticket/command.ts",
+      "id": "command:ticket",
+      "kind": "command",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "path": "ticket",
+      "plugins": [],
+    },
+    {
+      "category": "command",
+      "defer": null,
+      "errors": [
+        "error.ts",
+      ],
       "file": "commands/user/profile/command.ts",
       "id": "command:user/profile",
       "kind": "command",
@@ -319,6 +355,29 @@ exports[`manifest > examples/basic manifest 1`] = `
       "catchAll": null,
       "category": "component",
       "errors": [
+        "components/tickets/error.ts",
+        "error.ts",
+      ],
+      "file": "components/tickets/[ticketId]/reason/modal.ts",
+      "id": "component:tickets/[ticketId]/reason",
+      "kind": "modal",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "overhead": 9,
+      "params": [
+        "ticketId",
+      ],
+      "path": "tickets/[ticketId]/reason",
+      "plugins": [],
+      "selectKind": null,
+      "shortId": "3pehna",
+    },
+    {
+      "catchAll": null,
+      "category": "component",
+      "errors": [
+        "components/tickets/error.ts",
         "error.ts",
       ],
       "file": "components/tickets/[ticketId]/assign/select.ts",

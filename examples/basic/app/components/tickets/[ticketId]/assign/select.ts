@@ -1,10 +1,11 @@
 import { defineComponent } from "@nectar-js/nectar";
+import { assignTicket } from "../../../../tickets.ts";
 
 export const kind = "user";
 
 export default defineComponent("tickets/[ticketId]/assign", async (ctx) => {
   const assignee = ctx.interaction.users.first();
-  await ctx.interaction.update({
-    content: `Ticket ${ctx.params.ticketId} assigned to ${assignee?.tag ?? "nobody"}`,
-  });
+  if (assignee === undefined) return;
+  const ticket = assignTicket(ctx.params.ticketId, assignee.id);
+  await ctx.interaction.update({ content: `Ticket ${ticket.id} assigned to ${assignee.tag}` });
 });

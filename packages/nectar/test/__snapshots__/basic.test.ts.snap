@@ -74,6 +74,25 @@ exports[`examples/basic command payloads 1`] = `
   },
   {
     "handlers": {
+      "": "command:ticket",
+    },
+    "name": "ticket",
+    "payload": {
+      "description": "Open a support ticket",
+      "name": "ticket",
+      "options": [
+        {
+          "description": "What it's about",
+          "name": "subject",
+          "required": true,
+          "type": 3,
+        },
+      ],
+      "type": 1,
+    },
+  },
+  {
+    "handlers": {
       "profile": "command:user/profile",
     },
     "name": "user",
@@ -148,6 +167,16 @@ exports[`examples/basic component routes round-trip 1`] = `
     "selectKind": null,
     "shortId": "31imou",
   },
+  {
+    "id": "component:tickets/[ticketId]/reason",
+    "kind": "modal",
+    "overhead": 9,
+    "params": [
+      "ticketId",
+    ],
+    "selectKind": null,
+    "shortId": "3pehna",
+  },
 ]
 `;
 
@@ -183,6 +212,17 @@ exports[`examples/basic route table 1`] = `
       "segments": [
         {
           "name": "user",
+          "type": "static",
+        },
+      ],
+    },
+    {
+      "category": "component",
+      "file": "components/tickets/error.ts",
+      "kind": "error",
+      "segments": [
+        {
+          "name": "tickets",
           "type": "static",
         },
       ],
@@ -254,6 +294,21 @@ exports[`examples/basic route table 1`] = `
         },
       ],
       "shortId": "3384xw",
+    },
+    {
+      "category": "command",
+      "file": "commands/ticket/command.ts",
+      "id": "command:ticket",
+      "kind": "command",
+      "params": [],
+      "path": "ticket",
+      "segments": [
+        {
+          "name": "ticket",
+          "type": "static",
+        },
+      ],
+      "shortId": "27z96a",
     },
     {
       "category": "command",
@@ -392,6 +447,31 @@ exports[`examples/basic route table 1`] = `
         },
       ],
       "shortId": "31imou",
+    },
+    {
+      "category": "component",
+      "file": "components/tickets/[ticketId]/reason/modal.ts",
+      "id": "component:tickets/[ticketId]/reason",
+      "kind": "modal",
+      "params": [
+        "ticketId",
+      ],
+      "path": "tickets/[ticketId]/reason",
+      "segments": [
+        {
+          "name": "tickets",
+          "type": "static",
+        },
+        {
+          "name": "ticketId",
+          "type": "dynamic",
+        },
+        {
+          "name": "reason",
+          "type": "static",
+        },
+      ],
+      "shortId": "3pehna",
     },
     {
       "category": "event",

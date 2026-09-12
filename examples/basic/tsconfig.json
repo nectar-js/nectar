@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "declaration": false,
-    "sourceMap": false
+    "sourceMap": false,
+    "allowImportingTsExtensions": true
   },
   "include": ["app", "test", "nectar.config.ts", ".nectar/types.d.ts"]
 }

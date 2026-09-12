@@ -13,6 +13,7 @@ declare module "@nectar-js/nectar" {
       "moderation/ban": { type: "chatInput"; options: { "target": { type: "user"; required: true }; "reason": { type: "string"; required: false }; "days": { type: "integer"; required: false } }; context: M0 & M1 };
       "moderation/kick": { type: "chatInput"; options: { "target": { type: "user"; required: true }; "reason": { type: "string"; required: false } }; context: M0 & M1 };
       "ping": { type: "chatInput"; options: {}; context: M0 };
+      "ticket": { type: "chatInput"; options: { "subject": { type: "string"; required: true } }; context: M0 };
       "user/profile": { type: "chatInput"; options: { "target": { type: "user"; required: false }; "section": { type: "string"; required: false } }; context: M0 };
     };
     components: {
@@ -20,6 +21,7 @@ declare module "@nectar-js/nectar" {
       "pagination/[page]/prev": { kind: "button"; params: { "page": string }; context: M0 };
       "tickets/[ticketId]/assign": { kind: "select:user"; params: { "ticketId": string }; context: M0 };
       "tickets/[ticketId]/close": { kind: "button"; params: { "ticketId": string }; context: M0 };
+      "tickets/[ticketId]/reason": { kind: "modal"; params: { "ticketId": string }; context: M0 };
     };
     events: {
       "clientReady": true;
