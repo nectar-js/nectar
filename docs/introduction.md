@@ -1,5 +1,9 @@
 # Introduction
 
+::: warning Pre-1.0
+Nectar is pre-1.0 software. Breaking changes can land in any 0.x minor release. Read the [changelog](https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md) before upgrading, and [Compatibility](./reference/compatibility) for what counts as a breaking change.
+:::
+
 Nectar is a framework for Discord bots built on discord.js. Commands, components, and events are files in `app/`. Nectar registers the commands and routes each interaction to its file.
 
 ```ts
@@ -36,7 +40,3 @@ Node runs your TypeScript directly by stripping the types, so only erasable synt
 Local imports need the `.ts` extension, as in `import { db } from "./db.ts"`. TypeScript allows that with `allowImportingTsExtensions`, which new projects already set.
 
 JavaScript projects are supported. Generated route types are TypeScript only.
-
-## Status
-
-Nectar is at 0.x and changes often. Minor versions can include breaking changes. The [changelog](https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md) lists them, and [Compatibility](./reference/compatibility) covers what counts as one.

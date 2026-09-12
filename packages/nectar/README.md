@@ -18,6 +18,9 @@
 
 <br />
 
+> [!WARNING]
+> Nectar is pre-1.0 software. Breaking changes can land in any 0.x minor release. Read the [changelog](https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md) before upgrading, and [Compatibility](https://nectar-js.github.io/nectar/reference/compatibility) for what counts as a breaking change.
+
 Nectar is a framework for Discord bots. You define commands, components, and events as files under `app/`, and Nectar handles command registration, custom ID encoding, and interaction routing.
 
 `app/commands/ping/command.ts` registers `/ping`, and `app/commands/moderation/ban/command.ts` registers `/moderation ban`. `app/components/tickets/[ticketId]/close/button.ts` handles a button whose custom ID carries a typed `ticketId`. Handlers get the discord.js interaction and client.
@@ -45,10 +48,6 @@ nectar start    # run the compiled build
 ```
 
 `nectar --help` lists the rest. The documentation is at [nectar-js.github.io/nectar](https://nectar-js.github.io/nectar/).
-
-## Status
-
-Nectar is at 0.x and changes often. Minor versions can break things, so read the [changelog](https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md) before upgrading.
 
 ## Requirements
 
