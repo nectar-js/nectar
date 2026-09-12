@@ -11,8 +11,10 @@ export default defineCommand("ticket/list", async (ctx) => {
     await ctx.interaction.editReply("No open tickets.");
     return;
   }
-  const lines = tickets.map(
-    (t) => `#${t.id} ${t.subject} (${t.assignee === null ? "unassigned" : `<@${t.assignee}>`})`,
-  );
+  const lines = tickets.map((t) => {
+    const where = t.channelId === null ? "" : ` in <#${t.channelId}>`;
+    const who = t.assignee === null ? "unassigned" : `<@${t.assignee}>`;
+    return `#${t.id} ${t.subject}${where} (${who})`;
+  });
   await ctx.interaction.editReply(lines.join("\n"));
 });

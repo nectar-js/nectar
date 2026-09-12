@@ -3,11 +3,13 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ChannelType,
   ContainerBuilder,
   MessageFlags,
+  PermissionFlagsBits,
   UserSelectMenuBuilder,
 } from "discord.js";
-import { openTicket } from "../../../tickets.ts";
+import { openTicket, setTicketChannel } from "../../../tickets.ts";
 
 export const meta: CommandMeta = {
   description: "Open a support ticket",
@@ -22,9 +24,33 @@ export const meta: CommandMeta = {
   ],
 };
 
+const ACCESS = [
+  PermissionFlagsBits.ViewChannel,
+  PermissionFlagsBits.SendMessages,
+  PermissionFlagsBits.ReadMessageHistory,
+];
+
 export default defineCommand("ticket/open", async (ctx) => {
-  const ticket = openTicket(ctx.options.subject, ctx.interaction.user.id);
+  const { guild, user, client } = ctx.interaction;
+  if (guild === null) return;
+
+  const ticket = openTicket(ctx.options.subject, user.id);
   const ticketId = String(ticket.id);
+
+  // A private channel: hidden from @everyone (whose role ID is the guild ID), open to the
+  // person who asked and to the bot. Assignees are added when they're picked.
+  const channel = await guild.channels.create({
+    name: `ticket-${ticket.id}`,
+    type: ChannelType.GuildText,
+    topic: ticket.subject,
+    ...(process.env.TICKETS_CATEGORY_ID ? { parent: process.env.TICKETS_CATEGORY_ID } : {}),
+    permissionOverwrites: [
+      { id: guild.id, deny: [PermissionFlagsBits.ViewChannel] },
+      { id: user.id, allow: ACCESS },
+      { id: client.user.id, allow: ACCESS },
+    ],
+  });
+  setTicketChannel(ticket.id, channel.id);
 
   const close = new ButtonBuilder()
     .setCustomId(customId("tickets/[ticketId]/close", { ticketId }))
@@ -37,12 +63,14 @@ export default defineCommand("ticket/open", async (ctx) => {
   // A Components V2 message: the layout lives in the container, and there is no `content`.
   const card = new ContainerBuilder()
     .addTextDisplayComponents((text) =>
-      text.setContent(
-        `## Ticket #${ticket.id}\n${ticket.subject}\nOpened by <@${ticket.openedBy}>`,
-      ),
+      text.setContent(`## Ticket #${ticket.id}\n${ticket.subject}\nOpened by <@${user.id}>`),
     )
     .addActionRowComponents(new ActionRowBuilder<ButtonBuilder>().addComponents(close))
     .addActionRowComponents(new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(assign));
 
-  await ctx.interaction.reply({ flags: MessageFlags.IsComponentsV2, components: [card] });
+  await channel.send({ flags: MessageFlags.IsComponentsV2, components: [card] });
+  await ctx.interaction.reply({
+    content: `Ticket #${ticket.id} opened in <#${channel.id}>.`,
+    flags: MessageFlags.Ephemeral,
+  });
 });

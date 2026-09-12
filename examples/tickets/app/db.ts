@@ -11,13 +11,14 @@ export function database(): DatabaseSync {
     db = new DatabaseSync(process.env.TICKETS_DB ?? "tickets.db");
     db.exec(`
       CREATE TABLE IF NOT EXISTS tickets (
-        id        INTEGER PRIMARY KEY,
-        subject   TEXT    NOT NULL,
-        opened_by TEXT    NOT NULL,
-        assignee  TEXT,
-        reason    TEXT,
-        opened_at INTEGER NOT NULL,
-        closed_at INTEGER
+        id         INTEGER PRIMARY KEY,
+        subject    TEXT    NOT NULL,
+        opened_by  TEXT    NOT NULL,
+        channel_id TEXT,
+        assignee   TEXT,
+        reason     TEXT,
+        opened_at  INTEGER NOT NULL,
+        closed_at  INTEGER
       )
     `);
   }

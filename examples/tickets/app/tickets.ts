@@ -4,6 +4,8 @@ export interface Ticket {
   id: number;
   subject: string;
   openedBy: string;
+  /** The ticket's channel. Set right after the channel is created. */
+  channelId: string | null;
   assignee: string | null;
   reason: string | null;
   openedAt: number;
@@ -21,17 +23,23 @@ interface Row {
   id: number;
   subject: string;
   opened_by: string;
+  channel_id: string | null;
   assignee: string | null;
   reason: string | null;
   opened_at: number;
   closed_at: number | null;
 }
 
+/** Inserts the ticket. The channel is named after the ID, so it comes second. */
 export function openTicket(subject: string, openedBy: string): Ticket {
   const { lastInsertRowid } = database()
     .prepare("INSERT INTO tickets (subject, opened_by, opened_at) VALUES (?, ?, ?)")
     .run(subject, openedBy, Date.now());
   return getTicket(Number(lastInsertRowid));
+}
+
+export function setTicketChannel(id: number, channelId: string): void {
+  database().prepare("UPDATE tickets SET channel_id = ? WHERE id = ?").run(channelId, id);
 }
 
 /** Open tickets, oldest first. */
@@ -79,6 +87,7 @@ function fromRow(row: Row): Ticket {
     id: row.id,
     subject: row.subject,
     openedBy: row.opened_by,
+    channelId: row.channel_id,
     assignee: row.assignee,
     reason: row.reason,
     openedAt: row.opened_at,

@@ -2,55 +2,103 @@ process.env.TICKETS_DB = ":memory:";
 
 import { customId } from "@nectar-js/nectar";
 import { createTestApp } from "@nectar-js/nectar/testing";
-import { Collection, MessageFlags } from "discord.js";
+import { ChannelType, Collection, MessageFlags, PermissionFlagsBits } from "discord.js";
 import { afterEach, describe, expect, test, vi } from "vitest";
 import { closeTicket, openTicket, openTickets, pruneClosedTickets } from "../app/tickets.ts";
 
 // Written by `nectar build`.
 const app = createTestApp(new URL("../.nectar/manifest.json", import.meta.url));
+// The bot's own user, which the channel overwrites name. Never set on a client that doesn't log in.
+Object.assign(app.client, { user: { id: "bot" } });
 
-/** In the server, with a member, so inGuild() and guildOnly pass. Each user has their own cooldown. */
-const member = (id: string) => ({ guildId: "g", member: {}, user: { id } });
+/** Just enough of a guild: channels are created, fetched by ID, and deleted. */
+function fakeGuild() {
+  const channels = new Map<string, FakeChannel>();
+  let next = 100;
+  return {
+    id: "g",
+    channels: {
+      create: vi.fn(async (options: { name: string }) => {
+        const channel: FakeChannel = {
+          id: String(next++),
+          name: options.name,
+          type: ChannelType.GuildText,
+          send: vi.fn(async () => {}),
+          delete: vi.fn(async () => {
+            channels.delete(channel.id);
+          }),
+          permissionOverwrites: { create: vi.fn(async () => {}) },
+        };
+        channels.set(channel.id, channel);
+        return channel;
+      }),
+      fetch: vi.fn(async (id: string) => channels.get(id) ?? null),
+    },
+    channelsById: channels,
+  };
+}
+
+interface FakeChannel {
+  id: string;
+  name: string;
+  type: ChannelType;
+  send: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+  permissionOverwrites: { create: ReturnType<typeof vi.fn> };
+}
+
+const guild = fakeGuild();
+
+/** In the server, with a member, so inGuild() and guildOnly pass. Each user has its own cooldown. */
+const member = (id: string) => ({ guildId: "g", guild, member: {}, user: { id } });
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-async function open(subject: string, user: string): Promise<string> {
-  const { responses } = await app.command("ticket/open", { subject }, member(user));
-  // Builders serialize through toJSON, so the custom IDs of the nested components show up.
-  const card = JSON.stringify(responses[0]?.options);
-  return /n:\w{6}:(\d+)/.exec(card)?.[1] ?? "";
+/** Opens a ticket and returns it with its channel. */
+async function open(subject: string, user: string) {
+  await app.command("ticket/open", { subject }, member(user));
+  const ticket = openTickets().find((t) => t.subject === subject);
+  if (ticket?.channelId == null) throw new Error(`No channel for ${subject}.`);
+  const channel = guild.channelsById.get(ticket.channelId);
+  if (channel === undefined) throw new Error(`Channel ${ticket.channelId} is gone.`);
+  return { ticketId: String(ticket.id), channel };
 }
 
 describe("/ticket open", () => {
-  test("stores the ticket and replies with a Components V2 card carrying its ID", async () => {
+  test("creates a private channel, posts the card there, and tells the opener where", async () => {
     const { responses } = await app.command("ticket/open", { subject: "Login" }, member("10"));
     const [ticket] = openTickets().filter((t) => t.subject === "Login");
     expect(ticket).toMatchObject({ openedBy: "10", assignee: null, closedAt: null });
     const ticketId = String(ticket?.id);
-    expect(responses).toMatchObject([
+
+    expect(guild.channels.create).toHaveBeenLastCalledWith({
+      name: `ticket-${ticketId}`,
+      type: ChannelType.GuildText,
+      topic: "Login",
+      permissionOverwrites: [
+        { id: "g", deny: [PermissionFlagsBits.ViewChannel] },
+        { id: "10", allow: expect.arrayContaining([PermissionFlagsBits.ViewChannel]) },
+        { id: "bot", allow: expect.arrayContaining([PermissionFlagsBits.ViewChannel]) },
+      ],
+    });
+    const channel = guild.channelsById.get(ticket?.channelId ?? "");
+    expect(channel?.send).toHaveBeenCalledWith({
+      flags: MessageFlags.IsComponentsV2,
+      components: [expect.anything()],
+    });
+    // The card carries the ticket ID in both component custom IDs.
+    const card = JSON.stringify(channel?.send.mock.calls[0]);
+    expect(card).toContain(customId("tickets/[ticketId]/close", { ticketId }));
+    expect(card).toContain(customId("tickets/[ticketId]/assign", { ticketId }));
+
+    expect(responses).toEqual([
       {
         method: "reply",
         options: {
-          flags: MessageFlags.IsComponentsV2,
-          components: [
-            {
-              components: [
-                { data: { content: expect.stringContaining(`Ticket #${ticketId}`) } },
-                {
-                  components: [
-                    { data: { custom_id: customId("tickets/[ticketId]/close", { ticketId }) } },
-                  ],
-                },
-                {
-                  components: [
-                    { data: { custom_id: customId("tickets/[ticketId]/assign", { ticketId }) } },
-                  ],
-                },
-              ],
-            },
-          ],
+          content: `Ticket #${ticketId} opened in <#${channel?.id}>.`,
+          flags: MessageFlags.Ephemeral,
         },
       },
     ]);
@@ -92,8 +140,8 @@ describe("/ticket open", () => {
 });
 
 describe("/ticket list", () => {
-  test("defers, then lists open tickets with their assignee", async () => {
-    const id = await open("Listed", "40");
+  test("defers, then lists open tickets with their channel and assignee", async () => {
+    const { ticketId, channel } = await open("Listed", "40");
     const { responses } = await app.command("ticket/list", {}, member("40"));
     expect(responses[0]).toEqual({
       method: "deferReply",
@@ -101,50 +149,65 @@ describe("/ticket list", () => {
     });
     expect(responses[1]).toMatchObject({
       method: "editReply",
-      options: expect.stringContaining(`#${id} Listed (unassigned)`),
+      options: expect.stringContaining(`#${ticketId} Listed in <#${channel.id}> (unassigned)`),
     });
   });
 });
 
 describe("components", () => {
-  test("assigning a ticket stores the assignee", async () => {
-    const id = await open("Assign me", "50");
+  test("assigning stores the assignee and lets them into the channel", async () => {
+    const { ticketId, channel } = await open("Assign me", "50");
     const users = new Collection([["3", { id: "3" }]]);
     const { responses } = await app.select(
       "tickets/[ticketId]/assign",
-      { ticketId: id },
-      { users },
+      { ticketId },
+      { ...member("50"), users },
     );
-    expect(responses).toEqual([{ method: "reply", options: `Ticket #${id} assigned to <@3>.` }]);
-    expect(openTickets().find((t) => String(t.id) === id)?.assignee).toBe("3");
+    expect(responses).toEqual([
+      { method: "reply", options: `Ticket #${ticketId} assigned to <@3>.` },
+    ]);
+    expect(openTickets().find((t) => String(t.id) === ticketId)?.assignee).toBe("3");
+    expect(channel.permissionOverwrites.create).toHaveBeenCalledWith("3", {
+      ViewChannel: true,
+      SendMessages: true,
+      ReadMessageHistory: true,
+    });
   });
 
-  test("close opens a modal, and the modal closes the ticket with the reason", async () => {
-    const id = await open("Close me", "60");
-    const { responses } = await app.button("tickets/[ticketId]/close", { ticketId: id });
+  test("close opens a modal, and the modal closes the ticket and deletes its channel", async () => {
+    const { ticketId, channel } = await open("Close me", "60");
+    const { responses } = await app.button("tickets/[ticketId]/close", { ticketId }, member("60"));
     expect(responses).toMatchObject([
       {
         method: "showModal",
-        options: { data: { custom_id: customId("tickets/[ticketId]/reason", { ticketId: id }) } },
+        options: { data: { custom_id: customId("tickets/[ticketId]/reason", { ticketId }) } },
       },
     ]);
 
     const closed = await app.modal(
       "tickets/[ticketId]/reason",
-      { ticketId: id },
-      { user: { id: "60" }, fields: { getTextInputValue: () => "fixed" } },
+      { ticketId },
+      {
+        ...member("60"),
+        user: { id: "60", tag: "mod#0001" },
+        fields: { getTextInputValue: () => "fixed" },
+      },
     );
     expect(closed.responses).toEqual([
-      { method: "reply", options: `Ticket #${id} closed by <@60>: fixed` },
+      {
+        method: "reply",
+        options: { content: `Ticket #${ticketId} closed: fixed`, flags: MessageFlags.Ephemeral },
+      },
     ]);
-    expect(openTickets().some((t) => String(t.id) === id)).toBe(false);
+    expect(channel.delete).toHaveBeenCalledWith(`Ticket #${ticketId} closed by mod#0001: fixed`);
+    expect(openTickets().some((t) => String(t.id) === ticketId)).toBe(false);
   });
 
   test("a closed or unknown ticket is answered by the tickets error boundary", async () => {
     const { outcome, responses } = await app.modal(
       "tickets/[ticketId]/reason",
       { ticketId: "999999" },
-      { fields: { getTextInputValue: () => "late" } },
+      { ...member("61"), fields: { getTextInputValue: () => "late" } },
     );
     expect(outcome).toMatchObject({
       type: "interaction:fail",
@@ -159,7 +222,11 @@ describe("components", () => {
   });
 
   test("a tampered ticket ID never reaches the handler", async () => {
-    const { outcome } = await app.button("tickets/[ticketId]/close", { ticketId: "1 OR 1=1" });
+    const { outcome } = await app.button(
+      "tickets/[ticketId]/close",
+      { ticketId: "1 OR 1=1" },
+      member("62"),
+    );
     expect(outcome).toMatchObject({
       type: "interaction:reject",
       reason: "invalid-param",
