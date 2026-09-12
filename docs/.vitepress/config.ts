@@ -53,6 +53,8 @@ export default defineConfig({
           { text: "Middleware", link: "/guides/middleware" },
           { text: "Error handling", link: "/guides/errors" },
           { text: "Testing", link: "/guides/testing" },
+          { text: "Scheduled jobs", link: "/guides/jobs" },
+          { text: "Localization", link: "/guides/localization" },
           { text: "Sharding", link: "/guides/sharding" },
           { text: "Deploying", link: "/guides/deployment" },
         ],

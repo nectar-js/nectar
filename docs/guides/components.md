@@ -117,6 +117,27 @@ The handler gets `ctx.params.path` as `["settings", "roles"]`. Every value count
 
 `components/confirm/button.ts` has none, so `customId("confirm")` is enough.
 
+## Components V2
+
+Containers, sections, text displays, and the other discord.js 14.19+ layout components work the same way. Nectar only reads custom IDs, so a button inside a `SectionBuilder` or `ContainerBuilder` routes to its `button.ts` like any other:
+
+```ts
+import { ContainerBuilder, MessageFlags, SectionBuilder } from "discord.js";
+
+await ctx.interaction.reply({
+  flags: MessageFlags.IsComponentsV2,
+  components: [
+    new ContainerBuilder().addSectionComponents(
+      new SectionBuilder()
+        .addTextDisplayComponents((text) => text.setContent(`Ticket ${ticket.id}`))
+        .setButtonAccessory(close),
+    ),
+  ],
+});
+```
+
+Messages with `IsComponentsV2` can't have `content` or `embeds`. That's Discord's rule, not Nectar's.
+
 ## Checking values
 
 A user can change the values in a custom ID. Validate their format with `params`, and check access in the handler:
