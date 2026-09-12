@@ -7,8 +7,13 @@
 <p align="center">A filesystem-based meta-framework for discord.js.</p>
 
 <div align="center">
-  <img alt="NPM Version" src="https://img.shields.io/npm/v/%40nectar-js%2Fnectar?style=for-the-badge&color=f27506">
+  <a href="https://www.npmjs.com/package/@nectar-js/nectar">
+    <img alt="NPM Version" src="https://img.shields.io/npm/v/%40nectar-js%2Fnectar?style=for-the-badge&color=f27506">
+  </a>
   <img alt="NPM License" src="https://img.shields.io/npm/l/%40nectar-js%2Fnectar?style=for-the-badge&color=f27506">
+  <a href="https://github.com/nectar-js/nectar/stargazers">
+    <img alt="GitHub Stars" src="https://img.shields.io/github/stars/nectar-js/nectar?style=for-the-badge&color=f27506">
+  </a>
 </div>
 
 <br />
