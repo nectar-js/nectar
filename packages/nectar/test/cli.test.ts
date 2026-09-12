@@ -150,7 +150,7 @@ describe("nectar check", () => {
     const result = await nectar(["check"], basic);
     expect(result.code).toBe(0);
     expect(result.err).toBe("");
-    expect(result.out).toBe("✔ No problems. 4 commands, 5 component routes, 2 events in app/.");
+    expect(result.out).toBe("✔ No problems. 5 commands, 5 component routes, 2 events in app/.");
   });
 
   test("reports diagnostics with file, code, and docs link, writes nothing", async () => {
@@ -214,6 +214,7 @@ describe("nectar manifest", () => {
       "ping",
       "ticket",
       "user",
+      "Avatar",
     ]);
   });
 

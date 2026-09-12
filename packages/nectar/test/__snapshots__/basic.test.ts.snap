@@ -122,6 +122,16 @@ exports[`examples/basic command payloads 1`] = `
       "type": 1,
     },
   },
+  {
+    "handlers": {
+      "": "command:avatar",
+    },
+    "name": "Avatar",
+    "payload": {
+      "name": "Avatar",
+      "type": 2,
+    },
+  },
 ]
 `;
 
@@ -244,6 +254,44 @@ exports[`examples/basic route table 1`] = `
   "routes": [
     {
       "category": "command",
+      "file": "commands/(utility)/avatar/command.ts",
+      "id": "command:avatar",
+      "kind": "command",
+      "params": [],
+      "path": "avatar",
+      "segments": [
+        {
+          "name": "utility",
+          "type": "group",
+        },
+        {
+          "name": "avatar",
+          "type": "static",
+        },
+      ],
+      "shortId": "2964bh",
+    },
+    {
+      "category": "command",
+      "file": "commands/(utility)/ping/command.ts",
+      "id": "command:ping",
+      "kind": "command",
+      "params": [],
+      "path": "ping",
+      "segments": [
+        {
+          "name": "utility",
+          "type": "group",
+        },
+        {
+          "name": "ping",
+          "type": "static",
+        },
+      ],
+      "shortId": "3384xw",
+    },
+    {
+      "category": "command",
       "file": "commands/moderation/ban/command.ts",
       "id": "command:moderation/ban",
       "kind": "command",
@@ -279,21 +327,6 @@ exports[`examples/basic route table 1`] = `
         },
       ],
       "shortId": "snukfs",
-    },
-    {
-      "category": "command",
-      "file": "commands/ping/command.ts",
-      "id": "command:ping",
-      "kind": "command",
-      "params": [],
-      "path": "ping",
-      "segments": [
-        {
-          "name": "ping",
-          "type": "static",
-        },
-      ],
-      "shortId": "3384xw",
     },
     {
       "category": "command",

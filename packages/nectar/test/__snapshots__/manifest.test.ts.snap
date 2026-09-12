@@ -128,6 +128,17 @@ exports[`manifest > examples/basic manifest 1`] = `
       },
       "type": 1,
     },
+    {
+      "handlers": {
+        "": "command:avatar",
+      },
+      "name": "Avatar",
+      "payload": {
+        "name": "Avatar",
+        "type": 2,
+      },
+      "type": 2,
+    },
   ],
   "events": [
     {
@@ -235,6 +246,21 @@ exports[`manifest > examples/basic manifest 1`] = `
       "errors": [
         "error.ts",
       ],
+      "file": "commands/(utility)/avatar/command.ts",
+      "id": "command:avatar",
+      "kind": "command",
+      "middleware": [
+        "middleware.ts",
+      ],
+      "path": "avatar",
+      "plugins": [],
+    },
+    {
+      "category": "command",
+      "defer": null,
+      "errors": [
+        "error.ts",
+      ],
       "file": "commands/moderation/ban/command.ts",
       "id": "command:moderation/ban",
       "kind": "command",
@@ -267,7 +293,7 @@ exports[`manifest > examples/basic manifest 1`] = `
       "errors": [
         "error.ts",
       ],
-      "file": "commands/ping/command.ts",
+      "file": "commands/(utility)/ping/command.ts",
       "id": "command:ping",
       "kind": "command",
       "middleware": [

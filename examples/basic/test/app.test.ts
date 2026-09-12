@@ -198,3 +198,18 @@ describe("errors", () => {
     expect(error).toHaveBeenCalledWith("[command:ping]", down);
   });
 });
+
+describe("context menus", () => {
+  test("Avatar replies with the target's avatar", async () => {
+    const { responses } = await app.command(
+      "avatar",
+      {},
+      {
+        targetUser: {
+          displayAvatarURL: ({ size }: { size: number }) => `https://cdn/avatar?size=${size}`,
+        },
+      },
+    );
+    expect(responses).toEqual([{ method: "reply", options: "https://cdn/avatar?size=512" }]);
+  });
+});
