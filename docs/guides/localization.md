@@ -88,7 +88,7 @@ Under `nectar dev`, an edited catalog reaches the next reply without a restart. 
 
 ## Variables and plurals
 
-`{name}` interpolates. Numbers and dates go through `Intl`, so `{count}` reads `1,234` for an American and `1.234` for a German. `{{` and `}}` are literal braces. A variable you forget to pass stays in the reply as `{name}`, which is easier to spot than the word `undefined`.
+`{name}` interpolates. Numbers and dates go through `Intl`, so `{count}` reads `1,234` for an American and `1.234` for a German. Double a brace to write one literally. A variable you forget to pass stays in the reply as `{name}`, which is easier to spot than the word `undefined`.
 
 An object whose keys are all plural forms (`zero`, `one`, `two`, `few`, `many`, `other`, or an exact number) is one message with plural forms:
 
