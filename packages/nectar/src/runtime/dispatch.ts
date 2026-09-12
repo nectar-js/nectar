@@ -1,5 +1,5 @@
-import type { AutocompleteInteraction, Interaction } from "discord.js";
-import { ApplicationCommandType } from "discord-api-types/v10";
+import type { AutocompleteInteraction, CommandInteraction, Interaction } from "discord.js";
+import { ApplicationCommandType, MessageFlags } from "discord-api-types/v10";
 import { type OptionSpec, optionsAt, resolveOptions } from "../commands/options.js";
 import {
   type ComponentKind,
@@ -173,7 +173,8 @@ async function run(
         return;
       }
     }
-    await runChain(middleware, ctx, handler, {
+    const deferred = route.kind === "command" && route.defer !== null ? route.defer : null;
+    await runChain(middleware, ctx, deferred === null ? handler : deferring(handler, deferred), {
       middleware: (index) =>
         state.signals.emit({
           type: "middleware:enter",
@@ -215,6 +216,20 @@ async function run(
     if (autocompleteOption !== undefined)
       await closeAutocomplete(interaction as AutocompleteInteraction);
   }
+}
+
+/**
+ * Defers the reply right before the handler, after the middleware chain, so a policy check can
+ * still answer with its own message. A middleware that already replied or deferred wins.
+ */
+function deferring(handler: Handler, mode: "reply" | "ephemeral"): Handler {
+  return async (ctx) => {
+    const interaction = ctx.interaction as CommandInteraction;
+    if (!interaction.replied && !interaction.deferred) {
+      await interaction.deferReply(mode === "ephemeral" ? { flags: MessageFlags.Ephemeral } : {});
+    }
+    return handler(ctx);
+  };
 }
 
 /** Discord shows a spinner until autocomplete answers, so a failed handler answers with nothing. */

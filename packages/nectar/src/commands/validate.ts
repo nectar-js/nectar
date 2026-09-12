@@ -94,6 +94,17 @@ export function validateCommandMeta(
   ok =
     checkLocalizations(ctx, value.descriptionLocalizations, "meta.descriptionLocalizations") && ok;
   ok = checkTopLevel(ctx, value) && ok;
+  if (
+    value.defer !== undefined &&
+    typeof value.defer !== "boolean" &&
+    value.defer !== "ephemeral"
+  ) {
+    ok = fail(
+      ctx,
+      "invalid-meta",
+      `meta.defer is ${JSON.stringify(value.defer)}. Use true to defer the reply before the handler runs, or "ephemeral" to defer it as an ephemeral reply.`,
+    );
+  }
 
   return ok ? (value as unknown as CommandMeta) : null;
 }

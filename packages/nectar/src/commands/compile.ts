@@ -9,7 +9,13 @@ import { loadModule } from "../compiler/load.js";
 import type { Boundary, Route, RouteTable } from "../compiler/routes.js";
 import { formatSegment } from "../compiler/segments.js";
 import { checkHandler } from "../components/compile.js";
-import type { CommandMeta, CommandOption, CommandRouteMeta, TopLevelMeta } from "./meta.js";
+import type {
+  CommandMeta,
+  CommandOption,
+  CommandRouteMeta,
+  DeferMode,
+  TopLevelMeta,
+} from "./meta.js";
 import { topLevelKeysUsed, validateCommandMeta, validateCommandRouteMeta } from "./validate.js";
 
 export interface CompiledCommand {
@@ -20,6 +26,8 @@ export interface CompiledCommand {
    * `""` for a plain command, `"ban"` for a subcommand, `"group/sub"` inside a subcommand group.
    */
   handlers: Record<string, Route>;
+  /** How each handler position defers, for the ones whose `meta.defer` asks for it. */
+  defer: Record<string, DeferMode>;
   payload: RESTPostAPIApplicationCommandsJSONBody;
   /** Every file that contributed to this command. */
   files: string[];
@@ -255,13 +263,20 @@ function compilePlainCommand(entry: LoadedRoute, diagnostics: Diagnostics): Comp
     if (meta.options !== undefined) payload.options = meta.options.map(optionPayload);
   }
 
+  const mode = deferMode(meta);
   return {
     name,
     type,
     handlers: { "": route },
+    defer: mode === null ? {} : { "": mode },
     payload: compact(payload) as unknown as RESTPostAPIApplicationCommandsJSONBody,
     files: [route.file],
   };
+}
+
+function deferMode(meta: CommandMeta): DeferMode | null {
+  if (meta.defer === "ephemeral") return "ephemeral";
+  return meta.defer === true ? "reply" : null;
 }
 
 function compileParentCommand(
@@ -279,9 +294,16 @@ function compileParentCommand(
   }
 
   const handlers: Record<string, Route> = {};
+  const defer: Record<string, DeferMode> = {};
   const files = [parent.boundary.file];
   const options: Record<string, unknown>[] = [];
   let ok = true;
+  const place = (key: string, entry: LoadedRoute) => {
+    handlers[key] = entry.route;
+    files.push(entry.route.file);
+    const mode = deferMode(entry.meta);
+    if (mode !== null) defer[key] = mode;
+  };
 
   const bySecond = new Map<string, LoadedRoute[]>();
   for (const entry of nested) {
@@ -320,8 +342,7 @@ function compileParentCommand(
         ok = false;
         continue;
       }
-      handlers[sub.name] = sub.route;
-      files.push(sub.route.file);
+      place(sub.name, subs[0] as LoadedRoute);
       options.push(sub.payload);
       continue;
     }
@@ -365,8 +386,7 @@ function compileParentCommand(
         ok = false;
         continue;
       }
-      handlers[`${groupName}/${sub.name}`] = sub.route;
-      files.push(sub.route.file);
+      place(`${groupName}/${sub.name}`, entry);
       groupOptions.push(sub.payload);
     }
     options.push(
@@ -391,7 +411,7 @@ function compileParentCommand(
     options,
   }) as RESTPostAPIApplicationCommandsJSONBody;
 
-  return { name, type: ApplicationCommandType.ChatInput, handlers, payload, files };
+  return { name, type: ApplicationCommandType.ChatInput, handlers, defer, payload, files };
 }
 
 function compileSubcommand(

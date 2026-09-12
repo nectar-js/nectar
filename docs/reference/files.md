@@ -34,6 +34,7 @@ export default defineCommand("moderation/ban", async (ctx) => {
 | `name` | Replaces the directory name. |
 | `type` | `"chatInput"`, `"user"`, or `"message"`. Defaults to `"chatInput"`. |
 | `options` | Up to 25 options. Slash commands only. |
+| `defer` | `true` defers the reply before the handler runs, `"ephemeral"` defers it as an ephemeral reply. The handler answers with `editReply()`. |
 | `nameLocalizations` | Names by locale. |
 | `descriptionLocalizations` | Descriptions by locale. |
 | `defaultMemberPermissions` | Permission bitfield, like `PermissionFlagsBits.BanMembers`. |

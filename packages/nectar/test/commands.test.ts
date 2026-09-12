@@ -195,6 +195,28 @@ describe("payloads", () => {
   });
 });
 
+describe("defer", () => {
+  test("is recorded per handler position and left off the payload", async () => {
+    const { commands, payloads, codes } = await compile({
+      "commands/slow/command.ts": cmd('{ description: "d", defer: true }'),
+      "commands/report/route.ts": routeMeta('{ description: "d" }'),
+      "commands/report/user/command.ts": cmd('{ description: "d", defer: "ephemeral" }'),
+      "commands/report/stats/command.ts": cmd('{ description: "d", defer: false }'),
+    });
+    expect(codes).toEqual([]);
+    expect(commands.map((c) => c.defer)).toEqual([{ user: "ephemeral" }, { "": "reply" }]);
+    expect(JSON.stringify(payloads)).not.toContain("defer");
+  });
+
+  test('rejects anything but a boolean or "ephemeral"', async () => {
+    const { codes, diagnostics } = await compile({
+      "commands/slow/command.ts": cmd('{ description: "d", defer: "yes" }'),
+    });
+    expect(codes).toEqual(["invalid-meta"]);
+    expect(diagnostics[0]?.message).toContain("meta.defer");
+  });
+});
+
 describe("diagnostics", () => {
   test("missing meta", async () => {
     const { codes } = await compile({

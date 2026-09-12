@@ -210,6 +210,7 @@ exports[`manifest > examples/basic manifest 1`] = `
     },
     {
       "category": "command",
+      "defer": null,
       "errors": [
         "error.ts",
       ],
@@ -225,6 +226,7 @@ exports[`manifest > examples/basic manifest 1`] = `
     },
     {
       "category": "command",
+      "defer": null,
       "errors": [
         "error.ts",
       ],
@@ -240,6 +242,7 @@ exports[`manifest > examples/basic manifest 1`] = `
     },
     {
       "category": "command",
+      "defer": null,
       "errors": [
         "error.ts",
       ],
@@ -254,6 +257,7 @@ exports[`manifest > examples/basic manifest 1`] = `
     },
     {
       "category": "command",
+      "defer": null,
       "errors": [
         "error.ts",
       ],

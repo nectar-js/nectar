@@ -1,4 +1,5 @@
 import type { RESTPostAPIApplicationCommandsJSONBody } from "discord-api-types/v10";
+import type { DeferMode } from "../commands/meta.js";
 import type { RouteCategory } from "../compiler/routes.js";
 import type { SelectKind } from "../components/compile.js";
 import type { EventMode } from "../events/compile.js";
@@ -37,6 +38,8 @@ interface ManifestRouteBase {
 
 export interface ManifestCommandRoute extends ManifestRouteBase {
   kind: "command";
+  /** The reply to defer before the handler runs, from `meta.defer`. */
+  defer: DeferMode | null;
 }
 
 export interface ManifestAutocompleteRoute extends ManifestRouteBase {

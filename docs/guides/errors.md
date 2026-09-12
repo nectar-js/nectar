@@ -1,6 +1,6 @@
 # Error handling
 
-When a handler or middleware throws, Nectar passes the error to the nearest `error.ts`, then to each one above it, then to its default boundary. The default boundary logs the error and, if the interaction hasn't been answered, replies with an ephemeral "Something went wrong while handling that."
+When a handler or middleware throws, Nectar passes the error to the nearest `error.ts`, then to each one above it, then to its default boundary. The default boundary logs the error and, if the interaction hasn't been answered, replies with an ephemeral "Something went wrong while handling that." If the reply was deferred, the same text goes into the deferred reply.
 
 ## Handling an error
 

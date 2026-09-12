@@ -25,8 +25,9 @@ export function toManifest(graph: RouteGraph, outDir: string): Manifest {
 
   const routes: ManifestRoute[] = [];
   for (const command of graph.commands) {
-    for (const route of Object.values(command.handlers))
-      routes.push({ ...base(route), kind: "command" });
+    for (const [key, route] of Object.entries(command.handlers)) {
+      routes.push({ ...base(route), kind: "command", defer: command.defer[key] ?? null });
+    }
   }
   for (const entry of graph.autocomplete) {
     routes.push({ ...base(entry.route), kind: "autocomplete", options: entry.options });

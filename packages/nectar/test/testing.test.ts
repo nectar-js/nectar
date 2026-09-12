@@ -35,6 +35,10 @@ const files = {
     '{ type: "user" }',
     "await ctx.interaction.reply(ctx.interaction.targetUser.tag);",
   ),
+  "commands/slow/command.ts": cmd(
+    '{ description: "d", defer: "ephemeral" }',
+    'if (ctx.interaction.guildId === "crash") throw new Error("late"); await ctx.interaction.editReply("done");',
+  ),
   "components/confirm/button.ts": handler(
     "await ctx.interaction.reply(String(ctx.interaction.inCachedGuild()));",
   ),
@@ -122,6 +126,33 @@ describe("commands", () => {
     expect((await app.button("confirm")).responses[0]?.options).toBe("false");
     const cached = await app.button("confirm", {}, { guild: {}, member: {} });
     expect(cached.responses[0]?.options).toBe("true");
+  });
+
+  test("meta.defer defers before the handler, and the default boundary fills the deferred reply", async () => {
+    const app = await testApp();
+    const slow = await app.command("slow");
+    expect(slow.responses).toEqual([
+      { method: "deferReply", options: { flags: MessageFlags.Ephemeral } },
+      { method: "editReply", options: "done" },
+    ]);
+
+    const crash = await app.command("slow", {}, { guildId: "crash" });
+    expect(crash.outcome).toMatchObject({ type: "interaction:fail", boundary: null });
+    expect(crash.responses).toEqual([
+      { method: "deferReply", options: { flags: MessageFlags.Ephemeral } },
+      { method: "editReply", options: { content: GENERIC_ERROR_REPLY } },
+    ]);
+
+    // A middleware that already answered wins over the automatic defer.
+    const stopped = await testApp({
+      ...files,
+      "commands/slow/middleware.ts":
+        'export default async function (ctx, next) { await ctx.interaction.reply("first"); return next(); }\n',
+    });
+    expect((await stopped.command("slow")).responses).toEqual([
+      { method: "reply", options: "first" },
+      { method: "editReply", options: "done" },
+    ]);
   });
 
   test("failures reach the boundaries, and the default reply only goes out unanswered", async () => {

@@ -94,7 +94,16 @@ export interface CommandMeta extends TopLevelMeta {
   options?: CommandOption[];
   nameLocalizations?: LocalizationMap;
   descriptionLocalizations?: LocalizationMap;
+  /**
+   * Defer the reply before the handler runs, so a slow handler doesn't miss Discord's three
+   * second window. `"ephemeral"` defers with an ephemeral reply. The handler then answers with
+   * `editReply()`.
+   */
+  defer?: boolean | "ephemeral";
 }
+
+/** How a command route defers, as the manifest records it. */
+export type DeferMode = "reply" | "ephemeral";
 
 /** `export const meta` in a `route.ts` under `commands/`. Describes a parent command or subcommand group. */
 export interface CommandRouteMeta extends TopLevelMeta {

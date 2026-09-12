@@ -76,10 +76,12 @@ async function defaultBoundary(
   if (!("interaction" in ctx)) return;
   const interaction = ctx.interaction as RepliableLike;
   if (typeof interaction.isRepliable !== "function" || !interaction.isRepliable()) return;
-  if (interaction.replied || interaction.deferred) return;
+  if (interaction.replied) return;
 
   try {
-    await interaction.reply({ content: GENERIC_ERROR_REPLY, flags: MessageFlags.Ephemeral });
+    // A deferred reply is already on screen as a spinner, so fill it in rather than leave it.
+    if (interaction.deferred) await interaction.editReply({ content: GENERIC_ERROR_REPLY });
+    else await interaction.reply({ content: GENERIC_ERROR_REPLY, flags: MessageFlags.Ephemeral });
   } catch (replyError) {
     logger.error(`Could not send the error reply for ${ctx.route.id}`, {
       ...logFields(ctx),
@@ -144,4 +146,5 @@ interface RepliableLike {
   replied?: boolean;
   deferred?: boolean;
   reply: (options: { content: string; flags: MessageFlags }) => Promise<unknown>;
+  editReply: (options: { content: string }) => Promise<unknown>;
 }

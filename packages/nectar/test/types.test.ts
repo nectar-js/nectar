@@ -50,6 +50,7 @@ declare module "../src/index.js" {
         context: MiddlewareExtension<AuthModule>;
       };
       info: { type: "user"; options: Empty; context: Empty };
+      slow: { type: "chatInput"; options: Empty; context: Empty };
       "admin/roles/give": {
         type: "chatInput";
         options: {
