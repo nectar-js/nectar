@@ -558,14 +558,41 @@ describe("examples/plugin", () => {
     const services = (await plugin.start?.({} as never)) as {
       usage: { record(command: string, userId: string): void };
     };
+    // Start and stop markers go in the log too, and don't count as runs.
+    await plugin.startGlobal?.({} as never);
     services.usage.record("ping", "1");
     services.usage.record("user/profile", "1");
     services.usage.record("ping", "2");
+    await plugin.stopGlobal?.({} as never);
     await plugin.stop?.({} as never);
 
     const out: string[] = [];
     const project = { root: dir } as never;
     await plugin.commands?.[0]?.run({ project, flags: {}, out: (l) => out.push(l), err() {} });
     expect(out).toEqual(["     2  /ping", "     1  /user profile"]);
+    expect(readFileSync(path.join(dir, "usage.log"), "utf8")).toMatch(
+      /^\{"at":"[^"]+","event":"start"\}\n(.*\n){3}\{"at":"[^"]+","event":"stop"\}\n$/,
+    );
+  });
+
+  test("types lists the app's commands, and an app without commands gets a warning", async () => {
+    const url = pathToFileURL(path.join(example, "plugins", "usage", "index.ts")).href;
+    const { usage } = (await import(url)) as { usage: () => NectarPlugin };
+    const plugin = usage();
+    const command = { kind: "command", id: "command:user/profile", path: "user/profile" };
+    const graph = { appDir: "", routes: [command], commands: [], events: [] } as never;
+
+    expect(plugin.types?.(graph)).toBe(
+      'declare global {\n  interface NectarUsageCommands {\n    "user/profile": true;\n  }\n}',
+    );
+    expect(plugin.transform?.(graph)).toMatchObject([{ type: "middleware", kind: "command" }]);
+    expect(plugin.transform?.({ ...(graph as object), routes: [] } as never)).toEqual([
+      {
+        type: "diagnostic",
+        severity: "warning",
+        code: "usage-empty",
+        message: "No commands to count.",
+      },
+    ]);
   });
 });
