@@ -12,7 +12,7 @@ Exit codes are `0` for success, `1` when the command fails, and `2` for an unkno
 nectar dev [--verbose]
 ```
 
-Compiles the app, writes `.nectar/`, registers commands to `dev.guilds`, logs in, and reloads on changes. See [Development and production](../concepts/dev-and-production#nectar-dev).
+Compiles the app, writes `.nectar/`, registers commands to `dev.guilds`, logs in, and reloads on changes. See [Local development](../guides/development#nectar-dev).
 
 `--verbose` adds the route tree after each rebuild, debug logs, and discord.js warnings.
 
@@ -44,7 +44,7 @@ Prints the compiled manifest as JSON. `--route` takes a route ID like `command:m
 nectar sync [--dry-run] [--force]
 ```
 
-Registers commands for the current environment. `--dry-run` shows the changes without applying them, and `--force` applies changes the safety guard would refuse. See [Command registration](../concepts/registration).
+Registers commands for the current environment. `--dry-run` shows the changes without applying them, and `--force` applies changes the safety guard would refuse. See [Command registration](../guides/command-registration).
 
 Needs `DISCORD_TOKEN` and `DISCORD_APPLICATION_ID`.
 

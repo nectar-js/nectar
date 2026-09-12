@@ -117,6 +117,6 @@ useLocales(new URL("../locales", import.meta.url));
 const { responses } = await app.command("ban", { member }, { locale: "fr" });
 ```
 
-[Documentation](https://nectar-js.github.io/nectar/guides/localization) ·
+[Documentation](https://nectar-js.github.io/nectar/packages/i18n/) ·
 [Example](https://github.com/nectar-js/nectar/tree/main/examples/i18n) ·
 [License](https://github.com/nectar-js/nectar/blob/main/LICENSE)

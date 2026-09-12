@@ -1,4 +1,4 @@
-# The app directory
+# Project structure
 
 Nectar reads routes from `app/` in the project root. Set `appDir` in `nectar.config.ts` to use a different directory.
 
@@ -8,7 +8,20 @@ Routes go in three directories:
 - `components/` for buttons, select menus, and modals
 - `events/` for discord.js events
 
-A `middleware.ts` or `error.ts` directly in `app/` applies to all of them.
+A root `middleware.ts` applies to commands and components, including autocomplete. A root `error.ts` handles errors from all routes, including events.
+
+```text
+app/
+  commands/ping/command.ts
+  components/tickets/[ticketId]/close/button.ts
+  events/guildMemberAdd/event.ts
+  middleware.ts
+  error.ts
+  lib/
+nectar.config.ts
+```
+
+Keep shared code in ordinary modules such as `app/lib/`. Nectar ignores files that do not use a reserved name.
 
 ## Reserved files
 
@@ -39,36 +52,11 @@ Nectar only reads files with these names and ignores everything else.
 
 Parameters only work under `components/`.
 
-## Commands
+## Write handlers
 
-`commands/ping/command.ts` registers `/ping`. Nesting adds subcommands and subcommand groups, up to three levels. `commands/moderation/ban/command.ts` is `/moderation ban`, and `commands/settings/roles/add/command.ts` is `/settings roles add`.
-
-A command with subcommands can't have its own `command.ts`. Give it a `route.ts` with a description instead. Settings for the whole command, like `defaultMemberPermissions`, go there too.
-
-```ts
-// app/commands/moderation/route.ts
-import type { CommandRouteMeta } from "@nectar-js/nectar";
-
-export const meta: CommandRouteMeta = {
-  description: "Moderation tools",
-};
-```
-
-Subcommand groups need a `route.ts` with a description as well.
-
-For a context menu command, set `meta.type` to `"user"` or `"message"` in a top-level `command.ts`. Set `meta.name` if the name needs spaces or capital letters.
-
-## Components
-
-`button.ts`, `select.ts`, and `modal.ts` handle components, one per directory. The path, including its parameters, is encoded into the component's custom ID. See [Custom IDs](./custom-ids).
-
-`components/tickets/[ticketId]/close/button.ts` handles a button with a `ticketId` parameter.
-
-## Events
-
-`events/messageCreate/event.ts` runs on discord.js's `messageCreate` event. The directory name has to be a value of discord.js's `Events` enum.
-
-To handle one event in several files, put each in a route group, like `events/guildMemberAdd/(welcome)/event.ts` and `events/guildMemberAdd/(audit)/event.ts`.
+- [Commands](./commands) covers slash commands, subcommands, context menus, and autocomplete.
+- [Components](./components) covers buttons, select menus, and modal submissions.
+- [Events](./events) covers discord.js event listeners and multiple handlers for one event.
 
 ## Route groups
 

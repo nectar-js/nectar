@@ -1,4 +1,4 @@
-# Compilation
+# Build output
 
 `nectar build` compiles `app/` into `.nectar/manifest.json`. The runtime reads routes from the manifest and never scans `app/`.
 

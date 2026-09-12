@@ -106,7 +106,7 @@ export default defineComponent("tickets/[ticketId]/close", async (interaction, p
 });
 ```
 
-`interaction` is a `ButtonInteraction`, and `params` holds the route's parameters. The third argument of `defineComponent` takes parameter validators. See [Custom IDs](../concepts/custom-ids#validation).
+`interaction` is a `ButtonInteraction`, and `params` holds the route's parameters. The third argument of `defineComponent` takes parameter validators. See [Custom IDs](../guides/custom-ids#validation).
 
 ## select.ts
 
@@ -163,7 +163,7 @@ export default defineMiddleware(async (interaction) => {
 });
 ```
 
-Runs before every command, autocomplete, and component handler in its directory and below, starting from `app/`. It can go in any directory. Handlers read what it returned with `use()`, and `stop` ends the chain. See [Middleware and errors](../concepts/middleware-and-errors).
+Runs before every command, autocomplete, and component handler in its directory and below, starting from `app/`. It can go in any directory. Handlers read what it returned with `use()`, and `stop` ends the chain. See [Middleware](../guides/middleware).
 
 ## error.ts
 

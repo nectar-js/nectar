@@ -120,7 +120,7 @@ Messages sent before the switch still carry the old IDs, and Nectar ignores them
 
 ## Registering commands
 
-Delete `deploy-commands.js`. `nectar dev` registers your commands in `dev.guilds` while you work, and `nectar sync` registers them for production. See [Command registration](../concepts/registration).
+Delete `deploy-commands.js`. `nectar dev` registers your commands in `dev.guilds` while you work, and `nectar sync` registers them for production. See [Command registration](../guides/command-registration).
 
 ## Scripts
 

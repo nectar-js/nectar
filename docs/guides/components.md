@@ -157,4 +157,4 @@ export default defineComponent(
 );
 ```
 
-See [Custom IDs](../concepts/custom-ids) for the format and the checks Nectar runs.
+See [Custom IDs](./custom-ids) for the format and the checks Nectar runs.

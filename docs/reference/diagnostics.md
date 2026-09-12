@@ -20,7 +20,7 @@ A handler is under the wrong directory, like a `button.ts` under `commands/`. `c
 
 ### invalid-segment
 
-A directory name can't be read as part of a route path. Static names use letters, digits, hyphens, and underscores, and start with a letter or digit. Parameters look like `[ticketId]` and catch-alls like `[...path]`. Their names become keys of the handler's params, so they can't start with a digit or contain hyphens. Groups look like `(staff)`. See [Directory names](../concepts/app-directory#directory-names).
+A directory name can't be read as part of a route path. Static names use letters, digits, hyphens, and underscores, and start with a letter or digit. Parameters look like `[ticketId]` and catch-alls like `[...path]`. Their names become keys of the handler's params, so they can't start with a digit or contain hyphens. Groups look like `(staff)`. See [Directory names](../guides/project-structure#directory-names).
 
 ### route-without-path
 
@@ -193,7 +193,7 @@ export const kind = "user";
 
 ### invalid-param-validator
 
-The `params` passed to `defineComponent` names a parameter the route doesn't have, or a validator isn't a function or a Standard Schema. See [Validation](../concepts/custom-ids#validation).
+The `params` passed to `defineComponent` names a parameter the route doesn't have, or a validator isn't a function or a Standard Schema. See [Validation](../guides/custom-ids#validation).
 
 ### catch-all-route
 
@@ -237,7 +237,7 @@ A plugin's `transform` returned something other than an array of changes, a chan
 
 ### plugin-unknown-route
 
-A plugin added middleware to a route ID that doesn't exist, or to a `kind` the route doesn't have. Route IDs look like `command:moderation/ban`. See [Route IDs](../concepts/app-directory#route-ids).
+A plugin added middleware to a route ID that doesn't exist, or to a `kind` the route doesn't have. Route IDs look like `command:moderation/ban`. See [Route IDs](../guides/project-structure#route-ids).
 
 ### plugin-missing-file
 

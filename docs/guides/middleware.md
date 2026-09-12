@@ -1,5 +1,18 @@
 # Middleware
 
+A `middleware.ts` runs before every command, autocomplete, and component handler in its directory and below. Event handlers don't run middleware.
+
+Middleware runs from the root down. For `/moderation ban`, that's:
+
+1. `app/middleware.ts`
+2. `app/commands/middleware.ts`
+3. `app/commands/moderation/middleware.ts`
+4. `app/commands/moderation/ban/command.ts`
+
+Directories without a `middleware.ts` are skipped.
+
+Return a value to share it with handlers through `use()`. Return `stop` to skip the remaining middleware and handler. Throw to pass an error to the nearest [error boundary](./errors).
+
 ## Passing values to handlers
 
 A middleware returns a value, and every handler below reads it with `use()`:
@@ -31,7 +44,7 @@ export default defineCommand("moderation/ban", async (interaction) => {
 });
 ```
 
-`use(guard)` is `{ member: GuildMember }` because that is what the middleware returns. TypeScript takes `stop` out of the union, so nothing else is needed. A handler imports the middleware it reads from, which also documents where the value comes from.
+`use(guard)` is `{ member: GuildMember }` because that is what the middleware returns. TypeScript takes `stop` out of the union, so nothing else is needed. Import the middleware whose value you need. Calling `use()` for middleware that did not run throws.
 
 A middleware can read the ones above it the same way:
 
@@ -78,20 +91,10 @@ export default requirePermissions(["BanMembers", "KickMembers"]);
 | `requireRoles(roleIds, options?)` | The member has one of the roles, or all of them with `mode: "all"` |
 | `cooldown(seconds, options?)` | The user hasn't run the route in the last `seconds` |
 
-Otherwise they reply with an ephemeral message and stop the chain. Set `message` in the options to change the reply.
+`defaultMemberPermissions` sets default command permissions, which server admins can override. Use middleware to enforce permissions when the command runs.
+
+If a helper rejects an interaction, it replies with an ephemeral message and stops the chain. Set `message` in the options to change the reply.
 
 `cooldown` counts per route, so a `middleware.ts` with `cooldown(30)` over ten commands gives each command its own timer. `scope: "guild"` shares the timer between everyone in a server, and `scope: "global"` between everyone. `message` can be a function of the seconds left. Autocomplete is never held back. Timers live in memory, so they reset when the bot restarts and aren't shared between shards.
 
-## What else a handler can reach
-
-Besides `use()`, these imports work anywhere inside a running route, including middleware and error boundaries:
-
-| Import | |
-| --- | --- |
-| `client()` | The discord.js client |
-| `env()` | `"development"`, `"test"`, or `"production"` |
-| `services()` | What plugin `start` hooks provided |
-| `route()` | `id`, `category`, `path`, and `file` of the route |
-| `trace()` | `id`, `receivedAt`, and `elapsed()`, the milliseconds since Discord created the interaction |
-
-They throw at the top level of a module, where no route is running.
+See [Handler context](../reference/handler-context) for `client()`, `route()`, and other helpers available in middleware.

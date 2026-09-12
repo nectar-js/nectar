@@ -145,7 +145,7 @@ export default defineComponent("tickets/[ticketId]/close", async (interaction, p
 });
 ```
 
-Build the ID with `customId("tickets/[ticketId]/close", { ticketId })` instead of by hand. Checks that `parse` ran on the values belong in [parameter validators](../concepts/custom-ids#validation).
+Build the ID with `customId("tickets/[ticketId]/close", { ticketId })` instead of by hand. Checks that `parse` ran on the values belong in [parameter validators](../guides/custom-ids#validation).
 
 Messages sent before the switch still carry the old IDs, and Nectar ignores them. Keep handling the old format in `app/events/interactionCreate/event.ts` for as long as those messages matter.
 
@@ -202,7 +202,7 @@ Anything you put on `container` becomes an ordinary module that handlers import.
 
 ## Registration
 
-Sapphire registers application commands when the client logs in, using each command's `guildIds` and `idHints`. Nectar never registers on startup. `nectar dev` registers to `dev.guilds`, and `nectar sync` registers for production, globally or to `commands.target`. Nectar matches commands by name, so `idHints` have no equivalent. See [Command registration](../concepts/registration).
+Sapphire registers application commands when the client logs in, using each command's `guildIds` and `idHints`. Nectar never registers on startup. `nectar dev` registers to `dev.guilds`, and `nectar sync` registers for production, globally or to `commands.target`. Nectar matches commands by name, so `idHints` have no equivalent. See [Command registration](../guides/command-registration).
 
 ## Message commands
 

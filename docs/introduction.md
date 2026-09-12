@@ -1,9 +1,5 @@
 # Introduction
 
-::: warning Pre-1.0
-Nectar is pre-1.0 software. Breaking changes can land in any 0.x minor release. Read the [changelog](https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md) before upgrading, and [Compatibility](./reference/compatibility) for what counts as a breaking change.
-:::
-
 Nectar is a framework for Discord bots built on discord.js. Commands, components, and events are files in `app/`. Nectar registers the commands and routes each interaction to its file.
 
 ```ts
@@ -17,26 +13,25 @@ export default defineCommand("ping", async (interaction) => {
 });
 ```
 
-This registers `/ping`. `interaction` is the discord.js `ChatInputCommandInteraction`.
+This file registers `/ping`. Add another directory with a `command.ts` to add another command.
 
-## Create a project
+Your handlers use discord.js interactions, builders, and the client directly. Nectar handles command registration, routing, middleware, error handling, and reloading during development. Import your database client and other application code where you need them.
 
-```bash
-npm create @nectar-js
-```
+## Build your bot
 
-It asks for a folder, a language, and a package manager, then for your bot's token, application ID, and test server ID from the [Developer Portal](https://discord.com/developers/applications). Those go in `.env`, and you can skip any of them. It can also install dependencies and create a git repository.
+Start with [Installation](./getting-started/installation), then learn how to:
 
-Then run `npm run dev` in the new project.
+- [Organize your project](./guides/project-structure) with routes and shared code.
+- [Write commands](./guides/commands) with options, subcommands, and autocomplete.
+- [Handle components](./guides/components) such as buttons, menus, and modals.
+- [Listen for events](./guides/events) such as a member joining a server.
 
-## Requirements
+For an existing bot, follow the migration guide for [discord.js](./migrating/discord-js) or [Sapphire](./migrating/sapphire).
 
-- Node.js 22.18 or newer
-- discord.js 14
-- ESM, with `"type": "module"` in `package.json`
+## Add packages
 
-Node runs your TypeScript directly by stripping the types, so only erasable syntax works: no enums, namespaces with runtime code, or constructor parameter properties. Turn on `erasableSyntaxOnly` in `tsconfig.json` to catch them.
+The [Packages](./packages/) section covers the project creator and optional packages such as [@nectar-js/i18n](./packages/i18n/) for translations.
 
-Local imports need the `.ts` extension, as in `import { db } from "./db.ts"`. TypeScript allows that with `allowImportingTsExtensions`, which new projects already set.
+## Version support
 
-JavaScript projects are supported. Generated route types are TypeScript only.
+Nectar is pre-1.0. Minor releases can include breaking changes. Read the [changelog](https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md) before upgrading and rebuild your bot after updating. See [Compatibility](./reference/compatibility) for the versioning policy.

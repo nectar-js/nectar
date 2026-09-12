@@ -15,62 +15,95 @@ export default defineConfig({
   themeConfig: {
     logo: "/logo.png",
     nav: [
-      { text: "Get started", link: "/introduction", activeMatch: "^/(introduction|migrating/)" },
-      { text: "Concepts", link: "/concepts/app-directory", activeMatch: "^/concepts/" },
-      { text: "Guides", link: "/guides/components", activeMatch: "^/guides/" },
+      {
+        text: "Docs",
+        link: "/introduction",
+        activeMatch: "^/(introduction|getting-started/|guides/|migrating/)",
+      },
+      { text: "Packages", link: "/packages/", activeMatch: "^/packages/" },
       { text: "Reference", link: "/reference/files", activeMatch: "^/reference/" },
       {
         text: `v${version}`,
         link: "https://github.com/nectar-js/nectar/blob/main/packages/nectar/CHANGELOG.md",
       },
     ],
-    sidebar: [
-      {
-        text: "Get started",
-        items: [
-          { text: "Introduction", link: "/introduction" },
-          { text: "Migrating from discord.js", link: "/migrating/discord-js" },
-          { text: "Migrating from Sapphire", link: "/migrating/sapphire" },
-        ],
-      },
-      {
-        text: "Concepts",
-        items: [
-          { text: "The app directory", link: "/concepts/app-directory" },
-          { text: "Compilation", link: "/concepts/compilation" },
-          { text: "Interactions", link: "/concepts/interactions" },
-          { text: "Custom IDs", link: "/concepts/custom-ids" },
-          { text: "Middleware and errors", link: "/concepts/middleware-and-errors" },
-          { text: "What Nectar owns", link: "/concepts/ownership" },
-          { text: "Command registration", link: "/concepts/registration" },
-          { text: "Development and production", link: "/concepts/dev-and-production" },
-        ],
-      },
-      {
-        text: "Guides",
-        items: [
-          { text: "Components", link: "/guides/components" },
-          { text: "Middleware", link: "/guides/middleware" },
-          { text: "Error handling", link: "/guides/errors" },
-          { text: "Testing", link: "/guides/testing" },
-          { text: "Scheduled jobs", link: "/guides/jobs" },
-          { text: "Localization", link: "/guides/localization" },
-          { text: "Sharding", link: "/guides/sharding" },
-          { text: "Deploying", link: "/guides/deployment" },
-        ],
-      },
-      {
-        text: "Reference",
-        items: [
-          { text: "Reserved files", link: "/reference/files" },
-          { text: "Configuration", link: "/reference/config" },
-          { text: "Plugins", link: "/reference/plugins" },
-          { text: "CLI", link: "/reference/cli" },
-          { text: "Diagnostics", link: "/reference/diagnostics" },
-          { text: "Compatibility", link: "/reference/compatibility" },
-        ],
-      },
-    ],
+    sidebar: {
+      "/packages/": [
+        {
+          text: "Packages",
+          items: [
+            { text: "Overview", link: "/packages/" },
+            { text: "Project creator", link: "/packages/create" },
+          ],
+        },
+        {
+          text: "@nectar-js/i18n",
+          items: [
+            { text: "Installation", link: "/packages/i18n/" },
+            { text: "Translate messages", link: "/packages/i18n/messages" },
+            { text: "Translate commands", link: "/packages/i18n/commands" },
+            { text: "Configuration and testing", link: "/packages/i18n/reference" },
+          ],
+        },
+      ],
+      "/reference/": [
+        {
+          text: "Reference",
+          collapsed: false,
+          items: [
+            { text: "Reserved files", link: "/reference/files" },
+            { text: "Handler context", link: "/reference/handler-context" },
+            { text: "Configuration", link: "/reference/config" },
+            { text: "CLI", link: "/reference/cli" },
+            { text: "Build output", link: "/reference/build-output" },
+            { text: "Plugin API", link: "/reference/plugins" },
+            { text: "Diagnostics", link: "/reference/diagnostics" },
+            { text: "Compatibility", link: "/reference/compatibility" },
+          ],
+        },
+      ],
+      "/": [
+        {
+          text: "Get started",
+          items: [
+            { text: "Introduction", link: "/introduction" },
+            { text: "Installation", link: "/getting-started/installation" },
+            { text: "Project structure", link: "/guides/project-structure" },
+          ],
+        },
+        {
+          text: "Build your bot",
+          items: [
+            { text: "Commands", link: "/guides/commands" },
+            { text: "Components", link: "/guides/components" },
+            { text: "Custom IDs", link: "/guides/custom-ids" },
+            { text: "Events", link: "/guides/events" },
+            { text: "Middleware", link: "/guides/middleware" },
+            { text: "Error handling", link: "/guides/errors" },
+            { text: "Localization", link: "/guides/localization" },
+          ],
+        },
+        {
+          text: "Run your bot",
+          items: [
+            { text: "Local development", link: "/guides/development" },
+            { text: "Command registration", link: "/guides/command-registration" },
+            { text: "Testing", link: "/guides/testing" },
+            { text: "Scheduled jobs", link: "/guides/jobs" },
+            { text: "Sharding", link: "/guides/sharding" },
+            { text: "Deployment", link: "/guides/deployment" },
+          ],
+        },
+        {
+          text: "Migration",
+          collapsed: true,
+          items: [
+            { text: "From discord.js", link: "/migrating/discord-js" },
+            { text: "From Sapphire", link: "/migrating/sapphire" },
+          ],
+        },
+      ],
+    },
     socialLinks: [{ icon: "github", link: "https://github.com/nectar-js/nectar" }],
     search: { provider: "local" },
     notFound: {

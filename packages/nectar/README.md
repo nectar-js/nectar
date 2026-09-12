@@ -155,9 +155,10 @@ JavaScript projects work too. Generated route types are TypeScript only.
 Everything is at [nectar-js.github.io/nectar](https://nectar-js.github.io/nectar/). Good starting points:
 
 - [Introduction](https://nectar-js.github.io/nectar/introduction)
-- [The app directory](https://nectar-js.github.io/nectar/concepts/app-directory)
-- [Custom IDs](https://nectar-js.github.io/nectar/concepts/custom-ids)
-- [Middleware and errors](https://nectar-js.github.io/nectar/concepts/middleware-and-errors)
+- [Project structure](https://nectar-js.github.io/nectar/guides/project-structure)
+- [Custom IDs](https://nectar-js.github.io/nectar/guides/custom-ids)
+- [Middleware](https://nectar-js.github.io/nectar/guides/middleware)
+- [Error handling](https://nectar-js.github.io/nectar/guides/errors)
 - [Migrating from discord.js](https://nectar-js.github.io/nectar/migrating/discord-js)
 - [Migrating from Sapphire](https://nectar-js.github.io/nectar/migrating/sapphire)
 
