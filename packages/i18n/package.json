@@ -1,6 +1,6 @@
 {
   "name": "@nectar-js/i18n",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Translations for Nectar bots: message catalogs, localized command metadata, and typed keys.",
   "license": "MIT",
   "type": "module",
