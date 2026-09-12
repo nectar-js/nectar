@@ -66,6 +66,59 @@ export function requireRoles(
   };
 }
 
+export interface CooldownOptions {
+  /**
+   * Who shares a cooldown: each user (default), everyone in a guild, or everyone. In a DM,
+   * `"guild"` falls back to the user.
+   */
+  scope?: "user" | "guild" | "global";
+  /** What the user sees while waiting, given the seconds left. */
+  message?: string | ((seconds: number) => string);
+}
+
+/**
+ * Passes once per `seconds` for each route and subject. The cooldown starts when the
+ * interaction passes, so a handler that throws still counts. Autocomplete is never held back.
+ * Cooldowns live in memory, per process, and reset on restart.
+ */
+export function cooldown(seconds: number, options: CooldownOptions = {}): Middleware {
+  if (!(seconds > 0)) throw new RangeError(`cooldown() needs a positive number of seconds.`);
+  const scope = options.scope ?? "user";
+  const message = options.message ?? ((left: number) => `Try again in ${left}s.`);
+  const until = new Map<string, number>();
+  return async (ctx, next) => {
+    const i = ctx.interaction as SubjectLike;
+    if (typeof i.respond === "function") return next();
+    const now = Date.now();
+    const key = `${ctx.route.id}\n${subject(i, scope)}`;
+    const expires = until.get(key);
+    if (expires !== undefined && expires > now) {
+      const left = Math.ceil((expires - now) / 1000);
+      return deny(ctx, typeof message === "string" ? message : message(left));
+    }
+    if (until.size >= SWEEP_AT) {
+      for (const [k, t] of until) if (t <= now) until.delete(k);
+    }
+    until.set(key, now + seconds * 1000);
+    return next();
+  };
+}
+
+/** Expired entries are dropped once the map reaches this size, so it stays bounded. */
+const SWEEP_AT = 1000;
+
+function subject(i: SubjectLike, scope: NonNullable<CooldownOptions["scope"]>): string {
+  if (scope === "global") return "";
+  if (scope === "guild" && typeof i.guildId === "string") return `g:${i.guildId}`;
+  return `u:${i.user?.id ?? ""}`;
+}
+
+interface SubjectLike {
+  guildId?: string | null;
+  user?: { id: string } | null;
+  respond?: unknown;
+}
+
 function inGuild(ctx: InteractionContext): boolean {
   const i = ctx.interaction as GuildInteractionLike;
   return typeof i.inGuild === "function" ? i.inGuild() : typeof i.guildId === "string";

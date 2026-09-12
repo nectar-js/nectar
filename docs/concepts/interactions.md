@@ -62,7 +62,7 @@ Nectar only responds itself in three cases:
 
 - An unhandled error gets a generic ephemeral reply, unless the interaction was already answered.
 - An autocomplete handler that throws gets an empty list.
-- `guildOnly`, `requirePermissions`, and `requireRoles` reply when they reject an interaction.
+- `guildOnly`, `requirePermissions`, `requireRoles`, and `cooldown` reply when they reject an interaction.
 
 ## Unrouted interactions
 

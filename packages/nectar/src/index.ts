@@ -68,6 +68,8 @@ export {
   type PluginGraph,
 } from "./plugins/index.js";
 export {
+  type CooldownOptions,
+  cooldown,
   guildOnly,
   type PolicyOptions,
   type RoleOptions,

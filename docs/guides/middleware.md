@@ -80,5 +80,8 @@ export default requirePermissions(["BanMembers", "KickMembers"]);
 | `guildOnly(options?)` | It comes from a server |
 | `requirePermissions(permissions, options?)` | The member has the permissions in the channel |
 | `requireRoles(roleIds, options?)` | The member has one of the roles, or all of them with `mode: "all"` |
+| `cooldown(seconds, options?)` | The user hasn't run the route in the last `seconds` |
 
 Otherwise they reply with an ephemeral message and stop the chain. Set `message` in the options to change the reply.
+
+`cooldown` counts per route, so a `middleware.ts` with `cooldown(30)` over ten commands gives each command its own timer. `scope: "guild"` shares the timer between everyone in a server, and `scope: "global"` between everyone. `message` can be a function of the seconds left. Autocomplete is never held back. Timers live in memory, so they reset when the bot restarts and aren't shared between shards.
