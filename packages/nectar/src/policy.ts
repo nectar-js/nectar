@@ -1,6 +1,7 @@
-import type { PermissionResolvable } from "discord.js";
+import type { Interaction, PermissionResolvable } from "discord.js";
 import { MessageFlags } from "discord-api-types/v10";
-import type { InteractionContext, Middleware } from "./runtime/types.js";
+import { route } from "./runtime/scope.js";
+import { type Middleware, type Stop, stop } from "./runtime/types.js";
 
 /**
  * Opt-in policy middleware. Each returns a middleware that stops the chain and answers the
@@ -22,11 +23,10 @@ export interface PolicyOptions {
 }
 
 /** Passes only interactions that come from a guild. */
-export function guildOnly(options: PolicyOptions = {}): Middleware {
+export function guildOnly(options: PolicyOptions = {}): Middleware<void> {
   const message = options.message ?? "This only works in a server.";
-  return async (ctx, next) => {
-    if (!inGuild(ctx)) return deny(ctx, message);
-    return next();
+  return async (interaction) => {
+    if (!inGuild(interaction)) return deny(interaction, message);
   };
 }
 
@@ -34,13 +34,14 @@ export function guildOnly(options: PolicyOptions = {}): Middleware {
 export function requirePermissions(
   permissions: PermissionResolvable,
   options: PolicyOptions = {},
-): Middleware {
+): Middleware<void> {
   const message = options.message ?? "You do not have permission to do that.";
-  return async (ctx, next) => {
-    if (!inGuild(ctx)) return deny(ctx, message);
-    const held = (ctx.interaction as GuildInteractionLike).memberPermissions;
-    if (held === null || held === undefined || !held.has(permissions)) return deny(ctx, message);
-    return next();
+  return async (interaction) => {
+    if (!inGuild(interaction)) return deny(interaction, message);
+    const held = (interaction as GuildInteractionLike).memberPermissions;
+    if (held === null || held === undefined || !held.has(permissions)) {
+      return deny(interaction, message);
+    }
   };
 }
 
@@ -53,16 +54,15 @@ export interface RoleOptions extends PolicyOptions {
 export function requireRoles(
   roles: string | readonly string[],
   options: RoleOptions = {},
-): Middleware {
+): Middleware<void> {
   const wanted = typeof roles === "string" ? [roles] : [...roles];
   const message = options.message ?? "You do not have the role for that.";
   const mode = options.mode ?? "any";
-  return async (ctx, next) => {
-    if (!inGuild(ctx)) return deny(ctx, message);
-    const held = memberRoles(ctx.interaction as GuildInteractionLike);
+  return async (interaction) => {
+    if (!inGuild(interaction)) return deny(interaction, message);
+    const held = memberRoles(interaction as GuildInteractionLike);
     const ok = mode === "all" ? wanted.every((r) => held.has(r)) : wanted.some((r) => held.has(r));
-    if (!ok) return deny(ctx, message);
-    return next();
+    if (!ok) return deny(interaction, message);
   };
 }
 
@@ -81,26 +81,25 @@ export interface CooldownOptions {
  * interaction passes, so a handler that throws still counts. Autocomplete is never held back.
  * Cooldowns live in memory, per process, and reset on restart.
  */
-export function cooldown(seconds: number, options: CooldownOptions = {}): Middleware {
+export function cooldown(seconds: number, options: CooldownOptions = {}): Middleware<void> {
   if (!(seconds > 0)) throw new RangeError(`cooldown() needs a positive number of seconds.`);
   const scope = options.scope ?? "user";
   const message = options.message ?? ((left: number) => `Try again in ${left}s.`);
   const until = new Map<string, number>();
-  return async (ctx, next) => {
-    const i = ctx.interaction as SubjectLike;
-    if (typeof i.respond === "function") return next();
+  return async (interaction) => {
+    const i = interaction as SubjectLike;
+    if (typeof i.respond === "function") return;
     const now = Date.now();
-    const key = `${ctx.route.id}\n${subject(i, scope)}`;
+    const key = `${route().id}\n${subject(i, scope)}`;
     const expires = until.get(key);
     if (expires !== undefined && expires > now) {
       const left = Math.ceil((expires - now) / 1000);
-      return deny(ctx, typeof message === "string" ? message : message(left));
+      return deny(interaction, typeof message === "string" ? message : message(left));
     }
     if (until.size >= SWEEP_AT) {
       for (const [k, t] of until) if (t <= now) until.delete(k);
     }
     until.set(key, now + seconds * 1000);
-    return next();
   };
 }
 
@@ -119,8 +118,8 @@ interface SubjectLike {
   respond?: unknown;
 }
 
-function inGuild(ctx: InteractionContext): boolean {
-  const i = ctx.interaction as GuildInteractionLike;
+function inGuild(interaction: Interaction): boolean {
+  const i = interaction as GuildInteractionLike;
   return typeof i.inGuild === "function" ? i.inGuild() : typeof i.guildId === "string";
 }
 
@@ -136,15 +135,17 @@ function memberRoles(interaction: GuildInteractionLike): Set<string> {
 }
 
 /** Answers the user, when the interaction can still be answered, and ends the chain. */
-async function deny(ctx: InteractionContext, message: string): Promise<void> {
-  const i = ctx.interaction as RepliableLike;
+async function deny(interaction: Interaction, message: string): Promise<Stop> {
+  const i = interaction as unknown as RepliableLike;
   if (typeof i.respond === "function") {
     // Autocomplete cannot show a message. An empty list is the only quiet answer.
     if (!i.responded) await i.respond([]);
-    return;
+    return stop;
   }
-  if (typeof i.reply !== "function" || i.replied || i.deferred) return;
-  await i.reply({ content: message, flags: MessageFlags.Ephemeral });
+  if (typeof i.reply === "function" && !i.replied && !i.deferred) {
+    await i.reply({ content: message, flags: MessageFlags.Ephemeral });
+  }
+  return stop;
 }
 
 interface GuildInteractionLike {

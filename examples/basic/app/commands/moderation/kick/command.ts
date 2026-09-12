@@ -1,4 +1,5 @@
-import { type CommandMeta, defineCommand } from "@nectar-js/nectar";
+import { type CommandMeta, defineCommand, use } from "@nectar-js/nectar";
+import guard from "../middleware.ts";
 
 export const meta: CommandMeta = {
   description: "Kick a member",
@@ -8,9 +9,9 @@ export const meta: CommandMeta = {
   ],
 };
 
-export default defineCommand("moderation/kick", async (ctx) => {
-  const { target } = ctx.options;
-  const reason = ctx.options.reason ?? "No reason given";
-  await ctx.interaction.guild?.members.kick(target, reason);
-  await ctx.interaction.reply(`${ctx.member.displayName} kicked ${target.tag}: ${reason}`);
+export default defineCommand("moderation/kick", async (interaction, { target, reason }) => {
+  const { member } = use(guard);
+  const why = reason ?? "No reason given";
+  await interaction.guild?.members.kick(target, why);
+  await interaction.reply(`${member.displayName} kicked ${target.tag}: ${why}`);
 });

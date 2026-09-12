@@ -1,6 +1,7 @@
 import { EventEmitter } from "node:events";
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import type { Client, Interaction } from "discord.js";
 import { MessageFlags } from "discord-api-types/v10";
 import { beforeEach, describe, expect, test, vi } from "vitest";
@@ -24,19 +25,26 @@ declare global {
 }
 
 const push = (...values: string[]) => `globalThis.__nectar.push([${values.join(", ")}]);`;
-const handler = (body: string) => `export default async function (ctx) { ${body} }\n`;
-const cmd = (meta: string, body: string) => `export const meta = ${meta};\n${handler(body)}`;
+/** Fixtures import the accessors from the same source module the tests use, so they share a scope. */
+const NECTAR = JSON.stringify(
+  pathToFileURL(path.resolve(import.meta.dirname, "../src/index.ts")).href,
+);
+const from = (names: string) => `import { ${names} } from ${NECTAR};\n`;
+const handler = (body: string, head = "") =>
+  `${head}export default async function (interaction, second) { ${body} }\n`;
+const cmd = (meta: string, body: string, head = "") =>
+  `export const meta = ${meta};\n${handler(body, head)}`;
 
 const app = {
-  "middleware.ts": `export default async function (ctx, next) { ${push('"root-mw"')} return next({ fromRoot: true }); }\n`,
-  "error.ts": `export default async function (error, ctx) { ${push('"root-error"', "error.message", "ctx.route.id")} }\n`,
+  "middleware.ts": `export default async function () { ${push('"root-mw"')} return { fromRoot: true }; }\n`,
+  "error.ts": `${from("route")}export default async function (error) { ${push('"root-error"', "error.message", "route().id")} }\n`,
   "commands/ping/command.ts": cmd(
     '{ description: "d" }',
-    `${push('"ping"', "ctx.fromRoot", "ctx.params && Object.keys(ctx.params).length")} await ctx.interaction.reply("pong");`,
+    `${push('"ping"', "use(root).fromRoot", "Object.keys(second).length")} await interaction.reply("pong");`,
+    `${from("use")}import root from "../../middleware.ts";\n`,
   ),
   "commands/mod/route.ts": 'export const meta = { description: "d" };\n',
-  "commands/mod/middleware.ts":
-    "export default async function (ctx, next) { if (ctx.interaction.blocked) return; return next(); }\n",
+  "commands/mod/middleware.ts": `${from("stop")}export default async function (interaction) { if (interaction.blocked) return stop; }\n`,
   "commands/mod/ban/command.ts": cmd('{ description: "d" }', push('"ban"')),
   "commands/boom/command.ts": cmd('{ description: "d" }', 'throw new Error("boom");'),
   "commands/boom/error.ts": `export default async function (error) { ${push('"boom-error"')} return "unhandled"; }\n`,
@@ -47,12 +55,11 @@ const app = {
     '{ description: "d", options: [{ type: "string", name: "q", description: "d", autocomplete: true }] }',
     push('"search"'),
   ),
-  "commands/search/autocomplete.ts": `export async function q(ctx) { const v = ctx.interaction.options.getFocused(); if (v === "throw") throw new Error("ac"); await ctx.interaction.respond([{ name: v, value: v }]); }\n`,
-  "components/tickets/[id]/close/button.ts": handler(push('"close"', "ctx.params.id")),
+  "commands/search/autocomplete.ts": `export async function q(interaction) { const v = interaction.options.getFocused(); if (v === "throw") throw new Error("ac"); await interaction.respond([{ name: v, value: v }]); }\n`,
+  "components/tickets/[id]/close/button.ts": handler(push('"close"', "second.id")),
   "components/pick/select.ts": `export const kind = "string";\n${handler(push('"pick"'))}`,
   "components/form/modal.ts": handler(push('"form"')),
-  "events/clientReady/event.ts":
-    "export default async function (client, ctx) { globalThis.__nectar.push(['ready', ctx.route.id, typeof ctx.client]); }\n",
+  "events/clientReady/event.ts": `${from("client, route")}export default async function () { globalThis.__nectar.push(["ready", route().id, typeof client()]); }\n`,
   "events/messageCreate/(a)/event.ts": `export const meta = { order: 1 };\nexport default async function (msg) { ${push('"a"', "msg")} }\n`,
   "events/messageCreate/(b)/event.ts": `export const meta = { order: 0 };\nexport default async function (msg) { await new Promise((r) => setTimeout(r, 10)); ${push('"b"', "msg")} }\n`,
   "events/guildMemberAdd/event.ts": `export const meta = { once: true };\n${handler(push('"member"'))}`,
@@ -146,7 +153,7 @@ beforeEach(() => {
 });
 
 describe("interaction dispatch", () => {
-  test("chat input command runs root middleware, extends context, and replies", async () => {
+  test("chat input command runs root middleware, exposes its result through use(), and replies", async () => {
     const { state } = await setup();
     const dispatch = createInteractionDispatcher(state);
     const i = chatInput("ping");
@@ -264,7 +271,8 @@ describe("interaction dispatch", () => {
     const { state } = await setup({
       "commands/t/command.ts": cmd(
         '{ description: "d" }',
-        "globalThis.__nectar.push([ctx.trace.id, ctx.trace.elapsed() >= 5, ctx.trace.receivedAt > 0]);",
+        "globalThis.__nectar.push([trace().id, trace().elapsed() >= 5, trace().receivedAt > 0]);",
+        from("trace"),
       ),
     });
     await createInteractionDispatcher(state)(chatInput("t"));
@@ -317,10 +325,9 @@ describe("error boundaries", () => {
 
   test("in development the default boundary reports route, file, interaction, and middleware", async () => {
     const { state, logger } = await setup({
-      "middleware.ts": "export default async function (ctx, next) { return next(); }\n",
+      "middleware.ts": "export default async function () {}\n",
       "commands/mod/route.ts": 'export const meta = { description: "d" };\n',
-      "commands/mod/middleware.ts":
-        "export default async function (ctx, next) { return next(); }\n",
+      "commands/mod/middleware.ts": "export default async function () {}\n",
       "commands/mod/ban/command.ts": cmd('{ description: "d" }', 'throw new Error("nope")'),
     });
     state.env = "development";
@@ -732,7 +739,7 @@ describe("rejections", () => {
 
   test("a failed param validator drops the interaction before middleware", async () => {
     const { dispatch, seen, logger, componentRoute } = await rejects({
-      "middleware.ts": `export default async function (ctx, next) { ${push('"mw"')} return next(); }\n`,
+      "middleware.ts": `export default async function () { ${push('"mw"')} }\n`,
       "components/tickets/[id]/button.ts": `const h = async () => { ${push('"open"')} };\nh.params = { id: (v) => /^\\d+$/.test(v) };\nexport default h;\n`,
     });
     const route = componentRoute("tickets/[id]");

@@ -30,11 +30,11 @@ const ACCESS = [
   PermissionFlagsBits.ReadMessageHistory,
 ];
 
-export default defineCommand("ticket/open", async (ctx) => {
-  const { guild, user, client } = ctx.interaction;
+export default defineCommand("ticket/open", async (interaction, { subject }) => {
+  const { guild, user, client } = interaction;
   if (guild === null) return;
 
-  const ticket = openTicket(ctx.options.subject, user.id);
+  const ticket = openTicket(subject, user.id);
   const ticketId = String(ticket.id);
 
   // A private channel: hidden from @everyone (whose role ID is the guild ID), open to the
@@ -69,7 +69,7 @@ export default defineCommand("ticket/open", async (ctx) => {
     .addActionRowComponents(new ActionRowBuilder<UserSelectMenuBuilder>().addComponents(assign));
 
   await channel.send({ flags: MessageFlags.IsComponentsV2, components: [card] });
-  await ctx.interaction.reply({
+  await interaction.reply({
     content: `Ticket #${ticket.id} opened in <#${channel.id}>.`,
     flags: MessageFlags.Ephemeral,
   });

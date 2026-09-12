@@ -69,7 +69,7 @@ describe("diffManifests", () => {
     const a = await manifest({ "commands/ping/command.ts": ping("") });
     const b = await manifest({
       "commands/ping/command.ts": ping(""),
-      "middleware.ts": "export default async function (ctx, next) { return next(); }\n",
+      "middleware.ts": "export default async function () {}\n",
     });
     expect(diffManifests(a, b)).toEqual({ structure: true, commands: false });
     const c = await manifest({

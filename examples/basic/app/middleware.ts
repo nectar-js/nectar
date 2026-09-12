@@ -1,6 +1,4 @@
 import { defineMiddleware } from "@nectar-js/nectar";
 
-export default defineMiddleware(async (_ctx, next) => {
-  const startedAt = Date.now();
-  return next({ startedAt });
-});
+// Runs before every interaction. Handlers read what it returns with use(timing).
+export default defineMiddleware(async () => ({ startedAt: Date.now() }));

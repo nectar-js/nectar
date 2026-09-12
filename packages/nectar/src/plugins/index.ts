@@ -32,7 +32,7 @@ export interface NectarPlugin {
   commands?: PluginCommand[];
   /**
    * Runs when the runtime starts, before any handler is imported and before login. A sharded
-   * bot runs it in every process. Returned services land on `ctx.services` for every handler
+   * bot runs it in every process. Returned services are what `services()` gives every handler
    * and middleware.
    */
   start?(app: PluginApp): Maybe<Partial<NectarServices>> | Promise<Maybe<Partial<NectarServices>>>;

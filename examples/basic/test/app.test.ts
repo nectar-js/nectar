@@ -12,11 +12,10 @@ afterEach(() => {
 
 describe("commands", () => {
   test("ping reports the time since the root middleware ran", async () => {
-    const { responses, context } = await app.command("ping");
+    const { responses } = await app.command("ping");
     expect(responses).toEqual([
       { method: "reply", options: expect.stringMatching(/^Pong in \d+ms$/) },
     ]);
-    expect(context?.startedAt).toBeTypeOf("number");
   });
 
   test("profile defaults to the caller and the overview", async () => {
@@ -36,21 +35,19 @@ describe("moderation", () => {
   const target = { id: "2", tag: "spammer#0001" };
 
   test("stops outside a cached guild", async () => {
-    const { outcome, context, responses } = await app.command("moderation/ban", { target });
+    const { outcome, responses } = await app.command("moderation/ban", { target });
     expect(outcome).toMatchObject({ type: "interaction:complete", handled: false });
-    expect(context).toBeNull();
     expect(responses).toEqual([]);
   });
 
   test("ban bans the target and names the moderator", async () => {
     const ban = vi.fn(async () => {});
     const member = { displayName: "Mod" };
-    const { responses, context } = await app.command(
+    const { responses } = await app.command(
       "moderation/ban",
       { target, reason: "spam" },
       { guild: { members: { ban } }, member },
     );
-    expect(context?.member).toBe(member);
     expect(ban).toHaveBeenCalledWith(target, { reason: "spam" });
     expect(responses).toEqual([{ method: "reply", options: "Mod banned spammer#0001: spam" }]);
   });

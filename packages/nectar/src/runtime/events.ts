@@ -1,7 +1,8 @@
 import type { ManifestEvent, ManifestEventRoute } from "../manifest/schema.js";
 import { handleError } from "./errors.js";
+import { runInScope, type Scope } from "./scope.js";
 import { chains, type RuntimeState, routeInfo } from "./state.js";
-import type { EventContext, EventHandler } from "./types.js";
+import type { EventHandler } from "./types.js";
 
 export interface EventBinding {
   name: string;
@@ -63,29 +64,37 @@ async function invoke(
   route: ManifestEventRoute,
   args: unknown[],
 ) {
-  const ctx: EventContext = {
+  const scope: Scope = {
+    interaction: null,
     client: state.client,
-    route: routeInfo(state, route),
     env: state.env,
     services: state.services,
+    route: routeInfo(state, route),
+    trace: null,
+    results: new Map(),
   };
-  try {
-    const handler = await state.modules.loadDefault<EventHandler>(ctx.route.file, "The handler");
-    await handler(...args, ctx);
-  } catch (error) {
-    const boundary = await handleError(
-      error,
-      ctx,
-      chains(state, route).errors,
-      state.modules,
-      state.logger,
-    );
-    state.signals.emit({
-      type: "event:fail",
-      event: event.name,
-      route: ctx.route,
-      error,
-      boundary,
-    });
-  }
+  await runInScope(scope, async () => {
+    try {
+      const handler = await state.modules.loadDefault<EventHandler>(
+        scope.route.file,
+        "The handler",
+      );
+      await handler(...args);
+    } catch (error) {
+      const boundary = await handleError(
+        error,
+        scope,
+        chains(state, route).errors,
+        state.modules,
+        state.logger,
+      );
+      state.signals.emit({
+        type: "event:fail",
+        event: event.name,
+        route: scope.route,
+        error,
+        boundary,
+      });
+    }
+  });
 }

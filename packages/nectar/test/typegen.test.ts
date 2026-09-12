@@ -15,7 +15,7 @@ describe("generated types", () => {
   test("examples/basic types.d.ts", async () => {
     const graph = await buildGraph(appDir);
     expect(graph.diagnostics.items).toEqual([]);
-    const types = toTypes(graph, path.join(basic, ".nectar"));
+    const types = toTypes(graph);
     expect(types).toMatchSnapshot();
 
     // The example project's typecheck reads this file, so the checkpoint runs against real output.
@@ -23,21 +23,17 @@ describe("generated types", () => {
     expect(readFileSync(file, "utf8")).toBe(types);
   });
 
-  test("catch-all params and middleware aliases", async () => {
+  test("catch-all params", async () => {
     const root = makeApp({
-      "middleware.ts": "export default async function (ctx, next) { return next(); }\n",
+      "middleware.ts": "export default async function () {}\n",
       "components/w/[id]/[...steps]/modal.ts": "export default async function () {}\n",
-      "components/w/middleware.ts":
-        "export default async function (ctx, next) { return next(); }\n",
+      "components/w/middleware.ts": "export default async function () {}\n",
     });
-    const types = toTypes(await buildGraph(root), path.join(root, ".nectar"));
+    const types = toTypes(await buildGraph(root));
     expect(types).toContain(
-      '"w/[id]/[...steps]": { kind: "modal"; params: { "id": string; "steps": string[] }; context: M0 & M1 };',
+      '"w/[id]/[...steps]": { kind: "modal"; params: { "id": string; "steps": string[] } };',
     );
-    expect(types).toContain('type M0 = MiddlewareExtension<typeof import("../middleware.js")>;');
-    expect(types).toContain(
-      'type M1 = MiddlewareExtension<typeof import("../components/w/middleware.js")>;',
-    );
+    expect(types).not.toContain("middleware");
   });
 });
 

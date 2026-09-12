@@ -63,7 +63,7 @@ const READ: Record<OptionType, (options: Resolver, name: string) => unknown> = {
 
 /**
  * Every option of the handler by name, read through discord.js's resolver. Options the user
- * left out are `null`, so the handler's `ctx.options` always has every declared key.
+ * left out are `null`, so the handler's options always have every declared key.
  */
 export function resolveOptions(
   interaction: ChatInputCommandInteraction,

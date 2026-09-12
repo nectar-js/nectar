@@ -8,8 +8,8 @@ export const meta: CommandMeta = {
   ],
 };
 
-export default defineCommand("user/profile", async (ctx) => {
-  const user = ctx.options.target ?? ctx.interaction.user;
-  const section = ctx.options.section ?? "overview";
-  await ctx.interaction.reply(`${user.tag}: ${section}`);
+export default defineCommand("user/profile", async (interaction, options) => {
+  const user = options.target ?? interaction.user;
+  const section = options.section ?? "overview";
+  await interaction.reply(`${user.tag}: ${section}`);
 });

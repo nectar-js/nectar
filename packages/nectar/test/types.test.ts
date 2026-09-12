@@ -14,69 +14,48 @@ import type {
 } from "discord.js";
 import { describe, expectTypeOf, test } from "vitest";
 import {
-  type CommandContext,
-  type ComponentContext,
+  type CommandInteractionOf,
+  type ComponentInteractionOf,
+  type ComponentParams,
   customId,
   defineCommand,
   defineComponent,
   defineEvent,
   defineMiddleware,
-  type MiddlewareExtension,
+  type OptionValues,
+  stop,
+  use,
 } from "../src/index.js";
 
-const auth = defineMiddleware(async (ctx, next) => {
-  const member = ctx.interaction.member as GuildMember;
-  return next({ member });
-});
-
-const passthrough = defineMiddleware(async (_ctx, next) => {
-  await next();
-});
-
 type Empty = Record<never, never>;
-type AuthModule = { default: typeof auth };
-type PassthroughModule = { default: typeof passthrough };
 
 declare module "../src/index.js" {
   interface NectarRoutes {
     commands: {
-      ping: { type: "chatInput"; options: Empty; context: Empty };
+      ping: { type: "chatInput"; options: Empty };
       "moderation/ban": {
         type: "chatInput";
         options: {
           target: { type: "user"; required: true };
           reason: { type: "string"; required: false };
         };
-        context: MiddlewareExtension<AuthModule>;
       };
-      info: { type: "user"; options: Empty; context: Empty };
-      slow: { type: "chatInput"; options: Empty; context: Empty };
+      info: { type: "user"; options: Empty };
+      slow: { type: "chatInput"; options: Empty };
+      whoami: { type: "chatInput"; options: Empty };
       "admin/roles/give": {
         type: "chatInput";
         options: {
           role: { type: "role"; required: true };
           days: { type: "integer"; required: false };
         };
-        context: Empty;
       };
     };
     components: {
-      confirm: { kind: "button"; params: Empty; context: Empty };
-      "tickets/[ticketId]/close": {
-        kind: "button";
-        params: { ticketId: string };
-        context: MiddlewareExtension<AuthModule> & MiddlewareExtension<PassthroughModule>;
-      };
-      "tickets/[ticketId]/assign": {
-        kind: "select:user";
-        params: { ticketId: string };
-        context: Empty;
-      };
-      "wizard/[id]/[...steps]": {
-        kind: "modal";
-        params: { id: string; steps: string[] };
-        context: Empty;
-      };
+      confirm: { kind: "button"; params: Empty };
+      "tickets/[ticketId]/close": { kind: "button"; params: { ticketId: string } };
+      "tickets/[ticketId]/assign": { kind: "select:user"; params: { ticketId: string } };
+      "wizard/[id]/[...steps]": { kind: "modal"; params: { id: string; steps: string[] } };
     };
     events: { clientReady: true };
     autocomplete: { "moderation/ban": "reason" };
@@ -104,68 +83,75 @@ describe("customId", () => {
   });
 });
 
-describe("contexts", () => {
-  test("component context narrows the interaction, params, and middleware additions", () => {
-    type Close = ComponentContext<"tickets/[ticketId]/close">;
-    expectTypeOf<Close["interaction"]>().toEqualTypeOf<ButtonInteraction>();
-    expectTypeOf<Close["params"]["ticketId"]>().toEqualTypeOf<string>();
-    expectTypeOf<Close["member"]>().toEqualTypeOf<GuildMember>();
-
-    type Assign = ComponentContext<"tickets/[ticketId]/assign">;
-    expectTypeOf<Assign["interaction"]>().toEqualTypeOf<UserSelectMenuInteraction>();
-    expectTypeOf<Assign>().not.toHaveProperty("member");
-  });
-
-  test("command context follows the command type", () => {
+describe("handlers", () => {
+  test("component handlers get the interaction for their kind and typed params", () => {
     expectTypeOf<
-      CommandContext<"ping">["interaction"]
-    >().toEqualTypeOf<ChatInputCommandInteraction>();
+      ComponentInteractionOf<"tickets/[ticketId]/close">
+    >().toEqualTypeOf<ButtonInteraction>();
     expectTypeOf<
-      CommandContext<"info">["interaction"]
-    >().toEqualTypeOf<UserContextMenuCommandInteraction>();
-    expectTypeOf<CommandContext<"moderation/ban">["member"]>().toEqualTypeOf<GuildMember>();
-  });
+      ComponentInteractionOf<"tickets/[ticketId]/assign">
+    >().toEqualTypeOf<UserSelectMenuInteraction>();
+    expectTypeOf<ComponentParams<"wizard/[id]/[...steps]">["steps"]>().toEqualTypeOf<string[]>();
 
-  test("command options are typed from meta, required ones without null", () => {
-    type Ban = CommandContext<"moderation/ban">["options"];
-    expectTypeOf<Ban["target"]>().toEqualTypeOf<User>();
-    expectTypeOf<Ban["reason"]>().toEqualTypeOf<string | null>();
-    type Give = CommandContext<"admin/roles/give">["options"];
-    expectTypeOf<Give["days"]>().toEqualTypeOf<number | null>();
-    expectTypeOf<Give["role"]>().toEqualTypeOf<Role | APIRole>();
-    expectTypeOf<CommandContext<"ping">["options"]>().toEqualTypeOf<Empty>();
-    expectTypeOf<ComponentContext<"confirm">["options"]>().toEqualTypeOf<Empty>();
-    defineCommand("moderation/ban", async (ctx) => {
-      expectTypeOf(ctx.options.target).toEqualTypeOf<User>();
-      // @ts-expect-error not an option of this command
-      ctx.options.nope;
-    });
-  });
-
-  test("define helpers check the path and type the handler", () => {
-    defineComponent("tickets/[ticketId]/close", async (ctx) => {
-      expectTypeOf(ctx.params.ticketId).toEqualTypeOf<string>();
-      expectTypeOf(ctx.member).toEqualTypeOf<GuildMember>();
+    defineComponent("tickets/[ticketId]/close", async (interaction, params) => {
+      expectTypeOf(interaction).toEqualTypeOf<ButtonInteraction>();
+      expectTypeOf(params.ticketId).toEqualTypeOf<string>();
       // @ts-expect-error not a param of this route
-      ctx.params.nope;
+      params.nope;
     });
     // @ts-expect-error unknown route
     defineComponent("nope", async () => {});
+  });
+
+  test("command handlers get the interaction for their type and typed options", () => {
+    expectTypeOf<CommandInteractionOf<"ping">>().toEqualTypeOf<ChatInputCommandInteraction>();
+    expectTypeOf<CommandInteractionOf<"info">>().toEqualTypeOf<UserContextMenuCommandInteraction>();
+
+    type Ban = OptionValues<"moderation/ban">;
+    expectTypeOf<Ban["target"]>().toEqualTypeOf<User>();
+    expectTypeOf<Ban["reason"]>().toEqualTypeOf<string | null>();
+    type Give = OptionValues<"admin/roles/give">;
+    expectTypeOf<Give["days"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<Give["role"]>().toEqualTypeOf<Role | APIRole>();
+    expectTypeOf<OptionValues<"ping">>().toEqualTypeOf<Empty>();
+
+    defineCommand("moderation/ban", async (interaction, { target, reason }) => {
+      expectTypeOf(interaction).toEqualTypeOf<ChatInputCommandInteraction>();
+      expectTypeOf(target).toEqualTypeOf<User>();
+      expectTypeOf(reason).toEqualTypeOf<string | null>();
+    });
+    defineCommand("moderation/ban", async (_interaction, options) => {
+      // @ts-expect-error not an option of this command
+      options.nope;
+    });
     // @ts-expect-error unknown command
     defineCommand("nope", async () => {});
-    defineEvent("guildMemberAdd", async (member, ctx) => {
+  });
+
+  test("event handlers get the discord.js listener arguments", () => {
+    defineEvent("guildMemberAdd", async (member) => {
       expectTypeOf(member).toEqualTypeOf<GuildMember>();
-      expectTypeOf(ctx.route.id).toEqualTypeOf<string>();
     });
     // @ts-expect-error not a discord.js event
     defineEvent("nope", async () => {});
   });
+});
 
-  test("middleware extension is inferred from the returned next() call", () => {
-    expectTypeOf<MiddlewareExtension<AuthModule>>().toEqualTypeOf<{ member: GuildMember }>();
-    expectTypeOf<MiddlewareExtension<PassthroughModule>>().toEqualTypeOf<Record<never, never>>();
-    expectTypeOf<MiddlewareExtension<{ default: () => void }>>().toEqualTypeOf<
-      Record<never, never>
-    >();
+describe("middleware", () => {
+  test("use() is typed from what the middleware returns, without stop", () => {
+    const auth = defineMiddleware(async (interaction) => {
+      if (!interaction.inCachedGuild()) return stop;
+      return { member: interaction.member };
+    });
+    const passthrough = defineMiddleware(async () => {});
+    const sync = defineMiddleware(() => 42);
+
+    // Never called: use() needs a running route, and only the types matter here.
+    const inHandler = () => {
+      expectTypeOf(use(auth)).toEqualTypeOf<{ member: GuildMember }>();
+      expectTypeOf(use(passthrough)).toEqualTypeOf<void>();
+      expectTypeOf(use(sync)).toEqualTypeOf<number>();
+    };
+    expectTypeOf(inHandler).toBeFunction();
   });
 });

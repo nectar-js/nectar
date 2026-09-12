@@ -1,8 +1,7 @@
-import { defineMiddleware } from "@nectar-js/nectar";
-import type { GuildMember } from "discord.js";
+import { defineMiddleware, stop } from "@nectar-js/nectar";
 
-export default defineMiddleware(async (ctx, next) => {
-  if (!ctx.interaction.inCachedGuild()) return;
-  const member: GuildMember = ctx.interaction.member;
-  return next({ member });
+// Commands below read the member with use(guard). Outside a cached guild nothing runs.
+export default defineMiddleware(async (interaction) => {
+  if (!interaction.inCachedGuild()) return stop;
+  return { member: interaction.member };
 });

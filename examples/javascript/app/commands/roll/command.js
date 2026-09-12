@@ -8,10 +8,10 @@ export const meta = {
   ],
 };
 
-// ctx.options holds every option by name, null when left out. Without generated types it's
-// untyped in JavaScript, but the values are the same.
-export default defineCommand("roll", async (ctx) => {
-  const sides = ctx.options.sides ?? 6;
+// The second argument holds every option by name, null when left out. Without generated types
+// it's untyped in JavaScript, but the values are the same.
+export default defineCommand("roll", async (interaction, options) => {
+  const sides = options.sides ?? 6;
   const rolled = 1 + Math.floor(Math.random() * sides);
-  await ctx.interaction.reply(`You rolled ${rolled} on a d${sides}.`);
+  await interaction.reply(`You rolled ${rolled} on a d${sides}.`);
 });

@@ -1,34 +1,29 @@
+import type { Interaction } from "discord.js";
 import { MessageFlags } from "discord-api-types/v10";
 import { describe, expect, test, vi } from "vitest";
 import { cooldown, guildOnly, requirePermissions, requireRoles } from "../src/policy.js";
-import { runChain } from "../src/runtime/index.js";
-import type { InteractionContext, Middleware } from "../src/runtime/types.js";
+import { runInScope, runMiddleware, type Scope } from "../src/runtime/index.js";
+import type { Middleware } from "../src/runtime/types.js";
 
-function ctx(interaction: Record<string, unknown>): InteractionContext {
-  return {
-    interaction: {
-      replied: false,
-      deferred: false,
-      reply: vi.fn(async () => {}),
-      ...interaction,
-    } as unknown as InteractionContext["interaction"],
-    client: {} as InteractionContext["client"],
-    route: { id: "command:x", category: "command", path: "x", file: "x" },
-    params: {},
-    options: {},
-    env: "test",
-    trace: { id: "1", receivedAt: 0, elapsed: () => 0 },
-    services: {},
-  };
-}
-
+/** Runs one policy middleware in a route scope and reports whether the handler would run. */
 async function outcome(middleware: Middleware, interaction: Record<string, unknown>) {
-  const c = ctx(interaction);
-  let ran = false;
-  await runChain([middleware], c, () => {
-    ran = true;
-  });
-  const reply = (c.interaction as unknown as { reply?: ReturnType<typeof vi.fn> }).reply;
+  const stub = {
+    replied: false,
+    deferred: false,
+    reply: vi.fn(async () => {}),
+    ...interaction,
+  } as unknown as Interaction;
+  const scope: Scope = {
+    interaction: stub,
+    client: {} as Scope["client"],
+    env: "test",
+    services: {},
+    route: { id: "command:x", category: "command", path: "x", file: "x" },
+    trace: { id: "1", receivedAt: 0, elapsed: () => 0 },
+    results: new Map(),
+  };
+  const ran = await runInScope(scope, () => runMiddleware([middleware], stub, scope.results));
+  const reply = (stub as unknown as { reply?: ReturnType<typeof vi.fn> }).reply;
   return {
     ran,
     replied: reply?.mock.calls[0]?.[0] as { content: string; flags: number } | undefined,

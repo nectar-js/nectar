@@ -1,5 +1,4 @@
 import { existsSync } from "node:fs";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   type AnySelectMenuInteraction,
@@ -27,10 +26,10 @@ import {
 import type { OptionType } from "./commands/meta.js";
 import { customIdFor, registerComponentRoutes, type SelectKind } from "./components/index.js";
 import type {
-  CommandContext,
+  CommandInteractionOf,
   CommandPath,
   CommandRoutes,
-  ComponentContext,
+  ComponentInteractionOf,
   ComponentParams,
   ComponentPath,
   OptionSpecType,
@@ -48,7 +47,6 @@ import {
   createLogger,
   createSignals,
   type Env,
-  type InteractionContext,
   type Logger,
   ModuleRegistry,
   type RuntimeState,
@@ -94,22 +92,13 @@ type AutocompleteRoutes = NectarRoutes extends { autocomplete: infer A }
 /** Command paths that have an `autocomplete.ts`. */
 export type AutocompletePath = keyof AutocompleteRoutes & string;
 
-/** A route's context with the interaction narrowed to the kind being tested. */
-type With<C, I> = Omit<C, "interaction"> & { interaction: I };
-
-/** A command's context as its autocomplete handler sees it: no resolved options. */
-type Autocompleting<C> = Omit<C, "interaction" | "options"> & {
-  interaction: AutocompleteInteraction;
-  options: Empty;
-};
-
 type ComponentArgs<P extends ComponentPath, I> =
   Empty extends ComponentParams<P>
     ? [params?: ComponentParams<P>, interaction?: StubFields<I>]
     : [params: ComponentParams<P>, interaction?: StubFields<I>];
 
 type SelectInteraction<P extends ComponentPath> = Extract<
-  ComponentContext<P>["interaction"],
+  ComponentInteractionOf<P>,
   AnySelectMenuInteraction
 >;
 
@@ -140,13 +129,11 @@ export type Outcome = Extract<
   { type: "interaction:complete" | "interaction:fail" | "interaction:reject" }
 >;
 
-export interface InteractionResult<I, C = InteractionContext<I>> {
+export interface InteractionResult<I> {
   /** The stub that was dispatched. */
   interaction: I;
   /** What the route sent back through the interaction, in call order. */
   responses: TestResponse[];
-  /** What the handler was called with, middleware additions included. `null` if it never ran. */
-  context: C | null;
   outcome: Outcome;
   /** Every signal the dispatch emitted, `interaction:start` through the outcome. */
   signals: Signal[];
@@ -158,13 +145,13 @@ export interface EventResult {
 }
 
 export interface TestAppOptions {
-  /** Handlers see it as `ctx.client`. Defaults to a discord.js client that never logs in. */
+  /** What `client()` returns in handlers. Defaults to a discord.js client that never logs in. */
   client?: Client;
   /** Defaults to `"test"`. */
   env?: Env;
   /** Receives dispatch warnings and the default error boundary's output. Defaults to the console. */
   logger?: Logger;
-  /** What handlers find on `ctx.services`, in place of plugin `start` hooks. */
+  /** What `services()` returns in handlers, in place of plugin `start` hooks. */
   services?: Partial<NectarServices>;
 }
 
@@ -182,8 +169,8 @@ export interface TestApp {
   command<P extends CommandPath>(
     path: P,
     options?: CommandOptions<P>,
-    interaction?: StubFields<CommandContext<P>["interaction"]>,
-  ): Promise<InteractionResult<CommandContext<P>["interaction"], CommandContext<P>>>;
+    interaction?: StubFields<CommandInteractionOf<P>>,
+  ): Promise<InteractionResult<CommandInteractionOf<P>>>;
   /**
    * Runs the autocomplete handler for `focused`, whose value is `options[focused]` or `""`.
    * As in a real autocomplete, user, channel, role, and attachment options arrive as IDs only.
@@ -193,28 +180,22 @@ export interface TestApp {
     focused: AutocompleteRoutes[P] & string,
     options?: CommandOptions<P & CommandPath>,
     interaction?: StubFields<AutocompleteInteraction>,
-  ): Promise<
-    InteractionResult<AutocompleteInteraction, Autocompleting<CommandContext<P & CommandPath>>>
-  >;
+  ): Promise<InteractionResult<AutocompleteInteraction>>;
   /** Clicks a button. The custom ID is encoded from `params`, then decoded and validated. */
   button<P extends ComponentPath>(
     path: P,
     ...args: ComponentArgs<P, ButtonInteraction>
-  ): Promise<InteractionResult<ButtonInteraction, With<ComponentContext<P>, ButtonInteraction>>>;
+  ): Promise<InteractionResult<ButtonInteraction>>;
   /** Submits a select menu. `values` starts empty; set it, or `users` and the like, on the stub. */
   select<P extends ComponentPath>(
     path: P,
     ...args: ComponentArgs<P, SelectInteraction<P>>
-  ): Promise<
-    InteractionResult<SelectInteraction<P>, With<ComponentContext<P>, SelectInteraction<P>>>
-  >;
+  ): Promise<InteractionResult<SelectInteraction<P>>>;
   /** Submits a modal. Set `fields` on the stub when the handler reads inputs. */
   modal<P extends ComponentPath>(
     path: P,
     ...args: ComponentArgs<P, ModalSubmitInteraction>
-  ): Promise<
-    InteractionResult<ModalSubmitInteraction, With<ComponentContext<P>, ModalSubmitInteraction>>
-  >;
+  ): Promise<InteractionResult<ModalSubmitInteraction>>;
   /**
    * Emits a discord.js event to its routes, in manifest order and mode, and resolves once they
    * finish. A `once` handler runs on the first call only, as it would in the runtime.
@@ -232,15 +213,11 @@ export function createTestApp(manifestFile: string | URL, options: TestAppOption
   const client = options.client ?? new Client({ intents: [] });
   const logger = options.logger ?? createLogger();
   const signals = createSignals(logger);
-  const contexts = new Map<string, InteractionContext>();
-  const handlers = manifest.routes
-    .filter((r) => r.kind !== "event")
-    .map((r) => path.join(appDir, ...r.file.split("/")));
   const state: RuntimeState = {
     manifest,
     appDir,
     client,
-    modules: new RecordingModules(new Set(handlers), contexts),
+    modules: new ModuleRegistry(),
     env: options.env ?? "test",
     logger,
     signals,
@@ -250,7 +227,7 @@ export function createTestApp(manifestFile: string | URL, options: TestAppOption
   const dispatch = createInteractionDispatcher(state);
   const events = bindEvents(state);
 
-  async function invoke<I, C>({ interaction, responses }: Stub): Promise<InteractionResult<I, C>> {
+  async function invoke<I>({ interaction, responses }: Stub): Promise<InteractionResult<I>> {
     const seen: Signal[] = [];
     const off = signals.on((signal) => {
       if ("trace" in signal && signal.trace === interaction.id) seen.push(signal);
@@ -264,15 +241,7 @@ export function createTestApp(manifestFile: string | URL, options: TestAppOption
     if (outcome === undefined || !isOutcome(outcome)) {
       throw new Error(`Dispatch of ${interaction.id} ended without an outcome signal.`);
     }
-    const context = contexts.get(interaction.id) ?? null;
-    contexts.delete(interaction.id);
-    return {
-      interaction: interaction as I,
-      responses,
-      context: context as C | null,
-      outcome,
-      signals: seen,
-    };
+    return { interaction: interaction as I, responses, outcome, signals: seen };
   }
 
   function component(
@@ -375,45 +344,6 @@ export function createTestApp(manifestFile: string | URL, options: TestAppOption
       return { failures };
     },
   };
-}
-
-/**
- * Hands out interaction handlers behind a proxy that records the context each call receives,
- * keyed by trace ID. Middleware, error boundaries, and event handlers pass through untouched.
- */
-class RecordingModules extends ModuleRegistry {
-  private readonly proxies = new WeakMap<object, unknown>();
-
-  constructor(
-    private readonly handlers: ReadonlySet<string>,
-    private readonly contexts: Map<string, InteractionContext>,
-  ) {
-    super();
-  }
-
-  override async loadDefault<T>(file: string, what: string): Promise<T> {
-    return this.record(file, await super.loadDefault<T>(file, what));
-  }
-
-  override async loadNamed<T>(file: string, name: string, what: string): Promise<T> {
-    return this.record(file, await super.loadNamed<T>(file, name, what));
-  }
-
-  private record<T>(file: string, handler: T): T {
-    if (!this.handlers.has(file) || typeof handler !== "function") return handler;
-    let proxy = this.proxies.get(handler);
-    if (proxy === undefined) {
-      // A proxy rather than a wrapper, so `params` validators on the handler stay readable.
-      proxy = new Proxy(handler, {
-        apply: (target, self, args: [InteractionContext]) => {
-          this.contexts.set(args[0].trace.id, args[0]);
-          return Reflect.apply(target, self, args);
-        },
-      });
-      this.proxies.set(handler, proxy);
-    }
-    return proxy as T;
-  }
 }
 
 interface Stub {

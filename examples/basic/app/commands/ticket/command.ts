@@ -7,8 +7,8 @@ export const meta: CommandMeta = {
   options: [{ type: "string", name: "subject", description: "What it's about", required: true }],
 };
 
-export default defineCommand("ticket", async (ctx) => {
-  const ticket = openTicket(ctx.options.subject, ctx.interaction.user.id);
+export default defineCommand("ticket", async (interaction, { subject }) => {
+  const ticket = openTicket(subject, interaction.user.id);
 
   const close = new ButtonBuilder()
     .setCustomId(customId("tickets/[ticketId]/close", { ticketId: ticket.id }))
@@ -18,7 +18,7 @@ export default defineCommand("ticket", async (ctx) => {
     .setCustomId(customId("tickets/[ticketId]/assign", { ticketId: ticket.id }))
     .setPlaceholder("Assign to");
 
-  await ctx.interaction.reply({
+  await interaction.reply({
     content: `Ticket ${ticket.id} opened: ${ticket.subject}`,
     components: [
       new ActionRowBuilder<ButtonBuilder>().addComponents(close),

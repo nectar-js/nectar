@@ -16,11 +16,12 @@ import type {
   ManifestRoute,
 } from "../manifest/schema.js";
 import { handleError, logFields } from "./errors.js";
-import { runChain } from "./middleware.js";
+import { runMiddleware } from "./middleware.js";
 import { HandlerLoadError } from "./modules.js";
+import { runInScope, type Scope } from "./scope.js";
 import { type InteractionMeta, interactionMeta } from "./signals.js";
 import { chains, type RuntimeState, routeInfo } from "./state.js";
-import type { Handler, InteractionContext, Middleware } from "./types.js";
+import type { Middleware, Options, Params } from "./types.js";
 
 /** Routes one incoming interaction. Resolves to nothing; every error ends in a boundary. */
 export type InteractionDispatcher = (interaction: Interaction) => Promise<void>;
@@ -116,120 +117,132 @@ async function run(
   route: ManifestRoute,
   interaction: Interaction,
   meta: InteractionMeta,
-  params: Record<string, string | string[]>,
+  params: Params,
   receivedAt: number,
-  options: Record<string, unknown> = {},
+  options: Options = {},
   autocompleteOption?: string,
 ): Promise<void> {
-  const ctx: InteractionContext = {
+  const scope: Scope = {
     interaction,
     client: state.client,
-    route: routeInfo(state, route),
-    params,
-    options,
     env: state.env,
+    services: state.services,
+    route: routeInfo(state, route),
     trace: {
       id: interaction.id,
       receivedAt,
       elapsed: () => Date.now() - interaction.createdTimestamp,
     },
-    services: state.services,
+    results: new Map(),
   };
   const files = chains(state, route);
-  const tag = { trace: interaction.id, interaction: meta, route: ctx.route };
+  const tag = { trace: interaction.id, interaction: meta, route: scope.route };
   state.signals.emit({ type: "route:match", ...tag });
 
-  let handlerStart = 0;
-  try {
-    const middleware = await Promise.all(
-      files.middleware.map((file) => state.modules.loadDefault<Middleware>(file, "Middleware")),
-    );
-    const handler =
-      autocompleteOption === undefined
-        ? await state.modules.loadDefault<Handler>(ctx.route.file, "The handler")
-        : await state.modules.loadNamed<Handler>(
-            ctx.route.file,
-            autocompleteOption,
-            "The autocomplete handler",
-          );
-    if (route.kind === "button" || route.kind === "select" || route.kind === "modal") {
-      const invalid = await findInvalidParam(validators(ctx.route.file, handler, route), params);
-      if (invalid !== null) {
-        state.logger.warn(
-          `Rejected ${route.kind} for ${ctx.route.id}: "${invalid}" failed validation.`,
-          {
-            ...logFields(ctx, meta),
-            param: invalid,
-          },
+  await runInScope(scope, async () => {
+    let handlerStart = 0;
+    try {
+      const middleware = await Promise.all(
+        files.middleware.map((file) => state.modules.loadDefault<Middleware>(file, "Middleware")),
+      );
+      const handler =
+        autocompleteOption === undefined
+          ? await state.modules.loadDefault<AnyHandler>(scope.route.file, "The handler")
+          : await state.modules.loadNamed<AnyHandler>(
+              scope.route.file,
+              autocompleteOption,
+              "The autocomplete handler",
+            );
+      if (route.kind === "button" || route.kind === "select" || route.kind === "modal") {
+        const invalid = await findInvalidParam(
+          validators(scope.route.file, handler, route),
+          params,
         );
-        state.signals.emit({
-          type: "interaction:reject",
-          trace: interaction.id,
-          interaction: meta,
-          reason: "invalid-param",
-          route: ctx.route,
-          param: invalid,
-        });
-        return;
+        if (invalid !== null) {
+          state.logger.warn(
+            `Rejected ${route.kind} for ${scope.route.id}: "${invalid}" failed validation.`,
+            {
+              ...logFields(scope, meta),
+              param: invalid,
+            },
+          );
+          state.signals.emit({
+            type: "interaction:reject",
+            trace: interaction.id,
+            interaction: meta,
+            reason: "invalid-param",
+            route: scope.route,
+            param: invalid,
+          });
+          return;
+        }
       }
-    }
-    const deferred = route.kind === "command" && route.defer !== null ? route.defer : null;
-    await runChain(middleware, ctx, deferred === null ? handler : deferring(handler, deferred), {
-      middleware: (index) =>
+      const proceed = await runMiddleware(middleware, interaction, scope.results, (index) =>
         state.signals.emit({
           type: "middleware:enter",
           ...tag,
           file: files.middleware[index] ?? "",
         }),
-      handler: () => {
+      );
+      if (proceed) {
         handlerStart = Date.now();
         state.signals.emit({ type: "handler:enter", ...tag });
-      },
-    });
-    const handled = handlerStart !== 0;
-    if (handled) {
-      state.signals.emit({ type: "handler:complete", ...tag, duration: Date.now() - handlerStart });
-    }
-    const duration = Date.now() - receivedAt;
-    state.signals.emit({ type: "interaction:complete", ...tag, duration, handled });
-    state.logger.debug(
-      handled ? `Handled ${ctx.route.id} in ${duration}ms.` : `Middleware stopped ${ctx.route.id}.`,
-      logFields(ctx, meta),
-    );
-  } catch (error) {
-    const boundary = await handleError(
-      error,
-      ctx,
-      files.errors,
-      state.modules,
-      state.logger,
-      files.middleware,
-    );
-    state.signals.emit({ type: "interaction:fail", ...tag, error, boundary });
-    if (boundary !== null) {
-      state.logger.debug(`${ctx.route.id} failed, handled by ${boundary}.`, {
-        ...logFields(ctx, meta),
-        boundary,
+        if (route.kind === "command") {
+          if (route.defer !== null) await defer(interaction as CommandInteraction, route.defer);
+          await handler(interaction, options);
+        } else if (route.kind === "autocomplete") {
+          await handler(interaction);
+        } else {
+          await handler(interaction, params);
+        }
+        state.signals.emit({
+          type: "handler:complete",
+          ...tag,
+          duration: Date.now() - handlerStart,
+        });
+      }
+      const handled = proceed;
+      const duration = Date.now() - receivedAt;
+      state.signals.emit({ type: "interaction:complete", ...tag, duration, handled });
+      state.logger.debug(
+        handled
+          ? `Handled ${scope.route.id} in ${duration}ms.`
+          : `Middleware stopped ${scope.route.id}.`,
+        logFields(scope, meta),
+      );
+    } catch (error) {
+      const boundary = await handleError(
         error,
-      });
+        scope,
+        files.errors,
+        state.modules,
+        state.logger,
+        files.middleware,
+      );
+      state.signals.emit({ type: "interaction:fail", ...tag, error, boundary });
+      if (boundary !== null) {
+        state.logger.debug(`${scope.route.id} failed, handled by ${boundary}.`, {
+          ...logFields(scope, meta),
+          boundary,
+          error,
+        });
+      }
+      if (autocompleteOption !== undefined)
+        await closeAutocomplete(interaction as AutocompleteInteraction);
     }
-    if (autocompleteOption !== undefined)
-      await closeAutocomplete(interaction as AutocompleteInteraction);
-  }
+  });
 }
+
+/** A loaded handler of any kind. The route kind decides which arguments it gets. */
+type AnyHandler = (...args: unknown[]) => unknown;
 
 /**
  * Defers the reply right before the handler, after the middleware chain, so a policy check can
  * still answer with its own message. A middleware that already replied or deferred wins.
  */
-function deferring(handler: Handler, mode: "reply" | "ephemeral"): Handler {
-  return async (ctx) => {
-    const interaction = ctx.interaction as CommandInteraction;
-    if (!interaction.replied && !interaction.deferred) {
-      await interaction.deferReply(mode === "ephemeral" ? { flags: MessageFlags.Ephemeral } : {});
-    }
-    return handler(ctx);
-  };
+async function defer(interaction: CommandInteraction, mode: "reply" | "ephemeral"): Promise<void> {
+  if (interaction.replied || interaction.deferred) return;
+  await interaction.deferReply(mode === "ephemeral" ? { flags: MessageFlags.Ephemeral } : {});
 }
 
 /** Discord shows a spinner until autocomplete answers, so a failed handler answers with nothing. */
@@ -268,7 +281,7 @@ function unknown(
  */
 function validators(
   file: string,
-  handler: Handler,
+  handler: AnyHandler,
   route: ManifestComponentRoute,
 ): ParamValidators {
   const cached = validatorCache.get(handler);
@@ -283,7 +296,7 @@ function validators(
   return result;
 }
 
-const validatorCache = new WeakMap<Handler, ParamValidators>();
+const validatorCache = new WeakMap<AnyHandler, ParamValidators>();
 
 interface Tables {
   /** `${type}:${name}:${handlerKey}` to the handler route. */

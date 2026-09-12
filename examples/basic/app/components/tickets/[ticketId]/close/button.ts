@@ -3,17 +3,17 @@ import { ActionRowBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } from
 
 export default defineComponent(
   "tickets/[ticketId]/close",
-  async (ctx) => {
+  async (interaction, params) => {
     const reason = new TextInputBuilder()
       .setCustomId("reason")
       .setLabel("Reason")
       .setStyle(TextInputStyle.Paragraph);
 
     // The modal carries the ticket ID on to its own route.
-    await ctx.interaction.showModal(
+    await interaction.showModal(
       new ModalBuilder()
-        .setCustomId(customId("tickets/[ticketId]/reason", ctx.params))
-        .setTitle(`Close ticket ${ctx.params.ticketId}`)
+        .setCustomId(customId("tickets/[ticketId]/reason", params))
+        .setTitle(`Close ticket ${params.ticketId}`)
         .addComponents(new ActionRowBuilder<TextInputBuilder>().addComponents(reason)),
     );
   },

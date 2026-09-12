@@ -5,6 +5,7 @@ import type {
   ChatInputCommandInteraction,
   ClientEvents,
   CommandInteractionOption,
+  Interaction,
   MentionableSelectMenuInteraction,
   MessageContextMenuCommandInteraction,
   ModalSubmitInteraction,
@@ -19,16 +20,7 @@ import type { SelectKind } from "./components/compile.js";
 import type { ParamValidator } from "./components/params.js";
 import { encodeComponentRoute } from "./components/registry.js";
 import type { NectarRoutes } from "./index.js";
-import type {
-  ContextExtension,
-  ErrorHandler,
-  EventContext,
-  Extended,
-  InteractionContext,
-  Middleware,
-  Next,
-  Params,
-} from "./runtime/types.js";
+import type { ErrorHandler, Middleware, Params, Stop } from "./runtime/types.js";
 
 type Empty = Record<never, never>;
 
@@ -41,7 +33,6 @@ export type ComponentKindName = "button" | "modal" | `select:${SelectKind}`;
 export interface ComponentRouteType {
   kind: ComponentKindName;
   params: Params;
-  context: object;
 }
 
 /** One command option as the generated types describe it. */
@@ -53,19 +44,18 @@ export interface OptionSpecType {
 export interface CommandRouteType {
   type: CommandType;
   options: Record<string, OptionSpecType>;
-  context: object;
 }
 
 /** Component routes by path. Until types are generated, any string is accepted. */
 export type ComponentRoutes = Fallback<
   Declared<"components">,
-  Record<string, { kind: ComponentKindName; params: Params; context: Empty }>
+  Record<string, { kind: ComponentKindName; params: Params }>
 >;
 
 /** Command routes by path. Until types are generated, any string is accepted. */
 export type CommandRoutes = Fallback<
   Declared<"commands">,
-  Record<string, { type: CommandType; options: Record<string, OptionSpecType>; context: Empty }>
+  Record<string, { type: CommandType; options: Record<string, OptionSpecType> }>
 >;
 
 export type ComponentPath = keyof ComponentRoutes & string;
@@ -99,7 +89,7 @@ type CommandInteraction<T> = T extends "chatInput"
 
 type Field<R, K extends string, F> = R extends Record<K, infer V> ? V : F;
 
-/** What `ctx.options` holds for each option type, as discord.js resolves it. */
+/** What `options` holds for each option type, as discord.js resolves it. */
 type OptionValue<T> = T extends "string"
   ? string
   : T extends "integer" | "number"
@@ -118,7 +108,7 @@ type OptionValue<T> = T extends "string"
                 ? Attachment
                 : never;
 
-/** `ctx.options` for a command route: required options as their value, the rest `| null`. */
+/** A command handler's second argument: required options as their value, the rest `| null`. */
 export type OptionValues<P extends CommandPath> = {
   [K in keyof Field<Route<CommandRoutes, P>, "options", Empty>]: Field<
     Route<CommandRoutes, P>,
@@ -131,25 +121,22 @@ export type OptionValues<P extends CommandPath> = {
     : never;
 };
 
+/** A component handler's second argument. */
 export type ComponentParams<P extends ComponentPath> = Field<
   Route<ComponentRoutes, P>,
   "params",
   Params
 >;
 
-export type ComponentContext<P extends ComponentPath> = InteractionContext<
-  ComponentInteraction<Field<Route<ComponentRoutes, P>, "kind", ComponentKindName>>,
-  ComponentParams<P>,
-  Empty
-> &
-  Field<Route<ComponentRoutes, P>, "context", Empty>;
+/** The discord.js interaction a command route receives, from its `meta.type`. */
+export type CommandInteractionOf<P extends CommandPath> = CommandInteraction<
+  Field<Route<CommandRoutes, P>, "type", CommandType>
+>;
 
-export type CommandContext<P extends CommandPath> = InteractionContext<
-  CommandInteraction<Field<Route<CommandRoutes, P>, "type", CommandType>>,
-  Empty,
-  OptionValues<P>
-> &
-  Field<Route<CommandRoutes, P>, "context", Empty>;
+/** The discord.js interaction a component route receives, from its file name and `kind`. */
+export type ComponentInteractionOf<P extends ComponentPath> = ComponentInteraction<
+  Field<Route<ComponentRoutes, P>, "kind", ComponentKindName>
+>;
 
 /** Every field is optional when the route has no parameters, so `customId("confirm")` works. */
 type ParamsArg<P extends ComponentPath> =
@@ -170,7 +157,7 @@ export type Routed<F> = F & { route: string };
 
 export function defineCommand<P extends CommandPath>(
   route: P,
-  handler: (ctx: CommandContext<P>) => unknown,
+  handler: (interaction: CommandInteractionOf<P>, options: OptionValues<P>) => unknown,
 ): Routed<typeof handler> {
   return routed("defineCommand", route, handler);
 }
@@ -186,7 +173,7 @@ export interface ComponentOptions<P extends ComponentPath> {
 
 export function defineComponent<P extends ComponentPath>(
   route: P,
-  handler: (ctx: ComponentContext<P>) => unknown,
+  handler: (interaction: ComponentInteractionOf<P>, params: ComponentParams<P>) => unknown,
   options: ComponentOptions<P> = {},
 ): Routed<typeof handler> {
   const defined = routed("defineComponent", route, handler);
@@ -196,27 +183,23 @@ export function defineComponent<P extends ComponentPath>(
 
 export function defineEvent<Name extends keyof ClientEvents>(
   event: Name,
-  handler: (...args: [...ClientEvents[Name], EventContext]) => unknown,
+  handler: (...args: ClientEvents[Name]) => unknown,
 ): Routed<typeof handler> {
   return routed("defineEvent", event, handler);
 }
 
 /**
- * `return next({ member })` types `member` onto every downstream context. Middleware that
- * calls `next()` without returning it adds nothing; pass the extension type explicitly if
- * you need both.
+ * A middleware gets the interaction and returns a value, which handlers below read with
+ * `use(thisMiddleware)`, or returns `stop` to end the chain. Its type is inferred from what
+ * it returns, with `stop` taken out.
  */
-export function defineMiddleware<E extends ContextExtension = Empty>(
-  middleware: (
-    ctx: InteractionContext,
-    next: Next,
-    // biome-ignore lint/suspicious/noConfusingVoidType: handlers that only call next() return void
-  ) => Promise<Extended<E> | undefined | void> | Extended<E> | undefined | void,
-): Middleware<E> {
+export function defineMiddleware<R>(
+  middleware: (interaction: Interaction) => R,
+): Middleware<Exclude<Awaited<R>, Stop>> {
   if (typeof middleware !== "function") {
     throw new TypeError(`defineMiddleware() expects a function, got ${typeof middleware}.`);
   }
-  return middleware as Middleware<E>;
+  return middleware as Middleware<Exclude<Awaited<R>, Stop>>;
 }
 
 export function defineError(handler: ErrorHandler): ErrorHandler {

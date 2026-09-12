@@ -1,79 +1,80 @@
+import type { Interaction } from "discord.js";
 import { describe, expect, test } from "vitest";
-import { runChain } from "../src/runtime/index.js";
-import type { InteractionContext, Middleware } from "../src/runtime/types.js";
+import { defineMiddleware, stop, use } from "../src/index.js";
+import { runInScope, runMiddleware, type Scope } from "../src/runtime/index.js";
+import type { Middleware } from "../src/runtime/types.js";
 
-const ctx = (): InteractionContext => ({
-  interaction: {} as InteractionContext["interaction"],
-  client: {} as InteractionContext["client"],
-  route: { id: "command:x", category: "command", path: "x", file: "x" },
-  params: {},
-  options: {},
-  env: "test",
-  trace: { id: "1", receivedAt: 0, elapsed: () => 0 },
-  services: {},
-});
+const interaction = {} as Interaction;
 
-describe("runChain", () => {
-  test("runs outer to inner, and code after next() runs after the handler", async () => {
+function scope(): Scope {
+  return {
+    interaction,
+    client: {} as Scope["client"],
+    env: "test",
+    services: {},
+    route: { id: "command:x", category: "command", path: "x", file: "x" },
+    trace: { id: "1", receivedAt: 0, elapsed: () => 0 },
+    results: new Map(),
+  };
+}
+
+describe("runMiddleware", () => {
+  test("runs outer to inner and keeps each result for use()", async () => {
     const log: string[] = [];
-    const a: Middleware = async (_c, next) => {
-      log.push("a:before");
-      await next();
-      log.push("a:after");
-    };
-    const b: Middleware = async (_c, next) => {
-      log.push("b:before");
-      await next();
-      log.push("b:after");
-    };
-    await runChain([a, b], ctx(), () => {
-      log.push("handler");
+    const a = defineMiddleware(async () => {
+      log.push("a");
+      return { member: "m" };
     });
-    expect(log).toEqual(["a:before", "b:before", "handler", "b:after", "a:after"]);
+    const b = defineMiddleware(async () => {
+      log.push("b");
+      return use(a).member.toUpperCase();
+    });
+    const s = scope();
+    const proceed = await runInScope(s, () => runMiddleware([a, b], interaction, s.results));
+    expect(proceed).toBe(true);
+    expect(log).toEqual(["a", "b"]);
+    expect(s.results.get(a)).toEqual({ member: "m" });
+    expect(s.results.get(b)).toBe("M");
   });
 
-  test("next(extra) extends the downstream context only", async () => {
-    const seen: unknown[] = [];
-    const a: Middleware = (_c, next) => next({ member: "m" });
-    const b: Middleware = (c, next) => {
-      seen.push((c as { member?: string }).member);
-      return next({ role: "r" });
-    };
-    const original = ctx();
-    await runChain([a, b], original, (c) => {
-      seen.push(c);
+  test("stop ends the chain and the handler must not run", async () => {
+    const log: string[] = [];
+    const first = defineMiddleware(async () => {
+      log.push("first");
+      return stop;
     });
-    expect(seen[0]).toBe("m");
-    expect(seen[1]).toMatchObject({ member: "m", role: "r", env: "test" });
-    expect(original).not.toHaveProperty("member");
+    const second = defineMiddleware(async () => {
+      log.push("second");
+    });
+    const s = scope();
+    const proceed = await runInScope(s, () =>
+      runMiddleware([first, second], interaction, s.results),
+    );
+    expect(proceed).toBe(false);
+    expect(log).toEqual(["first"]);
   });
 
-  test("returning without next stops the chain", async () => {
-    let ran = false;
-    const stop: Middleware = () => "stopped";
-    await runChain([stop], ctx(), () => {
-      ran = true;
-    });
-    expect(ran).toBe(false);
+  test("reports each layer before it runs", async () => {
+    const entered: number[] = [];
+    const layers: Middleware[] = [async () => {}, async () => {}];
+    await runMiddleware(layers, interaction, new Map(), (i) => entered.push(i));
+    expect(entered).toEqual([0, 1]);
   });
 
   test("throws propagate to the caller", async () => {
     const boom: Middleware = () => {
       throw new Error("nope");
     };
-    await expect(runChain([boom], ctx(), () => {})).rejects.toThrow("nope");
-    await expect(
-      runChain([], ctx(), () => {
-        throw new Error("handler");
-      }),
-    ).rejects.toThrow("handler");
+    await expect(runMiddleware([boom], interaction, new Map())).rejects.toThrow("nope");
   });
+});
 
-  test("calling next twice is an error", async () => {
-    const twice: Middleware = async (_c, next) => {
-      await next();
-      await next();
-    };
-    await expect(runChain([twice], ctx(), () => {})).rejects.toThrow("twice");
+describe("use", () => {
+  test("outside a route, or for a middleware that did not run, it says so", async () => {
+    const m = defineMiddleware(async () => 1);
+    expect(() => use(m)).toThrow("use() was called outside a route.");
+    await expect(runInScope(scope(), async () => use(m))).rejects.toThrow(
+      "use() was given a middleware that did not run for command:x.",
+    );
   });
 });

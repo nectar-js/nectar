@@ -245,7 +245,7 @@ describe("dev server", () => {
   });
 
   test("an unhandled error lists every middleware file in one column", async () => {
-    const next = "export default async function (ctx, next) { return next(); }\n";
+    const next = "export default async function () {}\n";
     const root = makeProject({
       "middleware.ts": next,
       "commands/middleware.ts": next,

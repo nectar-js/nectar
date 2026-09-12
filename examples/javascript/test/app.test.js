@@ -7,8 +7,7 @@ const app = createTestApp(new URL("../.nectar/manifest.json", import.meta.url));
 
 describe("commands", () => {
   test("ping replies with the time since the middleware ran and a counter button", async () => {
-    const { responses, context } = await app.command("ping");
-    expect(context?.startedAt).toBeTypeOf("number");
+    const { responses } = await app.command("ping");
     expect(responses).toMatchObject([
       {
         method: "reply",
@@ -22,13 +21,11 @@ describe("commands", () => {
     ]);
   });
 
-  test("roll reads its option from ctx.options and defaults to six sides", async () => {
+  test("roll reads its option and defaults to six sides", async () => {
     const twenty = await app.command("roll", { sides: 20 });
-    expect(twenty.context?.options).toEqual({ sides: 20 });
     expect(twenty.responses[0]?.options).toMatch(/^You rolled ([1-9]|1\d|20) on a d20\.$/);
 
     const six = await app.command("roll");
-    expect(six.context?.options).toEqual({ sides: null });
     expect(six.responses[0]?.options).toMatch(/on a d6\.$/);
   });
 });

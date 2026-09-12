@@ -1,4 +1,5 @@
-import { type CommandMeta, defineCommand } from "@nectar-js/nectar";
+import { type CommandMeta, defineCommand, use } from "@nectar-js/nectar";
+import guard from "../middleware.ts";
 
 export const meta: CommandMeta = {
   description: "Ban a member",
@@ -15,9 +16,9 @@ export const meta: CommandMeta = {
   ],
 };
 
-export default defineCommand("moderation/ban", async (ctx) => {
-  const { target } = ctx.options;
-  const reason = ctx.options.reason ?? "No reason given";
-  await ctx.interaction.guild?.members.ban(target, { reason });
-  await ctx.interaction.reply(`${ctx.member.displayName} banned ${target.tag}: ${reason}`);
+export default defineCommand("moderation/ban", async (interaction, { target, reason }) => {
+  const { member } = use(guard);
+  const why = reason ?? "No reason given";
+  await interaction.guild?.members.ban(target, { reason: why });
+  await interaction.reply(`${member.displayName} banned ${target.tag}: ${why}`);
 });

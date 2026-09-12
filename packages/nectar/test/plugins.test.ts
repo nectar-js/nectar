@@ -17,18 +17,24 @@ declare global {
   var __nectar: unknown[];
 }
 
+/** Fixtures import the accessors from the same source module the tests use, so they share a scope. */
+const NECTAR = JSON.stringify(
+  pathToFileURL(path.resolve(import.meta.dirname, "../src/index.ts")).href,
+);
+const from = (names: string) => `import { ${names} } from ${NECTAR};\n`;
+
 beforeEach(() => {
   globalThis.__nectar = [];
 });
 
 const app = {
-  "middleware.ts": "export default async function (ctx, next) { return next(); }\n",
-  "commands/ping/command.ts": `export const meta = { description: "d" };\nexport default async function (ctx) { globalThis.__nectar.push(["ping", ctx.services.audit.name]); }\n`,
+  "middleware.ts": "export default async function () {}\n",
+  "commands/ping/command.ts": `export const meta = { description: "d" };\n${from("services")}export default async function () { globalThis.__nectar.push(["ping", services().audit.name]); }\n`,
   "commands/search/command.ts": `export const meta = { description: "d", options: [{ type: "string", name: "q", description: "d", autocomplete: true }] };\nexport default async function () {}\n`,
   "commands/search/autocomplete.ts": "export async function q() {}\n",
   "components/close/button.ts": "export default async function () {}\n",
   // Not a reserved name, so the compiler ignores it and a plugin can point at it.
-  "plugins/audit.js": `export default async function (ctx, next) { globalThis.__nectar.push(["audit", ctx.route.id]); return next(); }\n`,
+  "plugins/audit.js": `${from("route")}export default async function () { globalThis.__nectar.push(["audit", route().id]); }\n`,
 };
 
 const middlewareIn = (root: string) => path.join(root, "plugins", "audit.js");
@@ -204,7 +210,7 @@ describe("generated types", () => {
   test("a plugin's declarations are appended after the augmentation", async () => {
     const root = makeApp(app);
     const graph = await buildGraph(root);
-    const types = toTypes(graph, path.join(root, ".nectar"), [
+    const types = toTypes(graph, [
       { name: "quiet" },
       { name: "audit", types: (g) => `type Audited = ${g.routes.length};` },
       { name: "empty", types: () => "   " },
@@ -218,7 +224,7 @@ describe("generated types", () => {
   test("a throwing types hook names the plugin", async () => {
     const graph = await buildGraph(makeApp(app));
     expect(() =>
-      toTypes(graph, "/out", [
+      toTypes(graph, [
         {
           name: "audit",
           types: () => {
@@ -516,7 +522,6 @@ describe("cli", () => {
     expect(ping.plugins).toEqual(["audit"]);
     const types = readFileSync(path.join(root, ".nectar", "types.d.ts"), "utf8");
     expect(types).toContain('// From plugin "audit"\ntype Audited = true;');
-    expect(types).toContain("plugins/audit.js");
 
     const inspect = await nectar(["manifest", "--route", "command:ping"], root);
     expect(JSON.parse(inspect.out)[0].plugins).toEqual(["audit"]);

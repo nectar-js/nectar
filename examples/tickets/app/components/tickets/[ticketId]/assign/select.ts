@@ -4,12 +4,12 @@ import { assignTicket } from "../../../../tickets.ts";
 
 export const kind = "user";
 
-export default defineComponent("tickets/[ticketId]/assign", async (ctx) => {
-  const assignee = ctx.interaction.users.first();
-  const guild = ctx.interaction.guild;
+export default defineComponent("tickets/[ticketId]/assign", async (interaction, params) => {
+  const assignee = interaction.users.first();
+  const guild = interaction.guild;
   if (assignee === undefined || guild === null) return;
 
-  const ticket = assignTicket(ctx.params.ticketId, assignee.id);
+  const ticket = assignTicket(params.ticketId, assignee.id);
 
   // Let the assignee into the channel. The channel may be gone if someone deleted it by hand.
   const channel = ticket.channelId === null ? null : await guild.channels.fetch(ticket.channelId);
@@ -20,5 +20,5 @@ export default defineComponent("tickets/[ticketId]/assign", async (ctx) => {
       ReadMessageHistory: true,
     });
   }
-  await ctx.interaction.reply(`Ticket #${ticket.id} assigned to <@${assignee.id}>.`);
+  await interaction.reply(`Ticket #${ticket.id} assigned to <@${assignee.id}>.`);
 });

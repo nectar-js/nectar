@@ -8,7 +8,7 @@ export { version } from "./version.js";
 export interface NectarRoutes {}
 
 /**
- * What plugins put on `ctx.services`. A plugin declares its entry through module augmentation:
+ * What plugins put on `services()`. A plugin declares its entry through module augmentation:
  *
  *     declare module "@nectar-js/nectar" {
  *       interface NectarServices { audit: AuditLog }
@@ -36,10 +36,10 @@ export { CustomIdTooLongError, MAX_CUSTOM_ID_LENGTH } from "./components/customI
 export type { ParamValidator, StandardSchemaLike } from "./components/params.js";
 export { ConfigError, defineConfig, type NectarConfig, validateConfig } from "./config.js";
 export {
-  type CommandContext,
+  type CommandInteractionOf,
   type CommandPath,
   type CommandRoutes,
-  type ComponentContext,
+  type ComponentInteractionOf,
   type ComponentKindName,
   type ComponentOptions,
   type ComponentParams,
@@ -94,6 +94,7 @@ export type {
   LogRecord,
   LogSink,
 } from "./runtime/logger.js";
+export { client, env, route, services, trace, use } from "./runtime/scope.js";
 export type {
   InteractionMeta,
   RejectReason,
@@ -102,19 +103,19 @@ export type {
   SignalEmitter,
   SignalType,
 } from "./runtime/signals.js";
-export type {
-  ContextExtension,
-  Env,
-  ErrorHandler,
-  EventContext,
-  Extended,
-  InteractionContext,
-  Logger,
-  Middleware,
-  MiddlewareExtension,
-  Next,
-  Options,
-  Params,
-  RouteInfo,
-  Trace,
+export {
+  type AutocompleteHandler,
+  type CommandHandler,
+  type ComponentHandler,
+  type Env,
+  type ErrorHandler,
+  type EventHandler,
+  type Logger,
+  type Middleware,
+  type Options,
+  type Params,
+  type RouteInfo,
+  type Stop,
+  stop,
+  type Trace,
 } from "./runtime/types.js";

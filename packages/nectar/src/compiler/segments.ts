@@ -27,7 +27,7 @@ export function parseSegment(dirName: string): SegmentParseResult {
     const name = isCatchAll ? inner.slice(3) : inner;
     if (!PARAM_NAME.test(name)) {
       return fail(
-        `"${dirName}" has an invalid parameter name. Parameters become keys of ctx.params, so use letters, digits, and underscores, and don't start with a digit.`,
+        `"${dirName}" has an invalid parameter name. Parameters become keys of the handler's params, so use letters, digits, and underscores, and don't start with a digit.`,
       );
     }
     return ok({ type: isCatchAll ? "catchAll" : "dynamic", name });

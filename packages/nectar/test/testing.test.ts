@@ -3,6 +3,7 @@
  * whole test program the way a generated `.nectar/types.d.ts` types an app.
  */
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { MessageFlags } from "discord-api-types/v10";
 import { describe, expect, test, vi } from "vitest";
 import { buildGraph } from "../src/compiler/index.js";
@@ -12,43 +13,50 @@ import { GENERIC_ERROR_REPLY } from "../src/runtime/index.js";
 import { createTestApp, type TestAppOptions } from "../src/testing.js";
 import { makeApp } from "./helpers.js";
 
-const handler = (body: string) => `export default async function (ctx) { ${body} }\n`;
-const cmd = (meta: string, body: string) => `export const meta = ${meta};\n${handler(body)}`;
+/** Fixtures import the accessors from the same source module the tests use, so they share a scope. */
+const NECTAR = JSON.stringify(
+  pathToFileURL(path.resolve(import.meta.dirname, "../src/index.ts")).href,
+);
+const from = (names: string) => `import { ${names} } from ${NECTAR};\n`;
+const handler = (body: string, head = "") =>
+  `${head}export default async function (interaction, second) { ${body} }\n`;
+const cmd = (meta: string, body: string, head = "") =>
+  `export const meta = ${meta};\n${handler(body, head)}`;
 const described = 'export const meta = { description: "d" };\n';
 
 const files = {
-  "commands/ping/command.ts": cmd('{ description: "d" }', 'await ctx.interaction.reply("pong");'),
+  "commands/ping/command.ts": cmd('{ description: "d" }', 'await interaction.reply("pong");'),
   "commands/moderation/route.ts": described,
   "commands/moderation/ban/command.ts": cmd(
     '{ description: "d", options: [{ type: "user", name: "target", description: "d", required: true }, { type: "string", name: "reason", description: "d", autocomplete: true }] }',
-    "const o = ctx.interaction.options; await ctx.interaction.reply([o.getSubcommand(), o.getUser('target', true).tag, o.getString('reason')].join(' '));",
+    "const o = interaction.options; await interaction.reply([o.getSubcommand(), second.target.tag, String(second.reason)].join(' '));",
   ),
   "commands/moderation/ban/autocomplete.ts":
-    'export async function reason(ctx) { const o = ctx.interaction.options; await ctx.interaction.respond([{ name: [o.getFocused(), o.get("target")?.value, String(o.getUser("target"))].join(" "), value: "x" }]); }\n',
+    'export async function reason(interaction) { const o = interaction.options; await interaction.respond([{ name: [o.getFocused(), o.get("target")?.value, String(o.getUser("target"))].join(" "), value: "x" }]); }\n',
   "commands/admin/route.ts": described,
   "commands/admin/roles/route.ts": described,
   "commands/admin/roles/give/command.ts": cmd(
     '{ description: "d", options: [{ type: "role", name: "role", description: "d", required: true }, { type: "integer", name: "days", description: "d" }] }',
-    "const o = ctx.interaction.options; await ctx.interaction.reply([o.getSubcommandGroup(), o.getSubcommand(), o.getRole('role', true).name, o.getInteger('days')].join(' '));",
+    "const o = interaction.options; await interaction.reply([o.getSubcommandGroup(), o.getSubcommand(), second.role.name, second.days].join(' '));",
   ),
   "commands/info/command.ts": cmd(
     '{ type: "user" }',
-    "await ctx.interaction.reply(ctx.interaction.targetUser.tag);",
+    "await interaction.reply(interaction.targetUser.tag);",
   ),
   "commands/slow/command.ts": cmd(
     '{ description: "d", defer: "ephemeral" }',
-    'if (ctx.interaction.guildId === "crash") throw new Error("late"); await ctx.interaction.editReply("done");',
+    'if (interaction.guildId === "crash") throw new Error("late"); await interaction.editReply("done");',
   ),
   "components/confirm/button.ts": handler(
-    "await ctx.interaction.reply(String(ctx.interaction.inCachedGuild()));",
+    "await interaction.reply(String(interaction.inCachedGuild()));",
   ),
   "components/tickets/[ticketId]/close/button.ts":
-    "const h = async (ctx) => { await ctx.interaction.update({ content: 'closed ' + ctx.params.ticketId }); };\nh.params = { ticketId: (v) => v !== 'bad' };\nexport default h;\n",
+    "const h = async (interaction, params) => { await interaction.update({ content: 'closed ' + params.ticketId }); };\nh.params = { ticketId: (v) => v !== 'bad' };\nexport default h;\n",
   "components/tickets/[ticketId]/assign/select.ts": `export const kind = "user";\n${handler(
-    "await ctx.interaction.reply(ctx.interaction.isUserSelectMenu() + ' ' + ctx.interaction.values.length);",
+    "await interaction.reply(interaction.isUserSelectMenu() + ' ' + interaction.values.length);",
   )}`,
   "components/wizard/[id]/[...steps]/modal.ts": handler(
-    'await ctx.interaction.reply(ctx.interaction.fields.getTextInputValue("title") + " " + ctx.params.steps.join(","));',
+    'await interaction.reply(interaction.fields.getTextInputValue("title") + " " + second.steps.join(","));',
   ),
 };
 
@@ -94,18 +102,12 @@ describe("commands", () => {
       reason: "spam",
     });
     expect(ban.responses).toEqual([{ method: "reply", options: "ban someone#0001 spam" }]);
-    expect(ban.context?.options).toEqual({
-      target: { id: "1", tag: "someone#0001" },
-      reason: "spam",
-    });
     const give = await app.command("admin/roles/give", { role: { name: "Mod" }, days: 3 });
     expect(give.responses).toEqual([{ method: "reply", options: "roles give Mod 3" }]);
-    expect(give.context?.options).toEqual({ role: { name: "Mod" }, days: 3 });
 
-    // Every declared option is present on ctx.options; the ones left out are null.
+    // Every declared option reaches the handler; the ones left out are null.
     const quiet = await app.command("moderation/ban", { target: { id: "1", tag: "x" } });
-    expect(quiet.context?.options).toEqual({ target: { id: "1", tag: "x" }, reason: null });
-    expect((await app.button("confirm")).context?.options).toEqual({});
+    expect(quiet.responses).toEqual([{ method: "reply", options: "ban x null" }]);
 
     // @ts-expect-error not an option of the command
     await expect(app.command("admin/roles/give", { nope: 1 })).rejects.toThrow(
@@ -147,7 +149,7 @@ describe("commands", () => {
     const stopped = await testApp({
       ...files,
       "commands/slow/middleware.ts":
-        'export default async function (ctx, next) { await ctx.interaction.reply("first"); return next(); }\n',
+        'export default async function (interaction) { await interaction.reply("first"); }\n',
     });
     expect((await stopped.command("slow")).responses).toEqual([
       { method: "reply", options: "first" },
@@ -159,7 +161,7 @@ describe("commands", () => {
     const app = await testApp({
       "commands/ping/command.ts": cmd(
         '{ description: "d" }',
-        'if (ctx.interaction.guildId !== null) await ctx.interaction.reply("partial"); throw new Error("crash");',
+        'if (interaction.guildId !== null) await interaction.reply("partial"); throw new Error("crash");',
       ),
       "commands/info/command.ts": cmd('{ type: "user" }', 'throw new Error("caught");'),
       "commands/info/error.ts": "export default async function () {}\n",
@@ -243,31 +245,34 @@ describe("autocomplete", () => {
 });
 
 describe("middleware", () => {
-  test("the result holds the context the handler got, or null when middleware stopped", async () => {
+  test("handlers read middleware results with use(), and stop ends the chain", async () => {
     const app = await testApp({
       ...files,
-      "middleware.ts":
-        "export default async function (ctx, next) { if (ctx.interaction.guildId === null) return; return next({ member: ctx.interaction.member }); }\n",
+      "middleware.ts": `${from("stop")}export default async function (interaction) { if (interaction.guildId === null) return stop; return { member: interaction.member }; }\n`,
+      "commands/whoami/command.ts": cmd(
+        '{ description: "d" }',
+        "await interaction.reply(use(guard).member.displayName);",
+        `${from("use")}import guard from "../../middleware.ts";\n`,
+      ),
+      "components/tickets/[ticketId]/close/button.ts": handler(
+        "await interaction.update(use(guard).member.displayName + second.ticketId);",
+        `${from("use")}import guard from "../../../../middleware.ts";\n`,
+      ),
     });
-    const target = { id: "1", tag: "someone#0001" };
 
-    const stopped = await app.command("moderation/ban", { target });
-    expect(stopped.context).toBeNull();
+    const stopped = await app.command("whoami");
     expect(stopped.outcome).toMatchObject({ type: "interaction:complete", handled: false });
     expect(stopped.responses).toEqual([]);
 
-    const member = { displayName: "Mod" };
-    const inGuild = { guildId: "1", member };
-    const ban = await app.command("moderation/ban", { target }, inGuild);
-    expect(ban.context?.member).toBe(member);
-    expect(ban.context?.interaction).toBe(ban.interaction);
-
+    const inGuild = { guildId: "1", member: { displayName: "Mod" } };
+    expect((await app.command("whoami", {}, inGuild)).responses).toEqual([
+      { method: "reply", options: "Mod" },
+    ]);
     const close = await app.button("tickets/[ticketId]/close", { ticketId: "7" }, inGuild);
-    expect(close.context?.params).toEqual({ ticketId: "7" });
-    expect(close.context?.member).toBe(member);
-
-    const suggest = await app.autocomplete("moderation/ban", "reason", {}, inGuild);
-    expect(suggest.context?.member).toBe(member);
+    expect(close.responses).toEqual([{ method: "update", options: "Mod7" }]);
+    // Autocomplete runs the same chain, so the DM case stops it and answers with nothing.
+    const suggest = await app.autocomplete("moderation/ban", "reason", {});
+    expect(suggest.outcome).toMatchObject({ handled: false });
   });
 });
 
@@ -279,8 +284,7 @@ describe("events", () => {
         'export const meta = { order: 1 };\nexport default async function (message) { message.seen.push("a"); }\n',
       "events/messageCreate/(b)/event.ts":
         'export const meta = { order: 0 };\nexport default async function (message) { await new Promise((r) => setTimeout(r, 5)); message.seen.push("b"); }\n',
-      "events/guildMemberAdd/event.ts":
-        "export const meta = { once: true };\nexport default async function (member, ctx) { member.seen.push(ctx.route.id); }\n",
+      "events/guildMemberAdd/event.ts": `export const meta = { once: true };\n${from("route")}export default async function (member) { member.seen.push(route().id); }\n`,
       "events/guildMemberRemove/event.ts":
         'export default async function () { throw new Error("left"); }\n',
     });

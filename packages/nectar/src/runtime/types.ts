@@ -1,6 +1,5 @@
-import type { Client, ClientOptions, Interaction } from "discord.js";
+import type { ClientOptions, Interaction } from "discord.js";
 import type { RouteCategory } from "../compiler/routes.js";
-import type { NectarServices } from "../index.js";
 import type { NectarPlugin } from "../plugins/index.js";
 import type { LogFields, LoggerOptions } from "./logger.js";
 import type { Signal } from "./signals.js";
@@ -19,7 +18,7 @@ export interface RuntimeConfig {
   logger?: LoggerOptions;
   /** Receives every framework signal: interactions, failures, gateway state, shutdown. */
   observe?: (signal: Signal) => void;
-  /** Started before login, stopped on shutdown. Their services land on `ctx.services`. */
+  /** Started before login, stopped on shutdown. Their services land on `services()`. */
   plugins?: NectarPlugin[];
 }
 
@@ -45,67 +44,32 @@ export type Params = Record<string, string | string[]>;
 /** Command option values by name. Untyped until the route is known. */
 export type Options = Record<string, unknown>;
 
-export interface InteractionContext<I = Interaction, P = Params, O = Options> {
-  interaction: I;
-  client: Client;
-  route: RouteInfo;
-  params: P;
-  /**
-   * The command's options by name, resolved through discord.js. Options the user left out
-   * are `null`. Empty for components and autocomplete.
-   */
-  options: O;
-  env: Env;
-  trace: Trace;
-  /** What plugins provide. Empty without plugins. */
-  services: NectarServices;
-}
+/** Returned from a middleware to end the chain. Reply to the interaction first. */
+export const stop: unique symbol = Symbol.for("nectar.stop");
+export type Stop = typeof stop;
 
-export interface EventContext {
-  client: Client;
-  route: RouteInfo;
-  env: Env;
-  services: NectarServices;
-}
+declare const provides: unique symbol;
 
-/** What a middleware's `next()` accepts: extra fields merged into the downstream context. */
-export type ContextExtension = Record<string, unknown>;
+/**
+ * A middleware: runs before the handlers below it with the interaction, and either returns a
+ * value for `use()`, or `stop` to end the chain. `T` is what `use()` gives back.
+ */
+export type Middleware<T = unknown> = ((interaction: Interaction) => unknown) & {
+  readonly [provides]?: T;
+};
 
-declare const extension: unique symbol;
-
-/** Carries the extension type through `next()`'s return value so `defineMiddleware` can infer it. */
-export interface Extended<E extends ContextExtension> {
-  readonly [extension]?: E;
-}
-
-export type Next = <E extends ContextExtension = Record<never, never>>(
-  extension?: E,
-) => Promise<Extended<E>>;
-
-export type Middleware<E extends ContextExtension = ContextExtension> = ((
-  ctx: InteractionContext,
-  next: Next,
-) => unknown) &
-  Extended<E>;
-
-/** The context fields a middleware module adds downstream. `{}` for plain functions. */
-export type MiddlewareExtension<M> = M extends { default: Extended<infer E> }
-  ? ContextExtension extends E
-    ? Record<never, never>
-    : E
-  : Record<never, never>;
-
-export type Handler = (ctx: InteractionContext) => unknown;
-
+export type CommandHandler = (interaction: Interaction, options: Options) => unknown;
+export type ComponentHandler = (interaction: Interaction, params: Params) => unknown;
+export type AutocompleteHandler = (interaction: Interaction) => unknown;
 export type EventHandler = (...args: unknown[]) => unknown;
 
 /**
  * Return `"unhandled"` or throw to pass the error to the next boundary up. Returning anything
- * else marks it handled.
+ * else marks it handled. `interaction` is `null` when an event handler threw.
  */
 export type ErrorHandler = (
   error: unknown,
-  ctx: InteractionContext | EventContext,
+  interaction: Interaction | null,
 ) => unknown | Promise<unknown>;
 
 /**

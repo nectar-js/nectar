@@ -2,8 +2,9 @@ import type { Interaction } from "discord.js";
 import { MessageFlags } from "discord-api-types/v10";
 import type { LogFields } from "./logger.js";
 import type { ModuleRegistry } from "./modules.js";
+import type { Scope } from "./scope.js";
 import { type InteractionMeta, interactionMeta } from "./signals.js";
-import type { ErrorHandler, EventContext, InteractionContext, Logger } from "./types.js";
+import type { ErrorHandler, Logger } from "./types.js";
 
 /** The reply the default boundary sends when an interaction is still unanswered. */
 export const GENERIC_ERROR_REPLY = "Something went wrong while handling that.";
@@ -19,7 +20,7 @@ export const GENERIC_ERROR_REPLY = "Something went wrong while handling that.";
  */
 export async function handleError(
   error: unknown,
-  ctx: InteractionContext | EventContext,
+  scope: Scope,
   boundaries: readonly string[],
   modules: ModuleRegistry,
   logger: Logger,
@@ -29,28 +30,25 @@ export async function handleError(
   for (const file of boundaries) {
     try {
       const boundary = await modules.loadDefault<ErrorHandler>(file, "An error boundary");
-      const result = await boundary(current, ctx);
+      const result = await boundary(current, scope.interaction);
       if (result !== "unhandled") return file;
     } catch (thrown) {
       current = thrown;
     }
   }
-  await defaultBoundary(current, ctx, logger, middleware);
+  await defaultBoundary(current, scope, logger, middleware);
   return null;
 }
 
 /** The structured metadata every framework log line about a route carries. */
-export function logFields(
-  ctx: InteractionContext | EventContext,
-  meta?: InteractionMeta,
-): LogFields {
-  const fields: LogFields = { route: ctx.route.id };
-  if (!("interaction" in ctx)) {
-    fields.event = ctx.route.path.split("/")[0];
+export function logFields(scope: Scope, meta?: InteractionMeta): LogFields {
+  const fields: LogFields = { route: scope.route.id };
+  if (scope.interaction === null) {
+    fields.event = scope.route.path.split("/")[0];
     return fields;
   }
-  const i = meta ?? interactionMeta(ctx.interaction);
-  fields.trace = ctx.trace.id;
+  const i = meta ?? interactionMeta(scope.interaction);
+  if (scope.trace !== null) fields.trace = scope.trace.id;
   fields.interaction = i.type;
   if (i.command !== undefined) fields.command = i.command;
   if (i.customId !== undefined) fields.customId = i.customId;
@@ -62,19 +60,19 @@ export function logFields(
 
 async function defaultBoundary(
   error: unknown,
-  ctx: InteractionContext | EventContext,
+  scope: Scope,
   logger: Logger,
   middleware: readonly string[],
 ): Promise<void> {
   logger.error(
-    ctx.env === "development"
-      ? developmentReport(ctx, middleware)
-      : `Unhandled error in ${ctx.route.id} (${ctx.route.file})`,
-    { ...logFields(ctx), error },
+    scope.env === "development"
+      ? developmentReport(scope, middleware)
+      : `Unhandled error in ${scope.route.id} (${scope.route.file})`,
+    { ...logFields(scope), error },
   );
 
-  if (!("interaction" in ctx)) return;
-  const interaction = ctx.interaction as RepliableLike;
+  if (scope.interaction === null) return;
+  const interaction = scope.interaction as unknown as RepliableLike;
   if (typeof interaction.isRepliable !== "function" || !interaction.isRepliable()) return;
   if (interaction.replied) return;
 
@@ -83,24 +81,23 @@ async function defaultBoundary(
     if (interaction.deferred) await interaction.editReply({ content: GENERIC_ERROR_REPLY });
     else await interaction.reply({ content: GENERIC_ERROR_REPLY, flags: MessageFlags.Ephemeral });
   } catch (replyError) {
-    logger.error(`Could not send the error reply for ${ctx.route.id}`, {
-      ...logFields(ctx),
+    logger.error(`Could not send the error reply for ${scope.route.id}`, {
+      ...logFields(scope),
       error: replyError,
     });
   }
 }
 
 /** Where the failure sits in the app, so the developer can go straight to the boundary. */
-function developmentReport(
-  ctx: InteractionContext | EventContext,
-  middleware: readonly string[],
-): string {
-  const rows: [string, string][] = [["file", ctx.route.file]];
-  if ("interaction" in ctx) {
-    rows.push(["interaction", describeInteraction(ctx.interaction)]);
+function developmentReport(scope: Scope, middleware: readonly string[]): string {
+  const rows: [string, string][] = [["file", scope.route.file]];
+  if (scope.interaction !== null) {
+    rows.push(["interaction", describeInteraction(scope.interaction)]);
     // Discord gives a handler 3000ms to respond. Far past that means a slow handler or a
     // second process on the same token that answered first.
-    rows.push(["elapsed", `${ctx.trace.elapsed()}ms since Discord created it`]);
+    if (scope.trace !== null) {
+      rows.push(["elapsed", `${scope.trace.elapsed()}ms since Discord created it`]);
+    }
     rows.push([
       "middleware",
       middleware.length === 0 ? "none" : middleware.join(`\n${" ".repeat(15)}`),
@@ -108,7 +105,7 @@ function developmentReport(
   }
   const width = Math.max(...rows.map(([key]) => key.length));
   return [
-    `Unhandled error in ${ctx.route.id}`,
+    `Unhandled error in ${scope.route.id}`,
     ...rows.map(([key, value]) => `  ${key.padEnd(width)}  ${value}`),
   ].join("\n");
 }

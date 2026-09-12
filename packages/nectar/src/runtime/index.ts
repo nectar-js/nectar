@@ -10,7 +10,7 @@ export {
   type LogRecord,
   type LogSink,
 } from "./logger.js";
-export { type ChainHooks, runChain } from "./middleware.js";
+export { runMiddleware } from "./middleware.js";
 export { HandlerLoadError, ModuleRegistry } from "./modules.js";
 export {
   createRuntime,
@@ -20,6 +20,17 @@ export {
   type RuntimeOptions,
   type StartOptions,
 } from "./runtime.js";
+export {
+  client,
+  currentScope,
+  env,
+  route,
+  runInScope,
+  type Scope,
+  services,
+  trace,
+  use,
+} from "./scope.js";
 export {
   createSignals,
   type InteractionMeta,
@@ -34,21 +45,20 @@ export {
   type SignalType,
 } from "./signals.js";
 export type { RuntimeState } from "./state.js";
-export type {
-  ContextExtension,
-  Env,
-  ErrorHandler,
-  EventContext,
-  EventHandler,
-  Extended,
-  Handler,
-  InteractionContext,
-  Logger,
-  Middleware,
-  MiddlewareExtension,
-  Next,
-  Params,
-  RouteInfo,
-  RuntimeConfig,
-  Trace,
+export {
+  type AutocompleteHandler,
+  type CommandHandler,
+  type ComponentHandler,
+  type Env,
+  type ErrorHandler,
+  type EventHandler,
+  type Logger,
+  type Middleware,
+  type Options,
+  type Params,
+  type RouteInfo,
+  type RuntimeConfig,
+  type Stop,
+  stop,
+  type Trace,
 } from "./types.js";

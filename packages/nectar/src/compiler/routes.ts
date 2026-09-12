@@ -200,7 +200,7 @@ function makeRoute(
       if (params.includes(segment.name)) {
         diagnostics.error(
           "duplicate-param",
-          `The parameter "${segment.name}" appears twice in this route. Each parameter becomes a key of ctx.params, so the names have to differ. Rename one of the directories.`,
+          `The parameter "${segment.name}" appears twice in this route. Each parameter becomes a key of the handler's params, so the names have to differ. Rename one of the directories.`,
           { file },
         );
         return null;

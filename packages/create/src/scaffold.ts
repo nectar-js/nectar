@@ -171,10 +171,8 @@ function tsconfig(): string {
 function middleware(ts: boolean): string {
   return `import { defineMiddleware } from "@nectar-js/nectar";
 
-// Runs before every interaction. Whatever you pass to next() is on ctx downstream${ts ? ", typed" : ""}.
-export default defineMiddleware(async (_ctx, next) => {
-  return next({ startedAt: Date.now() });
-});
+// Runs before every interaction. Handlers read what it returns with use()${ts ? ", typed" : ""}.
+export default defineMiddleware(async () => ({ startedAt: Date.now() }));
 `;
 }
 
@@ -184,22 +182,24 @@ function pingCommand(ts: boolean): string {
     : `/** @type {import("@nectar-js/nectar").CommandMeta} */
 export const meta = {`;
   const imports = ts
-    ? `import { type CommandMeta, customId, defineCommand } from "@nectar-js/nectar";`
-    : `import { customId, defineCommand } from "@nectar-js/nectar";`;
+    ? `import { type CommandMeta, customId, defineCommand, use } from "@nectar-js/nectar";`
+    : `import { customId, defineCommand, use } from "@nectar-js/nectar";`;
   return `${imports}
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
+import timing from "../../middleware.${ts ? "ts" : "js"}";
 
 ${meta}
   description: "Check that the bot is alive",
 };
 
-export default defineCommand("ping", async (ctx) => {
+export default defineCommand("ping", async (interaction) => {
+  const { startedAt } = use(timing);
   const button = new ButtonBuilder()
     .setCustomId(customId("counter/[count]", { count: "0" }))
     .setLabel("Clicked 0 times")
     .setStyle(ButtonStyle.Primary);
-  await ctx.interaction.reply({
-    content: \`Pong in \${Date.now() - ctx.startedAt}ms\`,
+  await interaction.reply({
+    content: \`Pong in \${Date.now() - startedAt}ms\`,
     components: [new ActionRowBuilder${ts ? "<ButtonBuilder>" : ""}().addComponents(button)],
   });
 });
@@ -210,14 +210,14 @@ function counterButton(ts: boolean): string {
   return `import { customId, defineComponent } from "@nectar-js/nectar";
 import { ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
-// The directory name [count] makes ctx.params.count a string decoded from the custom ID.
-export default defineComponent("counter/[count]", async (ctx) => {
-  const count = Number(ctx.params.count) + 1;
+// The directory name [count] makes params.count a string decoded from the custom ID.
+export default defineComponent("counter/[count]", async (interaction, params) => {
+  const count = Number(params.count) + 1;
   const button = new ButtonBuilder()
     .setCustomId(customId("counter/[count]", { count: String(count) }))
     .setLabel(\`Clicked \${count} time\${count === 1 ? "" : "s"}\`)
     .setStyle(ButtonStyle.Primary);
-  await ctx.interaction.update({
+  await interaction.update({
     components: [new ActionRowBuilder${ts ? "<ButtonBuilder>" : ""}().addComponents(button)],
   });
 });

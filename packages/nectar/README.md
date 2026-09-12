@@ -6,6 +6,11 @@
 
 <p align="center">A filesystem-based meta-framework for discord.js.</p>
 
+<div align="center">
+  <img alt="NPM Version" src="https://img.shields.io/npm/v/%40nectar-js%2Fnectar?style=for-the-badge&color=f27506">
+  <img alt="NPM License" src="https://img.shields.io/npm/l/%40nectar-js%2Fnectar?style=for-the-badge&color=f27506">
+</div>
+
 <br />
 
 Nectar is a framework for Discord bots. You define commands, components, and events as files under `app/`, and Nectar handles command registration, custom ID encoding, and interaction routing.
