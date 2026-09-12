@@ -1,13 +1,16 @@
 import type {
+  Attachment,
   ButtonInteraction,
   ChannelSelectMenuInteraction,
   ChatInputCommandInteraction,
   ClientEvents,
+  CommandInteractionOption,
   MentionableSelectMenuInteraction,
   MessageContextMenuCommandInteraction,
   ModalSubmitInteraction,
   RoleSelectMenuInteraction,
   StringSelectMenuInteraction,
+  User,
   UserContextMenuCommandInteraction,
   UserSelectMenuInteraction,
 } from "discord.js";
@@ -41,9 +44,15 @@ export interface ComponentRouteType {
   context: object;
 }
 
+/** One command option as the generated types describe it. */
+export interface OptionSpecType {
+  type: OptionType;
+  required: boolean;
+}
+
 export interface CommandRouteType {
   type: CommandType;
-  options: Record<string, OptionType>;
+  options: Record<string, OptionSpecType>;
   context: object;
 }
 
@@ -56,7 +65,7 @@ export type ComponentRoutes = Fallback<
 /** Command routes by path. Until types are generated, any string is accepted. */
 export type CommandRoutes = Fallback<
   Declared<"commands">,
-  Record<string, { type: CommandType; options: Record<string, OptionType>; context: Empty }>
+  Record<string, { type: CommandType; options: Record<string, OptionSpecType>; context: Empty }>
 >;
 
 export type ComponentPath = keyof ComponentRoutes & string;
@@ -90,6 +99,38 @@ type CommandInteraction<T> = T extends "chatInput"
 
 type Field<R, K extends string, F> = R extends Record<K, infer V> ? V : F;
 
+/** What `ctx.options` holds for each option type, as discord.js resolves it. */
+type OptionValue<T> = T extends "string"
+  ? string
+  : T extends "integer" | "number"
+    ? number
+    : T extends "boolean"
+      ? boolean
+      : T extends "user"
+        ? User
+        : T extends "channel"
+          ? NonNullable<CommandInteractionOption["channel"]>
+          : T extends "role"
+            ? NonNullable<CommandInteractionOption["role"]>
+            : T extends "mentionable"
+              ? NonNullable<CommandInteractionOption["member" | "role" | "user"]>
+              : T extends "attachment"
+                ? Attachment
+                : never;
+
+/** `ctx.options` for a command route: required options as their value, the rest `| null`. */
+export type OptionValues<P extends CommandPath> = {
+  [K in keyof Field<Route<CommandRoutes, P>, "options", Empty>]: Field<
+    Route<CommandRoutes, P>,
+    "options",
+    Empty
+  >[K] extends { type: infer T; required: infer R }
+    ? R extends true
+      ? OptionValue<T>
+      : OptionValue<T> | null
+    : never;
+};
+
 export type ComponentParams<P extends ComponentPath> = Field<
   Route<ComponentRoutes, P>,
   "params",
@@ -98,13 +139,15 @@ export type ComponentParams<P extends ComponentPath> = Field<
 
 export type ComponentContext<P extends ComponentPath> = InteractionContext<
   ComponentInteraction<Field<Route<ComponentRoutes, P>, "kind", ComponentKindName>>,
-  ComponentParams<P>
+  ComponentParams<P>,
+  Empty
 > &
   Field<Route<ComponentRoutes, P>, "context", Empty>;
 
 export type CommandContext<P extends CommandPath> = InteractionContext<
   CommandInteraction<Field<Route<CommandRoutes, P>, "type", CommandType>>,
-  Empty
+  Empty,
+  OptionValues<P>
 > &
   Field<Route<CommandRoutes, P>, "context", Empty>;
 

@@ -7,6 +7,7 @@ const ctx = (): InteractionContext => ({
   client: {} as InteractionContext["client"],
   route: { id: "command:x", category: "command", path: "x", file: "x" },
   params: {},
+  options: {},
   env: "test",
   trace: { id: "1", receivedAt: 0, elapsed: () => 0 },
   services: {},

@@ -33,6 +33,7 @@ import type {
   ComponentContext,
   ComponentParams,
   ComponentPath,
+  OptionSpecType,
 } from "./define.js";
 import type { NectarRoutes, NectarServices } from "./index.js";
 import {
@@ -63,7 +64,7 @@ type Empty = Record<never, never>;
 export type StubFields<T> = T extends unknown ? { [K in keyof T]?: unknown } : never;
 
 /** What a test passes for each option type. */
-interface OptionValues {
+interface StubValues {
   string: string;
   integer: number;
   number: number;
@@ -75,14 +76,16 @@ interface OptionValues {
   attachment: StubFields<Attachment>;
 }
 
-type OptionTypes<P extends CommandPath> = CommandRoutes[P] extends { options: infer O }
+type OptionSpecs<P extends CommandPath> = CommandRoutes[P] extends { options: infer O }
   ? O
-  : Record<string, OptionType>;
+  : Record<string, OptionSpecType>;
+
+type OptionTypeOf<S> = S extends { type: infer T } ? T & OptionType : OptionType;
 
 /** Option values by name, typed from the command's generated options. */
-export type CommandOptions<P extends CommandPath> = [keyof OptionTypes<P>] extends [never]
+export type CommandOptions<P extends CommandPath> = [keyof OptionSpecs<P>] extends [never]
   ? Record<string, never>
-  : { [K in keyof OptionTypes<P>]?: OptionValues[OptionTypes<P>[K] & OptionType] };
+  : { [K in keyof OptionSpecs<P>]?: StubValues[OptionTypeOf<OptionSpecs<P>[K]>] };
 
 type AutocompleteRoutes = NectarRoutes extends { autocomplete: infer A }
   ? A
@@ -93,6 +96,12 @@ export type AutocompletePath = keyof AutocompleteRoutes & string;
 
 /** A route's context with the interaction narrowed to the kind being tested. */
 type With<C, I> = Omit<C, "interaction"> & { interaction: I };
+
+/** A command's context as its autocomplete handler sees it: no resolved options. */
+type Autocompleting<C> = Omit<C, "interaction" | "options"> & {
+  interaction: AutocompleteInteraction;
+  options: Empty;
+};
 
 type ComponentArgs<P extends ComponentPath, I> =
   Empty extends ComponentParams<P>
@@ -185,10 +194,7 @@ export interface TestApp {
     options?: CommandOptions<P & CommandPath>,
     interaction?: StubFields<AutocompleteInteraction>,
   ): Promise<
-    InteractionResult<
-      AutocompleteInteraction,
-      With<CommandContext<P & CommandPath>, AutocompleteInteraction>
-    >
+    InteractionResult<AutocompleteInteraction, Autocompleting<CommandContext<P & CommandPath>>>
   >;
   /** Clicks a button. The custom ID is encoded from `params`, then decoded and validated. */
   button<P extends ComponentPath>(

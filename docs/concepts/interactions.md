@@ -46,6 +46,7 @@ Command, autocomplete, and component handlers receive `ctx`:
 | `interaction` | The discord.js interaction |
 | `client` | The discord.js client |
 | `params` | Component parameters from the custom ID |
+| `options` | Command options by name, resolved through discord.js. `null` for options the user left out. Empty for components and autocomplete. |
 | `route` | `id`, `category`, `path`, and `file` of the route |
 | `env` | `"development"`, `"test"`, or `"production"` |
 | `trace` | `id`, `receivedAt`, and `elapsed()`, the milliseconds since Discord created the interaction |

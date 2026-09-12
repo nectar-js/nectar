@@ -9,7 +9,7 @@ export const meta: CommandMeta = {
 };
 
 export default defineCommand("user/profile", async (ctx) => {
-  const user = ctx.interaction.options.getUser("target") ?? ctx.interaction.user;
-  const section = ctx.interaction.options.getString("section") ?? "overview";
+  const user = ctx.options.target ?? ctx.interaction.user;
+  const section = ctx.options.section ?? "overview";
   await ctx.interaction.reply(`${user.tag}: ${section}`);
 });

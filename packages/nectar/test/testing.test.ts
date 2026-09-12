@@ -90,8 +90,18 @@ describe("commands", () => {
       reason: "spam",
     });
     expect(ban.responses).toEqual([{ method: "reply", options: "ban someone#0001 spam" }]);
+    expect(ban.context?.options).toEqual({
+      target: { id: "1", tag: "someone#0001" },
+      reason: "spam",
+    });
     const give = await app.command("admin/roles/give", { role: { name: "Mod" }, days: 3 });
     expect(give.responses).toEqual([{ method: "reply", options: "roles give Mod 3" }]);
+    expect(give.context?.options).toEqual({ role: { name: "Mod" }, days: 3 });
+
+    // Every declared option is present on ctx.options; the ones left out are null.
+    const quiet = await app.command("moderation/ban", { target: { id: "1", tag: "x" } });
+    expect(quiet.context?.options).toEqual({ target: { id: "1", tag: "x" }, reason: null });
+    expect((await app.button("confirm")).context?.options).toEqual({});
 
     // @ts-expect-error not an option of the command
     await expect(app.command("admin/roles/give", { nope: 1 })).rejects.toThrow(

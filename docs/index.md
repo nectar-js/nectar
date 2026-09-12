@@ -38,9 +38,8 @@ export const meta: CommandMeta = {
 };
 
 export default defineCommand("moderation/ban", async (ctx) => {
-  const target = ctx.interaction.options.getUser("target", true);
-  await ctx.interaction.guild?.members.ban(target);
-  await ctx.interaction.reply(`Banned ${target.username}.`);
+  await ctx.interaction.guild?.members.ban(ctx.options.target);
+  await ctx.interaction.reply(`Banned ${ctx.options.target.username}.`);
 });
 ```
 

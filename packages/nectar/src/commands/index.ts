@@ -13,4 +13,5 @@ export type {
   StringOption,
   TopLevelMeta,
 } from "./meta.js";
+export { type OptionSpec, optionsAt, resolveOptions } from "./options.js";
 export { validateCommandMeta, validateCommandRouteMeta } from "./validate.js";

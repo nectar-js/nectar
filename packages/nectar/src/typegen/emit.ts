@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { ApplicationCommandOptionType, ApplicationCommandType } from "discord-api-types/v10";
+import { ApplicationCommandType } from "discord-api-types/v10";
+import { optionsAt } from "../commands/options.js";
 import type { RouteGraph } from "../compiler/graph.js";
 import type { Route } from "../compiler/routes.js";
 import { type NectarPlugin, PluginError, pluginGraph } from "../plugins/index.js";
@@ -13,18 +14,6 @@ const COMMAND_TYPE: Record<number, string> = {
   [ApplicationCommandType.ChatInput]: "chatInput",
   [ApplicationCommandType.User]: "user",
   [ApplicationCommandType.Message]: "message",
-};
-
-const OPTION_TYPE: Record<number, string> = {
-  [ApplicationCommandOptionType.String]: "string",
-  [ApplicationCommandOptionType.Integer]: "integer",
-  [ApplicationCommandOptionType.Number]: "number",
-  [ApplicationCommandOptionType.Boolean]: "boolean",
-  [ApplicationCommandOptionType.User]: "user",
-  [ApplicationCommandOptionType.Channel]: "channel",
-  [ApplicationCommandOptionType.Role]: "role",
-  [ApplicationCommandOptionType.Mentionable]: "mentionable",
-  [ApplicationCommandOptionType.Attachment]: "attachment",
 };
 
 /**
@@ -56,8 +45,8 @@ export function toTypes(
   const commands: string[] = [];
   for (const command of [...graph.commands].sort((a, b) => a.name.localeCompare(b.name))) {
     for (const [key, route] of Object.entries(command.handlers)) {
-      const options = Object.entries(optionsAt(command.payload, key))
-        .map(([name, type]) => `${quote(name)}: ${quote(type)}`)
+      const options = optionsAt(command.payload, key)
+        .map((o) => `${quote(o.name)}: { type: ${quote(o.type)}; required: ${o.required} }`)
         .join("; ");
       commands.push(
         `    ${quote(route.path)}: { type: ${quote(COMMAND_TYPE[command.type] ?? "chatInput")}; options: {${options === "" ? "" : ` ${options} `}}; context: ${contextOf(route)} };`,
@@ -141,26 +130,6 @@ export function writeTypes(
   const file = path.join(outDir, TYPES_FILE);
   writeFileSync(file, toTypes(graph, outDir, plugins));
   return file;
-}
-
-interface PayloadNode {
-  name?: string;
-  type?: number;
-  options?: PayloadNode[];
-}
-
-/** Option name to option type name for one handler position of a command payload. */
-function optionsAt(payload: unknown, key: string): Record<string, string> {
-  let options = (payload as PayloadNode).options;
-  for (const part of key === "" ? [] : key.split("/")) {
-    options = options?.find((o) => o.name === part)?.options;
-  }
-  const out: Record<string, string> = {};
-  for (const option of options ?? []) {
-    const type = option.type === undefined ? undefined : OPTION_TYPE[option.type];
-    if (option.name !== undefined && type !== undefined) out[option.name] = type;
-  }
-  return out;
 }
 
 /** `../app/middleware.ts` becomes `../app/middleware.js`, which NodeNext resolves back to the source. */

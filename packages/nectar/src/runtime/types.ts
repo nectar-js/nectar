@@ -42,11 +42,19 @@ export interface Trace {
 
 export type Params = Record<string, string | string[]>;
 
-export interface InteractionContext<I = Interaction, P = Params> {
+/** Command option values by name. Untyped until the route is known. */
+export type Options = Record<string, unknown>;
+
+export interface InteractionContext<I = Interaction, P = Params, O = Options> {
   interaction: I;
   client: Client;
   route: RouteInfo;
   params: P;
+  /**
+   * The command's options by name, resolved through discord.js. Options the user left out
+   * are `null`. Empty for components and autocomplete.
+   */
+  options: O;
   env: Env;
   trace: Trace;
   /** What plugins provide. Empty without plugins. */

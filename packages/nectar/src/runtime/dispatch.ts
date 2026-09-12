@@ -1,5 +1,6 @@
 import type { AutocompleteInteraction, Interaction } from "discord.js";
 import { ApplicationCommandType } from "discord-api-types/v10";
+import { type OptionSpec, optionsAt, resolveOptions } from "../commands/options.js";
 import {
   type ComponentKind,
   createMatcher,
@@ -42,7 +43,8 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
       if (route === undefined) {
         return unknown(state, interaction, meta, `chat input command /${meta.command}`);
       }
-      return run(state, route, interaction, meta, {}, receivedAt);
+      const options = resolveOptions(interaction, tables.options.get(route.id) ?? []);
+      return run(state, route, interaction, meta, {}, receivedAt, options);
     }
 
     if (interaction.isContextMenuCommand()) {
@@ -67,7 +69,7 @@ export function createInteractionDispatcher(state: RuntimeState): InteractionDis
       if (route === undefined || !route.options.includes(option)) {
         return unknown(state, interaction, meta, `autocomplete for /${meta.command} "${option}"`);
       }
-      return run(state, route, interaction, meta, {}, receivedAt, option);
+      return run(state, route, interaction, meta, {}, receivedAt, {}, option);
     }
 
     const component: [ComponentKind, string] | null = interaction.isButton()
@@ -116,6 +118,7 @@ async function run(
   meta: InteractionMeta,
   params: Record<string, string | string[]>,
   receivedAt: number,
+  options: Record<string, unknown> = {},
   autocompleteOption?: string,
 ): Promise<void> {
   const ctx: InteractionContext = {
@@ -123,6 +126,7 @@ async function run(
     client: state.client,
     route: routeInfo(state, route),
     params,
+    options,
     env: state.env,
     trace: {
       id: interaction.id,
@@ -269,6 +273,8 @@ const validatorCache = new WeakMap<Handler, ParamValidators>();
 interface Tables {
   /** `${type}:${name}:${handlerKey}` to the handler route. */
   commands: Map<string, ManifestCommandRoute>;
+  /** Command route ID to the options its handler declares, from the registration payload. */
+  options: Map<string, OptionSpec[]>;
   autocomplete: Map<string, ManifestAutocompleteRoute>;
   matcher: ReturnType<typeof createMatcher<ManifestComponentRoute>>;
 }
@@ -285,14 +291,17 @@ function buildTables(routes: ManifestRoute[], commands: ManifestCommand[]): Tabl
   }
 
   const table = new Map<string, ManifestCommandRoute>();
+  const options = new Map<string, OptionSpec[]>();
   for (const command of commands) {
     for (const [key, id] of Object.entries(command.handlers)) {
       const route = commandRoutes.get(id);
-      if (route !== undefined) table.set(commandKey(command.type, command.name, key), route);
+      if (route === undefined) continue;
+      table.set(commandKey(command.type, command.name, key), route);
+      options.set(id, optionsAt(command.payload, key));
     }
   }
 
-  return { commands: table, autocomplete, matcher: createMatcher(components) };
+  return { commands: table, options, autocomplete, matcher: createMatcher(components) };
 }
 
 function commandKey(type: number, name: string, handlerKey: string): string {

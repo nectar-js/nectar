@@ -10,10 +10,10 @@ type M1 = MiddlewareExtension<typeof import("../app/commands/moderation/middlewa
 declare module "@nectar-js/nectar" {
   interface NectarRoutes {
     commands: {
-      "moderation/ban": { type: "chatInput"; options: { "target": "user"; "reason": "string"; "days": "integer" }; context: M0 & M1 };
-      "moderation/kick": { type: "chatInput"; options: { "target": "user"; "reason": "string" }; context: M0 & M1 };
+      "moderation/ban": { type: "chatInput"; options: { "target": { type: "user"; required: true }; "reason": { type: "string"; required: false }; "days": { type: "integer"; required: false } }; context: M0 & M1 };
+      "moderation/kick": { type: "chatInput"; options: { "target": { type: "user"; required: true }; "reason": { type: "string"; required: false } }; context: M0 & M1 };
       "ping": { type: "chatInput"; options: {}; context: M0 };
-      "user/profile": { type: "chatInput"; options: { "target": "user"; "section": "string" }; context: M0 };
+      "user/profile": { type: "chatInput"; options: { "target": { type: "user"; required: false }; "section": { type: "string"; required: false } }; context: M0 };
     };
     components: {
       "pagination/[page]/next": { kind: "button"; params: { "page": string }; context: M0 };

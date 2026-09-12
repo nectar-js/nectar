@@ -3,9 +3,12 @@
  * The augmentation below stands in for a generated `.nectar/types.d.ts`.
  */
 import type {
+  APIRole,
   ButtonInteraction,
   ChatInputCommandInteraction,
   GuildMember,
+  Role,
+  User,
   UserContextMenuCommandInteraction,
   UserSelectMenuInteraction,
 } from "discord.js";
@@ -40,13 +43,19 @@ declare module "../src/index.js" {
       ping: { type: "chatInput"; options: Empty; context: Empty };
       "moderation/ban": {
         type: "chatInput";
-        options: { target: "user"; reason: "string" };
+        options: {
+          target: { type: "user"; required: true };
+          reason: { type: "string"; required: false };
+        };
         context: MiddlewareExtension<AuthModule>;
       };
       info: { type: "user"; options: Empty; context: Empty };
       "admin/roles/give": {
         type: "chatInput";
-        options: { role: "role"; days: "integer" };
+        options: {
+          role: { type: "role"; required: true };
+          days: { type: "integer"; required: false };
+        };
         context: Empty;
       };
     };
@@ -114,6 +123,22 @@ describe("contexts", () => {
       CommandContext<"info">["interaction"]
     >().toEqualTypeOf<UserContextMenuCommandInteraction>();
     expectTypeOf<CommandContext<"moderation/ban">["member"]>().toEqualTypeOf<GuildMember>();
+  });
+
+  test("command options are typed from meta, required ones without null", () => {
+    type Ban = CommandContext<"moderation/ban">["options"];
+    expectTypeOf<Ban["target"]>().toEqualTypeOf<User>();
+    expectTypeOf<Ban["reason"]>().toEqualTypeOf<string | null>();
+    type Give = CommandContext<"admin/roles/give">["options"];
+    expectTypeOf<Give["days"]>().toEqualTypeOf<number | null>();
+    expectTypeOf<Give["role"]>().toEqualTypeOf<Role | APIRole>();
+    expectTypeOf<CommandContext<"ping">["options"]>().toEqualTypeOf<Empty>();
+    expectTypeOf<ComponentContext<"confirm">["options"]>().toEqualTypeOf<Empty>();
+    defineCommand("moderation/ban", async (ctx) => {
+      expectTypeOf(ctx.options.target).toEqualTypeOf<User>();
+      // @ts-expect-error not an option of this command
+      ctx.options.nope;
+    });
   });
 
   test("define helpers check the path and type the handler", () => {

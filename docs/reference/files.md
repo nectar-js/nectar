@@ -17,12 +17,14 @@ export const meta: CommandMeta = {
 };
 
 export default defineCommand("moderation/ban", async (ctx) => {
-  const target = ctx.interaction.options.getUser("target", true);
-  await ctx.interaction.reply(`Banned ${target.tag}.`);
+  const reason = ctx.options.reason ?? "No reason given";
+  await ctx.interaction.reply(`Banned ${ctx.options.target.tag}: ${reason}`);
 });
 ```
 
 `ctx.interaction` is a `ChatInputCommandInteraction`, `UserContextMenuCommandInteraction`, or `MessageContextMenuCommandInteraction`, depending on `meta.type`.
+
+`ctx.options` has every option in `meta.options` by name, resolved the way discord.js's `getUser`, `getString`, and the rest resolve them. Required options have their value. The others are `null` when the user left them out. With generated types, `ctx.options.target` is a `User` and `ctx.options.reason` is `string | null`. Context menu commands have no options; read `targetUser` or `targetMessage` from the interaction.
 
 `meta` is required:
 

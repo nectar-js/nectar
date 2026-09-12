@@ -51,6 +51,8 @@ export {
   defineError,
   defineEvent,
   defineMiddleware,
+  type OptionSpecType,
+  type OptionValues,
   type Routed,
 } from "./define.js";
 export type { EventMeta, EventMode } from "./events/compile.js";
@@ -109,6 +111,7 @@ export type {
   Middleware,
   MiddlewareExtension,
   Next,
+  Options,
   Params,
   RouteInfo,
   Trace,

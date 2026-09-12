@@ -60,6 +60,7 @@ export default defineCommand("ping", async (ctx) => {
 - `setName` goes away, since the directory is the name.
 - The description and options move to `meta`. `.addUserOption((o) => o.setName("target").setDescription("Who").setRequired(true))` becomes `{ type: "user", name: "target", description: "Who", required: true }`. [Reserved files](../reference/files#command-ts) lists every field.
 - `interaction` is `ctx.interaction`.
+- `interaction.options.getUser("target", true)` is `ctx.options.target`, typed from `meta`. The resolver is still there if you want it.
 - Each `.addSubcommand()` becomes a subdirectory with its own `command.ts`, and the parent directory gets a `route.ts` with the description.
 - Category folders like `utility/` can stay as route groups: `app/commands/(utility)/ping/command.ts` still registers `/ping`.
 
